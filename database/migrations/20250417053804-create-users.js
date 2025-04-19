@@ -25,6 +25,9 @@ module.exports = {
       email: {
         type: Sequelize.STRING,
       },
+      password: {
+        type: Sequelize.STRING,
+      },
       phoneNumber: {
         type: Sequelize.STRING,
       },
@@ -36,6 +39,9 @@ module.exports = {
       },
       institution: {
         type: Sequelize.STRING,
+      },
+      isVerified: {
+        type: Sequelize.BOOLEAN,
       },
       role: {
         type: Sequelize.STRING,
