@@ -1,57 +1,105 @@
-const welcome = (req, res) => {
-  res.status(200).type("text/html").send(`
-    <html>
-      <head>
-        <style>
-          body {
-            background-color: #001529; /* Darker Navy Blue */
-            color: #ffffff; /* White */
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 20px;
-          }
+const { admin, client } = require("../../config/firebase");
+const { Users } = require("../models");
 
-          div {
-            margin-bottom: 20px;
-          }
+const ApiError = require("../../utils/apiError");
 
-          strong {
-            font-size: 1.2em;
-          }
+const registerWithEmail = async (req, res, next) => {
+  const { email, password, name } = req.body;
 
-          p {
-            margin: 0;
-            line-height: 1.5;
-          }
+  try {
+    // Cek apakah email sudah ada di database lokal kamu
+    const existingUser = await Users.findOne({ where: { email } });
 
-          .button {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #007BFF; /* Button Blue */
-            color: #ffffff;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-          }
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Email sudah terdaftar di sistem.",
+      });
+    }
 
-          .button:hover {
-            background-color: #0056b3; /* Darker Button Blue on hover */
-          }
-        </style>
-      </head>
-      <body>
-        <div>
-          <strong>Status:</strong> Success
-        </div>
-        <div>
-          <strong>Message:</strong>
-          <p>Selamat datang di API Aplikasi Belajar</p>
-          <p>Untuk menggunakan API silahkan klik tombol dibawah:</p>
-          <a href="https://backend-production-f9e7.up.railway.app/api-docs" class="button">Klik disini</a>
-        </div>
-      </body>
-    </html>
-  `);
+    // Buat user di Firebase
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: name,
+    });
+
+    // Simpan user ke database lokal
+    await Users.create({
+      uid: userRecord.uid,
+      email: userRecord.email,
+      name: userRecord.displayName,
+    });
+
+    res.status(201).json({
+      message: "Pendaftaran berhasil",
+      user: userRecord,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
 };
 
-module.exports = { welcome };
+const registerWithGoogle = async (req, res, next) => {
+  const { idToken } = req.body;
+
+  try {
+    // Verifikasi idToken yang datang dari client
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    const { uid, name, email } = decodedToken;
+
+    let user = await Users.findOne({ where: { firebase_uid: uid } });
+
+    if (!user) {
+      // Kalau belum ada, simpan user ke DB kamu
+      user = await Users.create({ firebase_uid: uid, fullname: name, email });
+    }
+
+    res.status(200).json({
+      message: "Pengguna telah mendaftar atau login menggunakan akun Google",
+      user,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const login = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      throw new ApiError("ID Token is required", 400);
+    }
+
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+    const { uid } = decodedToken;
+
+    const userRecord = await admin.auth().getUser(uid);
+
+    let user = await Users.findOne({ where: { firebase_uid: uid } });
+
+    // Kalau belum ada, simpan user baru
+    if (!user) {
+      user = await Users.create({
+        firebase_uid: uid,
+        // email,
+        fullname: userRecord.displayName || "Unnamed User",
+        image: userRecord.photoURL,
+        phoneNumber: userRecord.phoneNumber,
+        role: "user",
+      });
+    }
+
+    // Kirim respon dengan data user
+    return res.status(200).json({
+      message: "Login berhasil",
+      user,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+module.exports = { registerWithEmail, registerWithGoogle, login };
