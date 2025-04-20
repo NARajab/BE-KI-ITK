@@ -188,6 +188,7 @@ const loginGoogle = async (req, res, next) => {
     const { uid } = decodedToken;
 
     const userRecord = await admin.auth().getUser(uid);
+    console.log(userRecord);
 
     let user = await Users.findOne({ where: { firebase_uid: uid } });
 
@@ -198,12 +199,31 @@ const loginGoogle = async (req, res, next) => {
         fullname: userRecord.displayName || "Unnamed User",
         image: userRecord.photoURL,
         phoneNumber: userRecord.phoneNumber,
+        isVerified: true,
         role: "user",
       });
     }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        fullname: user.fullname,
+        image: user.image,
+        phoneNumber: user.phoneNumber,
+        faculty: user.faculty,
+        studyProgram: user.studyProgram,
+        institution: user.institution,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
     return res.status(200).json({
       message: "Login berhasil",
       user,
+      token,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
