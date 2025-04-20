@@ -1,6 +1,6 @@
 const { admin, client } = require("../../config/firebase");
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
+const sendEmail = require("../../utils/sendMail");
 const jwt = require("jsonwebtoken");
 const { Users } = require("../models");
 
@@ -27,7 +27,7 @@ const register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const emailToken = jwt.sign({ email: email }, process.env.JWT_SECRET, {
+    const emailToken = jwt.sign({ email }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
 
@@ -44,77 +44,83 @@ const register = async (req, res, next) => {
       role: "User",
     });
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
 
-    const mailOptions = {
-      from: `"Admin" <${process.env.EMAIL_USER}>`,
+    const emailContent = `
+      <html>
+        <head>
+          <style>
+            .email-container {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              background-color: #f4f4f4;
+              padding: 20px;
+              border-radius: 10px;
+              max-width: 600px;
+              margin: 0 auto;
+            }
+            .email-header {
+              text-align: center;
+              padding-bottom: 20px;
+            }
+            .email-content {
+              background-color: #fff;
+              padding: 20px;
+              border-radius: 10px;
+            }
+            .email-button {
+              display: block;
+              width: 200px;
+              margin: 20px auto;
+              padding: 10px 0;
+              background-color: #007bff;
+              color: #fff;
+              text-align: center;
+              border-radius: 5px;
+              text-decoration: none;
+            }
+            .email-footer {
+              text-align: center;
+              font-size: 12px;
+              color: #888;
+              padding-top: 20px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="email-container">
+            <div class="email-header">
+              <h2>Verify Your Account</h2>
+            </div>
+            <div class="email-content">
+              <p>Halo ${fullname},</p>
+              <p>Thank you for registering. Please click the button below to verify your account:</p>
+              <a href="${verificationLink}" class="email-button">Verify Account</a>
+              <p>If you did not register, please ignore this email.</p>
+              <p>Thank you,</p>
+              <p>Support Team</p>
+            </div>
+            <div class="email-footer">
+              <p>&copy; 2025 KI-ITK. All rights reserved.</p>
+            </div>
+          </div>
+        </body
+    `;
+
+    await sendEmail({
       to: email,
       subject: "Verifikasi Email Anda",
-      html: `<p>Halo ${fullname},</p>
-             <p>Silakan klik link berikut untuk verifikasi email Anda:</p>
-             <a href="${verificationLink}">${verificationLink}</a>`,
-    };
-
-    transporter.sendMail(mailOptions, async (error, info) => {
-      if (error) {
-        console.error(error);
-        return res
-          .status(500)
-          .json({ message: "Failed to send verification email" });
-      }
-
-      res.status(201).json({
-        status: "success",
-        message: "Register success. Verification email sent.",
-        newUser,
-      });
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// Register ke firebase
-const registerWithEmail = async (req, res, next) => {
-  const { email, password, name } = req.body;
-
-  try {
-    const existingUser = await Users.findOne({ where: { email } });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "Email sudah terdaftar di sistem.",
-      });
-    }
-
-    const userRecord = await admin.auth().createUser({
-      email,
-      password,
-      displayName: name,
-    });
-
-    await Users.create({
-      uid: userRecord.uid,
-      email: userRecord.email,
-      name: userRecord.displayName,
+      html: emailContent,
     });
 
     res.status(201).json({
-      message: "Pendaftaran berhasil",
-      user: userRecord,
+      status: "success",
+      message: "Register success. Verification email sent.",
+      newUser,
     });
   } catch (err) {
-    next(new ApiError(err.message, 500));
+    next(err);
   }
 };
 
@@ -188,7 +194,7 @@ const loginGoogle = async (req, res, next) => {
     if (!user) {
       user = await Users.create({
         firebase_uid: uid,
-        // email,
+        email: userRecord.email,
         fullname: userRecord.displayName || "Unnamed User",
         image: userRecord.photoURL,
         phoneNumber: userRecord.phoneNumber,
@@ -244,10 +250,169 @@ const verifyEmail = async (req, res, next) => {
   }
 };
 
+// Send Email Reset Password
+const sendEmailResetPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return next(new ApiError("Email diperlukan", 400));
+    }
+    const user = await Users.findOne({ where: { email } });
+    if (!user) {
+      return next(new ApiError("Pengguna tidak ditemukan", 404));
+    }
+
+    const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    await user.save();
+
+    const resetUrl = `${process.env.BASE_URL}/reset-password/${token}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Reset Password",
+      html: `
+        <html>
+          <head>
+            <style>
+              .email-container {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                background-color: #f4f4f4;
+                padding: 20px;
+                border-radius: 10px;
+                max-width: 600px;
+                margin: 0 auto;
+              }
+              .email-header {
+                text-align: center;
+                padding-bottom: 20px;
+              }
+              .email-content {
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 10px;
+              }
+              .email-button {
+                display: block;
+                width: 200px;
+                margin: 20px auto;
+                padding: 10px 0;
+                background-color: #007bff;
+                color: #fff;
+                text-align: center;
+                border-radius: 5px;
+                text-decoration: none;
+              }
+              .email-footer {
+                text-align: center;
+                font-size: 12px;
+                color: #888;
+                padding-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="email-container">
+              <div class="email-header">
+                <h2>Reset Password</h2>
+              </div>
+              <div class="email-content">
+                <p>Halo ${user.fullname},</p>
+                <p>Anda telah meminta untuk mengatur ulang kata sandi Anda. Klik tombol di bawah ini untuk mengatur ulang kata sandi Anda:</p>
+                <a href="${resetUrl}" class="email-button">Atur Ulang Kata Sandi</a>
+                <p>Jika Anda tidak meminta pengaturan ulang kata sandi, abaikan email ini.</p>
+                <p><b>Catatan:</b> Email ini hanya berlaku selama 1 jam.</p>
+                <p>Terima kasih,</p>
+                <p>Tim Support</p>
+              </div>
+              <div class="email-footer">
+                <p>&copy; 2025 KI-ITK. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `,
+    });
+
+    return res.status(200).json({
+      message: "Link reset password telah dikirim ke email kamu.",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+// Reset Password
+const resetPassword = async (req, res, next) => {
+  const { token } = req.params;
+  const { newPassword, confirmPassword } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ message: "Token tidak ditemukan." });
+  }
+
+  if (!newPassword) {
+    return res.status(400).json({ message: "Password baru wajib diisi." });
+  }
+
+  if (newPassword !== confirmPassword) {
+    return res
+      .status(400)
+      .json({ message: "Password baru dan konfirmasi password tidak cocok." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { email } = decoded;
+
+    const user = await Users.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ message: "Pengguna tidak ditemukan." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password berhasil diubah." });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+// Get User data
+const getMe = async (req, res, next) => {
+  try {
+    return res.status(200).json({
+      status: "success",
+      data: {
+        id: req.user.id,
+        email: req.user.email,
+        fullname: req.user.fullname,
+        image: req.user.image,
+        phoneNumber: req.user.phoneNumber,
+        faculty: req.user.faculty,
+        studyProgram: req.user.studyProgram,
+        role: req.user.role,
+      },
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
-  registerWithEmail,
   register,
   login,
   loginGoogle,
   verifyEmail,
+  sendEmailResetPassword,
+  resetPassword,
+  getMe,
 };
