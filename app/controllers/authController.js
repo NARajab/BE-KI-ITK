@@ -5,6 +5,10 @@ const jwt = require("jsonwebtoken");
 const { Users } = require("../models");
 
 const ApiError = require("../../utils/apiError");
+const {
+  containsProfanity,
+  censorText,
+} = require("../../utils/profanityFilter");
 
 // Regiister Biasa
 const register = async (req, res, next) => {
@@ -19,6 +23,17 @@ const register = async (req, res, next) => {
   } = req.body;
 
   try {
+    for (let key in req.body) {
+      if (req.body.hasOwnProperty(key) && typeof req.body[key] === "string") {
+        if (containsProfanity(req.body[key])) {
+          return res.status(400).json({
+            message: `Field ${key} mengandung kata yang tidak pantas.`,
+          });
+        }
+        req.body[key] = censorText(req.body[key]);
+      }
+    }
+
     const existingUser = await Users.findOne({ where: { email } });
 
     if (existingUser) {
