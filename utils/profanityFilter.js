@@ -18,7 +18,7 @@ const badWords = loadBadWords();
 
 const fuseOptions = {
   includeScore: true,
-  threshold: 0.2,
+  threshold: 0.3,
   keys: ["word"],
 };
 
@@ -53,7 +53,11 @@ const containsProfanity = (text) => {
   for (const word of words) {
     const cleaned = cleanWord(word);
     const results = fuse.search(cleaned);
-    if (results.some((r) => r.score < 0.2)) {
+    const match = results.find((r) => r.score < 0.3);
+    if (match) {
+      console.log(
+        `🚫 Kata terdeteksi: "${word}" → Dibersihkan: "${cleaned}" → Cocok dengan: "${match.item.word}"`
+      );
       return true;
     }
   }
