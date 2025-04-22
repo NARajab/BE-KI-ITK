@@ -131,7 +131,7 @@ const register = async (req, res, next) => {
 
     res.status(201).json({
       status: "success",
-      message: "Register success. Verification email sent.",
+      message: "Pendaftaran berhasil. Email verifikasi terkirim.",
       newUser,
     });
   } catch (err) {
@@ -147,13 +147,15 @@ const login = async (req, res, next) => {
     const user = await Users.findOne({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Pengguna tidak ditemukan" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid password" });
+      return res
+        .status(401)
+        .json({ message: "Password yang anda masukkan salah" });
     }
 
     if (!user.isVerified) {
@@ -178,7 +180,6 @@ const login = async (req, res, next) => {
 
       return res.status(200).json({
         message: "Login berhasil",
-        payload,
         token,
       });
     } else {
@@ -237,7 +238,6 @@ const loginGoogle = async (req, res, next) => {
     );
     return res.status(200).json({
       message: "Login berhasil",
-      user,
       token,
     });
   } catch (err) {
