@@ -19,7 +19,7 @@ const getAllUsers = async (req, res, next) => {
 
 const getUserById = async (req, res, next) => {
   try {
-    const user = await Users.findByPk(req.params.id);
+    const user = await Users.findByPk(req.user.id);
     if (!user) {
       return res.status(404).json({ message: "Pengguna tidak ditemukan" });
     }

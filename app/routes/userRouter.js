@@ -1,6 +1,7 @@
 const router = require("express").Router();
 
 const User = require("../controllers/userController");
+const authenticat = require("../middlewares/authenticat");
 const authenticate = require("../middlewares/authenticat");
 const checkRole = require("../middlewares/checkRole");
 const { uploadSingle } = require("../middlewares/multer");
@@ -12,7 +13,7 @@ router.get(
   User.getAllUsers
 );
 
-router.get("/:id", User.getUserById);
+router.get("/:id", authenticat, User.getUserById);
 
 router.patch("/:id", uploadSingle("image"), User.updateUser);
 
