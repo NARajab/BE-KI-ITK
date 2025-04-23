@@ -1,4 +1,4 @@
-const { Periods } = require("../models");
+const { Periods, SubmissionTypes } = require("../models");
 const { Op } = require("sequelize");
 
 const ApiError = require("../../utils/apiError");
@@ -217,6 +217,19 @@ const deletePeriod = async (req, res, next) => {
   }
 };
 
+const getSubmissionType = async (req, res, next) => {
+  try {
+    const submissionsType = await SubmissionTypes.findAll();
+
+    res.status(200).json({
+      status: "success",
+      submissionsType,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createPeriod,
   updatePeriod,
@@ -224,4 +237,5 @@ module.exports = {
   getByYear,
   getByGroup,
   deletePeriod,
+  getSubmissionType,
 };

@@ -28,5 +28,6 @@ router.delete(
 
 router.get("/filter/year", Period.getByYear);
 router.get("/filter/group", Period.getByGroup);
+router.get("/submission-type", Period.getSubmissionType);
 
 module.exports = router;

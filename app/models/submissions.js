@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Submissions extends Model {
     /**
@@ -10,21 +8,42 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Submissions.hasMany(models.UserSubmissions, {
+        foreignKey: "submissionId",
+        as: "userSubmissions",
+      });
+
+      Submissions.hasMany(models.PersonalDatas, {
+        foreignKey: "submissionId",
+        as: "personalDatas",
+      });
+
+      Submissions.belongsTo(models.Copyrights, {
+        foreignKey: "copyrightId",
+        as: "copyright",
+      });
+
+      Submissions.belongsTo(models.SubmissionTypes, {
+        foreignKey: "submissionTypeId",
+        as: "submissionType",
+      });
     }
   }
-  Submissions.init({
-    submissionTypeId: DataTypes.INTEGER,
-    patentId: DataTypes.INTEGER,
-    copyrightId: DataTypes.INTEGER,
-    industrialDesignId: DataTypes.INTEGER,
-    brandId: DataTypes.INTEGER,
-    periodId: DataTypes.INTEGER,
-    comments: DataTypes.TEXT,
-    submissionScheme: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'Submissions',
-  });
+  Submissions.init(
+    {
+      submissionTypeId: DataTypes.INTEGER,
+      patentId: DataTypes.INTEGER,
+      copyrightId: DataTypes.INTEGER,
+      industrialDesignId: DataTypes.INTEGER,
+      brandId: DataTypes.INTEGER,
+      periodId: DataTypes.INTEGER,
+      comments: DataTypes.TEXT,
+      submissionScheme: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "Submissions",
+    }
+  );
   return Submissions;
 };
