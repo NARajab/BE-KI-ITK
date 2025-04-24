@@ -23,6 +23,21 @@ module.exports = (sequelize, DataTypes) => {
         as: "copyright",
       });
 
+      Submissions.belongsTo(models.Patents, {
+        foreignKey: "patentId",
+        as: "patent",
+      });
+
+      Submissions.belongsTo(models.Brands, {
+        foreignKey: "brandId",
+        as: "brand",
+      });
+
+      Submissions.belongsTo(models.IndustrialDesigns, {
+        foreignKey: "industrialDesignId",
+        as: "industrialDesign",
+      });
+
       Submissions.belongsTo(models.SubmissionTypes, {
         foreignKey: "submissionTypeId",
         as: "submissionType",

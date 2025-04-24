@@ -3,8 +3,7 @@ const {
   Submissions,
   Copyrights,
   PersonalDatas,
-  Users,
-  SubmissionTypes,
+  Periods,
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
@@ -86,86 +85,13 @@ const createCopyright = async (req, res, next) => {
       reviewStatus: "pending",
     });
 
+    await Periods.decrement("copyrightQuota", {
+      by: 1,
+      where: { id: periodId },
+    });
+
     res.status(201).json({
       message: "Submission created successfully",
-      userSubmission,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const getAllCopyrights = async (req, res, next) => {
-  try {
-    const copyrights = await UserSubmissions.findAll({
-      include: [
-        {
-          model: Users,
-          as: "user",
-        },
-        {
-          model: Submissions,
-          as: "submission",
-          include: [
-            {
-              model: Copyrights,
-              as: "copyright",
-            },
-            {
-              model: SubmissionTypes,
-              as: "submissionType",
-            },
-            {
-              model: PersonalDatas,
-              as: "personalDatas",
-            },
-          ],
-        },
-      ],
-    });
-    return res.status(200).json({
-      status: "success",
-      copyrights,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const getCopyrightById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const userSubmission = await UserSubmissions.findOne({
-      where: {
-        id,
-      },
-      include: [
-        {
-          model: Users,
-          as: "user",
-        },
-        {
-          model: Submissions,
-          as: "submission",
-          include: [
-            {
-              model: Copyrights,
-              as: "copyright",
-            },
-            {
-              model: SubmissionTypes,
-              as: "submissionType",
-            },
-            {
-              model: PersonalDatas,
-              as: "personalDatas",
-            },
-          ],
-        },
-      ],
-    });
-    return res.status(200).json({
-      status: "success",
       userSubmission,
     });
   } catch (err) {
@@ -190,7 +116,7 @@ const updateCopyright = async (req, res, next) => {
 
     const copyright = await Copyrights.findByPk(id);
     if (!copyright) {
-      return res.status(404).json({ message: "Copyright not found" });
+      return res.status(404).json({ message: "Copyright tidak ditemukan" });
     }
 
     const removeOldFile = (oldFileName, folder = "documents") => {
@@ -269,8 +195,8 @@ const updateCopyright = async (req, res, next) => {
     }
 
     res.status(200).json({
-      message: "Copyright updated successfully",
-      data: copyright,
+      message: "Copyright berhasil diperbaharui",
+      copyright,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -279,7 +205,5 @@ const updateCopyright = async (req, res, next) => {
 
 module.exports = {
   createCopyright,
-  getAllCopyrights,
-  getCopyrightById,
   updateCopyright,
 };

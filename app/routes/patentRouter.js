@@ -1,6 +1,6 @@
 const router = require("express").Router();
 
-const Copyright = require("../controllers/copyrightController");
+const Patent = require("../controllers/patentController");
 const authenticate = require("../middlewares/authenticat");
 const { uploadFields } = require("../middlewares/multer");
 
@@ -9,10 +9,8 @@ router.post(
   authenticate,
   (req, res, next) => {
     uploadFields([
-      { name: "statementLetter", maxCount: 1 },
-      { name: "letterTransferCopyright", maxCount: 1 },
-      { name: "exampleCreation", maxCount: 1 },
       { name: "ktp", maxCount: 10 },
+      { name: "draftPatentApplicationFile", maxCount: 1 },
     ])(req, res, (err) => {
       if (err) {
         console.error("Multer error:", err.message);
@@ -21,7 +19,7 @@ router.post(
       next();
     });
   },
-  Copyright.createCopyright
+  Patent.createPatent
 );
 
 router.patch(
@@ -29,10 +27,14 @@ router.patch(
   authenticate,
   (req, res, next) => {
     uploadFields([
-      { name: "statementLetter", maxCount: 1 },
-      { name: "letterTransferCopyright", maxCount: 1 },
-      { name: "exampleCreation", maxCount: 1 },
-      { name: "ktp", maxCount: 10 },
+      { name: "entirePatentDocument", maxCount: 1 },
+      { name: "description", maxCount: 1 },
+      { name: "abstract", maxCount: 1 },
+      { name: "claim", maxCount: 1 },
+      { name: "inventionImage", maxCount: 1 },
+      { name: "statementInventionOwnership", maxCount: 1 },
+      { name: "letterTransferRightsInvention", maxCount: 1 },
+      { name: "letterPassedReviewStage", maxCount: 1 },
     ])(req, res, (err) => {
       if (err) {
         console.error("Multer error:", err.message);
@@ -41,7 +43,7 @@ router.patch(
       next();
     });
   },
-  Copyright.updateCopyright
+  Patent.updatePatent
 );
 
 module.exports = router;
