@@ -224,9 +224,13 @@ const updateQuota = async (req, res, next) => {
 
     await period.update({
       copyrightQuota,
+      remainingCopyrightQuota: copyrightQuota,
       patentQuota,
+      remainingPatentQuota: patentQuota,
       brandQuota,
+      remainingBrandQuota: brandQuota,
       industrialDesignQuota,
+      remainingIndustrialDesignQuota: industrialDesignQuota,
     });
 
     res.status(200).json({

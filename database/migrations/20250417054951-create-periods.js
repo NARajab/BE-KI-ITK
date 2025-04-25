@@ -24,13 +24,25 @@ module.exports = {
       patentQuota: {
         type: Sequelize.INTEGER,
       },
+      remainingPatentQuota: {
+        type: Sequelize.INTEGER,
+      },
       copyrightQuota: {
+        type: Sequelize.INTEGER,
+      },
+      remainingCopyrightQuota: {
         type: Sequelize.INTEGER,
       },
       industrialDesignQuota: {
         type: Sequelize.INTEGER,
       },
+      remainingIndustrialDesignQuota: {
+        type: Sequelize.INTEGER,
+      },
       brandQuota: {
+        type: Sequelize.INTEGER,
+      },
+      remainingBrandQuota: {
         type: Sequelize.INTEGER,
       },
       createdAt: {

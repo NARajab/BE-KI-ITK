@@ -1,6 +1,7 @@
 const {
   UserSubmissions,
   Submissions,
+  Periods,
   Copyrights,
   Patents,
   Brands,
@@ -36,6 +37,26 @@ const updateSubmissionScheme = async (req, res, next) => {
 
     submission.submissionScheme = submissionScheme;
     await submission.save();
+
+    if (submissionScheme === "pendanaan") {
+      const fieldToDecrement = submission.copyrightId
+        ? "remainingCopyrightQuota"
+        : submission.patentId
+        ? "remainingPatentQuota"
+        : submission.brandId
+        ? "remainingBrandQuota"
+        : submission.industrialDesignId
+        ? "remainingIndustrialDesignQuota"
+        : null;
+
+      // Jika fieldToDecrement ada, lakukan decrement
+      if (fieldToDecrement) {
+        await Periods.decrement(fieldToDecrement, {
+          by: 1,
+          where: { id: submission.periodId },
+        });
+      }
+    }
 
     return res.status(200).json({
       status: "success",

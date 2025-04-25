@@ -85,11 +85,6 @@ const createCopyright = async (req, res, next) => {
       reviewStatus: "pending",
     });
 
-    await Periods.decrement("copyrightQuota", {
-      by: 1,
-      where: { id: periodId },
-    });
-
     res.status(201).json({
       message: "Submission created successfully",
       userSubmission,

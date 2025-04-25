@@ -55,11 +55,6 @@ const createPatent = async (req, res, next) => {
       reviewStatus: "pending",
     });
 
-    await Periods.decrement("patentQuota", {
-      by: 1,
-      where: { id: periodId },
-    });
-
     return res.status(201).json({
       status: "success",
       userSubmission,

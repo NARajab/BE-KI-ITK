@@ -103,11 +103,6 @@ const createBrand = async (req, res, next) => {
       reviewStatus: "pending",
     });
 
-    await Periods.decrement("brandQuota", {
-      by: 1,
-      where: { id: periodId },
-    });
-
     return res.status(200).json({
       status: "success",
       message: "Brand berhasil dibuat",

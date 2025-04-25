@@ -8,6 +8,7 @@ const UserSubmission = require("./userSubmissionRouter");
 const Copyright = require("./copyrightRouter");
 const Patents = require("./patentRouter");
 const Brands = require("./brandRouter");
+const Faqs = require("./faqRouter");
 
 router.use("/api/v1/auth", Auth);
 router.use("/api/v1/user", User);
@@ -16,5 +17,6 @@ router.use("/api/v1/period", Period);
 router.use("/api/v1/copyright", Copyright);
 router.use("/api/v1/patent", Patents);
 router.use("/api/v1/brand", Brands);
+router.use("/api/v1/faq", Faqs);
 
 module.exports = router;

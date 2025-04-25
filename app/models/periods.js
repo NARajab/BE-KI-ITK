@@ -18,9 +18,13 @@ module.exports = (sequelize, DataTypes) => {
       endDate: DataTypes.DATE,
       year: DataTypes.STRING,
       patentQuota: DataTypes.INTEGER,
+      remainingPatentQuota: DataTypes.INTEGER,
       copyrightQuota: DataTypes.INTEGER,
+      remainingCopyrightQuota: DataTypes.INTEGER,
       industrialDesignQuota: DataTypes.INTEGER,
+      remainingIndustrialDesignQuota: DataTypes.INTEGER,
       brandQuota: DataTypes.INTEGER,
+      remainingBrandQuota: DataTypes.INTEGER,
     },
     {
       sequelize,

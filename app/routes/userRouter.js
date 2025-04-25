@@ -13,7 +13,7 @@ router.get(
   User.getAllUsers
 );
 
-router.get("/:id", authenticat, User.getUserById);
+router.get("/", authenticat, User.getUserById);
 
 router.patch("/:id", uploadSingle("image"), User.updateUser);
 
