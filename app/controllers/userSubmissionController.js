@@ -5,6 +5,7 @@ const {
   Patents,
   Brands,
   IndustrialDesigns,
+  AdditionalDatas,
   PersonalDatas,
   Users,
   SubmissionTypes,
@@ -69,6 +70,7 @@ const getAllUserSubmission = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
+              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
             },
             {
               model: IndustrialDesigns,
@@ -122,6 +124,7 @@ const getCopyrightById = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
+              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
             },
             {
               model: IndustrialDesigns,

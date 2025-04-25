@@ -10,13 +10,36 @@ router.post(
   checkRole(["superAdmin", "admin"]),
   Period.createPeriod
 );
+
+router.post(
+  "/group/:year",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.createGroup
+);
+
 router.get("/", Period.getAllPeriod);
+router.get("/group/:year", Period.getAllGroupByYear);
 
 router.patch(
   "/:id",
   authenticat,
   checkRole(["superAdmin", "admin"]),
   Period.updatePeriod
+);
+
+router.patch(
+  "/group/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.updateGroup
+);
+
+router.patch(
+  "/quota/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.updateQuota
 );
 
 router.delete(
