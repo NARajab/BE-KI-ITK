@@ -165,14 +165,6 @@ const login = async (req, res, next) => {
     if (user && bcrypt.compareSync(password, user.password)) {
       const payload = {
         id: user.id,
-        email: user.email,
-        fullname: user.fullname,
-        image: user.image,
-        phoneNumber: user.phoneNumber,
-        faculty: user.faculty,
-        studyProgram: user.studyProgram,
-        institution: user.institution,
-        phoneNumber: user.phoneNumber,
         role: user.role,
       };
 
