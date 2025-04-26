@@ -8,7 +8,6 @@ const createTerms = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Terms and conditions berhasil dibuat",
-      terms,
     });
   } catch (error) {
     next(new ApiError(error.message, 400));

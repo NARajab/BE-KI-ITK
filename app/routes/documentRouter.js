@@ -3,24 +3,42 @@ const router = require("express").Router();
 const Document = require("../controllers/documentController");
 const authenticat = require("../middlewares/authenticat");
 const { uploadSingle } = require("../middlewares/multer");
-const { route } = require("./faqRouter");
+const checkRole = require("../middlewares/checkRole");
 
 router.post("/", Document.createDocumentType);
 
 router.post(
   "/by-type/:type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
   uploadSingle("document"),
   Document.createDocByType
 );
 
-router.patch("/type", Document.updateDocumentType);
+router.patch(
+  "/type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.updateDocumentType
+);
 
-router.patch("/:id", uploadSingle("document"), Document.updateDoc);
+router.patch(
+  "/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  uploadSingle("document"),
+  Document.updateDoc
+);
 
 router.get("/", Document.getAllDoc);
 
 router.get("/by-type/:type", Document.getDocByType);
 
-router.delete("/:id", Document.deleteDoc);
+router.delete(
+  "/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.deleteDoc
+);
 
 module.exports = router;

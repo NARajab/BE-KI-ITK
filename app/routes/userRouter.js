@@ -17,13 +17,6 @@ router.get("/:id", User.getUserById);
 
 router.patch("/:id", uploadSingle("image"), User.updateUser);
 
-router.patch(
-  "/role/:id",
-  authenticate,
-  checkRole(["superAdmin"]),
-  User.updateRoleUser
-);
-
 router.delete(
   "/:id",
   authenticate,

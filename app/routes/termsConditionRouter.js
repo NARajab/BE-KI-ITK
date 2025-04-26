@@ -2,10 +2,21 @@ const router = require("express").Router();
 
 const Terms = require("../controllers/termsConditionController");
 const authenticat = require("../middlewares/authenticat");
+const checkRole = require("../middlewares/checkRole");
 
-router.post("/", Terms.createTerms);
+router.post(
+  "/",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Terms.createTerms
+);
 
-router.patch("/:id", Terms.updateTerms);
+router.patch(
+  "/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Terms.updateTerms
+);
 
 router.get("/", Terms.getAllTerms);
 

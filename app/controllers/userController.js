@@ -1,9 +1,38 @@
 const { Users } = require("../models");
+const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
 const { containsProfanity } = require("../../utils/profanityFilter");
+
+const createUser = async (req, res, next) => {
+  try {
+    const { fullname, email, faculty, studyProgram, institution, role } =
+      req.body;
+
+    const defaultPassword = process.env.PASSWORD_HASH_USER;
+
+    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+    const user = await Users.create({
+      fullname,
+      email,
+      pssword: hashedPassword,
+      faculty,
+      studyProgram,
+      institution,
+      role,
+    });
+
+    return res.status(201).json({
+      status: "success",
+      user,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
 
 const getAllUsers = async (req, res, next) => {
   try {
@@ -77,22 +106,6 @@ const updateUser = async (req, res, next) => {
   }
 };
 
-const updateRoleUser = async (req, res, next) => {
-  const { role } = req.body;
-  try {
-    const user = await Users.findByPk(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "Pengguna tidak ditemukan" });
-    }
-
-    await user.update(role);
-
-    return res.status(200).json({ message: "Pengguna berhasil diperbaharui" });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
 const deleteUser = async (req, res, next) => {
   try {
     const user = await Users.findByPk(req.params.id);
@@ -110,6 +123,5 @@ module.exports = {
   getAllUsers,
   getUserById,
   updateUser,
-  updateRoleUser,
   deleteUser,
 };
