@@ -49,7 +49,6 @@ const updateSubmissionScheme = async (req, res, next) => {
         ? "remainingIndustrialDesignQuota"
         : null;
 
-      // Jika fieldToDecrement ada, lakukan decrement
       if (fieldToDecrement) {
         await Periods.decrement(fieldToDecrement, {
           by: 1,
