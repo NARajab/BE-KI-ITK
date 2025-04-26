@@ -20,13 +20,18 @@ const storage = multer.diskStorage({
 
     // Tentukan folder tujuan berdasarkan jenis file
     if (ext === ".jpg" || ext === ".jpeg" || ext === ".png") {
-      cb(null, imagePath); // Menyimpan gambar di uploads/image/
-    } else if (ext === ".pdf" || ext === ".zip") {
-      cb(null, documentPath); // Menyimpan PDF dan ZIP di uploads/documents/
+      cb(null, imagePath);
+    } else if (
+      ext === ".pdf" ||
+      ext === ".zip" ||
+      ext === ".doc" ||
+      ext === ".docx"
+    ) {
+      cb(null, documentPath);
     } else {
       cb(
         new Error(
-          "Hanya file gambar (jpeg/jpg/png), PDF, dan ZIP yang diperbolehkan"
+          "Hanya file gambar (jpeg/jpg/png), PDF, Word (doc/docx), dan ZIP yang diperbolehkan"
         )
       );
     }
@@ -39,32 +44,33 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const allowedImageTypes = /jpeg|jpg|png/; // Gambar
-  const allowedPdfTypes = /pdf/; // PDF
-  const allowedZipTypes = /zip/; // ZIP
+  const allowedImageTypes = /jpeg|jpg|png/;
+  const allowedPdfTypes = /pdf/;
+  const allowedZipTypes = /zip/;
+  const allowedDocTypes = /doc|docx/;
 
   const ext = path.extname(file.originalname).toLowerCase();
   const mime = file.mimetype;
 
-  // Validasi file gambar (jpeg, jpg, png)
   if (allowedImageTypes.test(ext) && allowedImageTypes.test(mime)) {
     return cb(null, true);
   }
 
-  // Validasi file PDF
   if (allowedPdfTypes.test(ext) && allowedPdfTypes.test(mime)) {
     return cb(null, true);
   }
 
-  // Validasi file ZIP
   if (allowedZipTypes.test(ext) && allowedZipTypes.test(mime)) {
     return cb(null, true);
   }
 
-  // Jika tipe file tidak sesuai
+  if (allowedDocTypes.test(ext) && allowedDocTypes.test(mime)) {
+    return cb(null, true);
+  }
+
   return cb(
     new Error(
-      "Hanya file gambar (jpeg/jpg/png), PDF, dan ZIP yang diperbolehkan"
+      "Hanya file gambar (jpeg/jpg/png), PDF, Word (doc/docx), dan ZIP yang diperbolehkan"
     )
   );
 };

@@ -1,6 +1,7 @@
 const { Faqs } = require("../models");
 
 const ApiError = require("../../utils/apiError");
+const { Op } = require("sequelize");
 
 const createTypeFaq = async (req, res, next) => {
   try {
@@ -13,6 +14,29 @@ const createTypeFaq = async (req, res, next) => {
     });
   } catch (err) {
     next(new ApiError(err.message, 400));
+  }
+};
+
+const updateFaqType = async (req, res, next) => {
+  try {
+    const { oldType, newType } = req.body;
+
+    const affectedFaqs = await Faqs.findAll({
+      where: { type: oldType },
+    });
+
+    if (affectedFaqs.length === 0) {
+      return next(new ApiError("Tidak ada dokumen dengan tipe tersebut", 404));
+    }
+
+    await Faqs.update({ type: newType }, { where: { type: oldType } });
+
+    res.status(200).json({
+      status: "success",
+      message: `Semua Faqs dengan type '${oldType}' berhasil diubah menjadi '${newType}'`,
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
   }
 };
 
@@ -49,7 +73,13 @@ const createFaqByType = async (req, res, next) => {
 
 const getAllFaq = async (req, res, next) => {
   try {
-    const faqs = await Faqs.findAll();
+    const faqs = await Faqs.findAll({
+      where: {
+        question: {
+          [Op.ne]: null,
+        },
+      },
+    });
     res.status(200).json({
       status: "success",
       faqs,
@@ -59,4 +89,67 @@ const getAllFaq = async (req, res, next) => {
   }
 };
 
-module.exports = { createTypeFaq, createFaqByType };
+const getFaqByType = async (req, res, next) => {
+  try {
+    const faqs = await Faqs.findAll({
+      where: {
+        type: req.params.type,
+        question: {
+          [Op.ne]: null,
+        },
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      faqs,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateFaq = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { question, answer } = req.body;
+    const faq = await Faqs.findByPk(id);
+    if (!faq) {
+      return next(new ApiError("Faq tidak ditemukan", 404));
+    }
+    await faq.update({ question, answer });
+    res.status(200).json({
+      status: "success",
+      message: "Faq berhasil diperbarui",
+      faq,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const deleteFaq = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const faq = await Faqs.findByPk(id);
+    if (!faq) {
+      return next(new ApiError("Faq tidak ditemukan", 404));
+    }
+    await faq.destroy();
+    res.status(200).json({
+      status: "success",
+      message: "Faq berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+module.exports = {
+  createTypeFaq,
+  createFaqByType,
+  getAllFaq,
+  getFaqByType,
+  updateFaq,
+  updateFaqType,
+  deleteFaq,
+};
