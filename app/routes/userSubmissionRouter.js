@@ -9,7 +9,7 @@ router.patch(
   UserSubmission.updateSubmissionScheme
 );
 
-router.get("/get-by-id", UserSubmission.getCopyrightById);
+router.get("/get-by-id", UserSubmission.getUserSubmissionById);
 
 router.get("/get-by-submision-type", UserSubmission.getByIdSubmissionType);
 

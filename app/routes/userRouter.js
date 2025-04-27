@@ -6,6 +6,14 @@ const authenticate = require("../middlewares/authenticat");
 const checkRole = require("../middlewares/checkRole");
 const { uploadSingle } = require("../middlewares/multer");
 
+router.post(
+  "/",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  uploadSingle("image"),
+  User.createUser
+);
+
 router.get(
   "/",
   authenticate,

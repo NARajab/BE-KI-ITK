@@ -1,5 +1,5 @@
 const { Users } = require("../models");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
 
@@ -8,20 +8,32 @@ const { containsProfanity } = require("../../utils/profanityFilter");
 
 const createUser = async (req, res, next) => {
   try {
-    const { fullname, email, faculty, studyProgram, institution, role } =
-      req.body;
+    const {
+      fullname,
+      email,
+      faculty,
+      studyProgram,
+      institution,
+      phoneNumber,
+      role,
+    } = req.body;
 
     const defaultPassword = process.env.PASSWORD_HASH_USER;
 
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
+    const image = req.file || null;
+
     const user = await Users.create({
       fullname,
       email,
-      pssword: hashedPassword,
+      password: hashedPassword,
       faculty,
       studyProgram,
       institution,
+      image: image ? image.filename : null,
+      isVerified: true,
+      phoneNumber,
       role,
     });
 
@@ -36,9 +48,30 @@ const createUser = async (req, res, next) => {
 
 const getAllUsers = async (req, res, next) => {
   try {
-    const users = await Users.findAll();
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const users = await Users.findAll();
+      return res.status(200).json({
+        status: "success",
+        totalUsers: users.length,
+        users,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: users } = await Users.findAndCountAll({
+      limit,
+      offset,
+    });
+
     return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUsers: count,
       users,
     });
   } catch (err) {
@@ -120,6 +153,7 @@ const deleteUser = async (req, res, next) => {
 };
 
 module.exports = {
+  createUser,
   getAllUsers,
   getUserById,
   updateUser,

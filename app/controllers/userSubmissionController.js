@@ -69,55 +69,113 @@ const updateSubmissionScheme = async (req, res, next) => {
 
 const getAllUserSubmission = async (req, res, next) => {
   try {
-    const copyrights = await UserSubmissions.findAll({
-      include: [
-        {
-          model: Users,
-          as: "user",
-        },
-        {
-          model: Submissions,
-          as: "submission",
-          include: [
-            {
-              model: Copyrights,
-              as: "copyright",
-            },
-            {
-              model: Patents,
-              as: "patent",
-            },
-            {
-              model: Brands,
-              as: "brand",
-              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
-            },
-            {
-              model: IndustrialDesigns,
-              as: "industrialDesign",
-            },
-            {
-              model: SubmissionTypes,
-              as: "submissionType",
-            },
-            {
-              model: PersonalDatas,
-              as: "personalDatas",
-            },
-          ],
-        },
-      ],
-    });
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const userSubmissions = await UserSubmissions.findAll({
+        include: [
+          {
+            model: Users,
+            as: "user",
+          },
+          {
+            model: Submissions,
+            as: "submission",
+            include: [
+              {
+                model: Copyrights,
+                as: "copyright",
+              },
+              {
+                model: Patents,
+                as: "patent",
+              },
+              {
+                model: Brands,
+                as: "brand",
+                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+              },
+              {
+                model: IndustrialDesigns,
+                as: "industrialDesign",
+              },
+              {
+                model: SubmissionTypes,
+                as: "submissionType",
+              },
+              {
+                model: PersonalDatas,
+                as: "personalDatas",
+              },
+            ],
+          },
+        ],
+      });
+      return res.status(200).json({
+        status: "success",
+        userSubmissions,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: userSubmissions } =
+      await UserSubmissions.findAndCountAll({
+        limit,
+        offset,
+        include: [
+          {
+            model: Users,
+            as: "user",
+          },
+          {
+            model: Submissions,
+            as: "submission",
+            include: [
+              {
+                model: Copyrights,
+                as: "copyright",
+              },
+              {
+                model: Patents,
+                as: "patent",
+              },
+              {
+                model: Brands,
+                as: "brand",
+                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+              },
+              {
+                model: IndustrialDesigns,
+                as: "industrialDesign",
+              },
+              {
+                model: SubmissionTypes,
+                as: "submissionType",
+              },
+              {
+                model: PersonalDatas,
+                as: "personalDatas",
+              },
+            ],
+          },
+        ],
+      });
+
     return res.status(200).json({
       status: "success",
-      copyrights,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUserSubmissions: count,
+      userSubmissions,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
 };
 
-const getCopyrightById = async (req, res, next) => {
+const getUserSubmissionById = async (req, res, next) => {
   try {
     const { id } = req.body;
     const userSubmission = await UserSubmissions.findOne({
@@ -177,52 +235,115 @@ const getCopyrightById = async (req, res, next) => {
 const getByIdSubmissionType = async (req, res, next) => {
   try {
     const { submissionTypeId } = req.body;
-    const userSubmissions = await UserSubmissions.findAll({
-      include: [
-        {
-          model: Users,
-          as: "user",
-        },
-        {
-          model: Submissions,
-          as: "submission",
-          where: {
-            submissionTypeId: submissionTypeId,
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const userSubmissions = await UserSubmissions.findAll({
+        include: [
+          {
+            model: Users,
+            as: "user",
           },
-          include: [
-            {
-              model: Copyrights,
-              as: "copyright",
+          {
+            model: Submissions,
+            as: "submission",
+            where: {
+              submissionTypeId: submissionTypeId,
             },
-            {
-              model: Patents,
-              as: "patent",
+            include: [
+              {
+                model: Copyrights,
+                as: "copyright",
+              },
+              {
+                model: Patents,
+                as: "patent",
+              },
+              {
+                model: Brands,
+                as: "brand",
+              },
+              {
+                model: IndustrialDesigns,
+                as: "industrialDesign",
+              },
+              {
+                model: SubmissionTypes,
+                as: "submissionType",
+              },
+              {
+                model: PersonalDatas,
+                as: "personalDatas",
+              },
+            ],
+          },
+        ],
+      });
+      if (userSubmissions.length === 0)
+        return next(new ApiError("UserSubmissions tidak ditemukan", 404));
+
+      return res.status(200).json({
+        status: "success",
+        userSubmissions,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: userSubmissions } =
+      await UserSubmissions.findAndCountAll({
+        limit,
+        offset,
+        include: [
+          {
+            model: Users,
+            as: "user",
+          },
+          {
+            model: Submissions,
+            as: "submission",
+            where: {
+              submissionTypeId: submissionTypeId,
             },
-            {
-              model: Brands,
-              as: "brand",
-            },
-            {
-              model: IndustrialDesigns,
-              as: "industrialDesign",
-            },
-            {
-              model: SubmissionTypes,
-              as: "submissionType",
-            },
-            {
-              model: PersonalDatas,
-              as: "personalDatas",
-            },
-          ],
-        },
-      ],
-    });
+            include: [
+              {
+                model: Copyrights,
+                as: "copyright",
+              },
+              {
+                model: Patents,
+                as: "patent",
+              },
+              {
+                model: Brands,
+                as: "brand",
+              },
+              {
+                model: IndustrialDesigns,
+                as: "industrialDesign",
+              },
+              {
+                model: SubmissionTypes,
+                as: "submissionType",
+              },
+              {
+                model: PersonalDatas,
+                as: "personalDatas",
+              },
+            ],
+          },
+        ],
+      });
+
     if (userSubmissions.length === 0)
       return next(new ApiError("UserSubmissions tidak ditemukan", 404));
 
     return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUserSubmissions: count,
       userSubmissions,
     });
   } catch (err) {
@@ -233,6 +354,6 @@ const getByIdSubmissionType = async (req, res, next) => {
 module.exports = {
   updateSubmissionScheme,
   getAllUserSubmission,
-  getCopyrightById,
+  getUserSubmissionById,
   getByIdSubmissionType,
 };

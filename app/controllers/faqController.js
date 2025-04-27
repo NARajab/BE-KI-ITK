@@ -6,7 +6,7 @@ const { Op } = require("sequelize");
 const createTypeFaq = async (req, res, next) => {
   try {
     const { type } = req.body;
-    const faq = await Faqs.create({ type: type });
+    await Faqs.create({ type: type });
     res.status(200).json({
       status: "success",
       message: "Kategori Faq berhasil ditambahkan",
@@ -72,15 +72,40 @@ const createFaqByType = async (req, res, next) => {
 
 const getAllFaq = async (req, res, next) => {
   try {
-    const faqs = await Faqs.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const faqs = await Faqs.findAll({
+        where: {
+          question: {
+            [Op.ne]: null,
+          },
+        },
+      });
+      res.status(200).json({
+        status: "success",
+        faqs,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: faqs } = await Faqs.findAndCountAll({
+      limit,
+      offset,
       where: {
         question: {
           [Op.ne]: null,
         },
       },
     });
+
     res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalFaqs: count,
       faqs,
     });
   } catch (err) {
@@ -90,7 +115,29 @@ const getAllFaq = async (req, res, next) => {
 
 const getFaqByType = async (req, res, next) => {
   try {
-    const faqs = await Faqs.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const faqs = await Faqs.findAll({
+        where: {
+          type: req.params.type,
+          question: {
+            [Op.ne]: null,
+          },
+        },
+      });
+      res.status(200).json({
+        status: "success",
+        faqs,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: faqs } = await Faqs.findAndCountAll({
+      limit,
+      offset,
       where: {
         type: req.params.type,
         question: {
@@ -98,8 +145,12 @@ const getFaqByType = async (req, res, next) => {
         },
       },
     });
+
     res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalFaqs: count,
       faqs,
     });
   } catch (err) {

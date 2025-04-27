@@ -8,7 +8,7 @@ const ApiError = require("../../utils/apiError");
 const createDocumentType = async (req, res, next) => {
   try {
     const { type } = req.body;
-    const document = await Documents.create({
+    await Documents.create({
       type,
     });
     res.status(201).json({
@@ -122,15 +122,39 @@ const updateDoc = async (req, res, next) => {
 
 const getAllDoc = async (req, res, next) => {
   try {
-    const docs = await Documents.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const docs = await Documents.findAll({
+        where: {
+          title: {
+            [Op.ne]: null,
+          },
+        },
+      });
+      return res.status(200).json({
+        status: "success",
+        totalDocs: docs.length,
+        docs,
+      });
+    }
+    const offset = (page - 1) * limit;
+
+    const { count, rows: docs } = await Documents.findAndCountAll({
+      limit,
+      offset,
       where: {
         title: {
           [Op.ne]: null,
         },
       },
     });
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalDocs: count,
       docs,
     });
   } catch (err) {
@@ -140,7 +164,28 @@ const getAllDoc = async (req, res, next) => {
 
 const getDocByType = async (req, res, next) => {
   try {
-    const docs = await Documents.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const docs = await Documents.findAll({
+        where: {
+          type: req.params.type,
+          title: {
+            [Op.ne]: null,
+          },
+        },
+      });
+      res.status(200).json({
+        status: "success",
+        docs,
+      });
+    }
+    const offset = (page - 1) * limit;
+
+    const { count, rows: docs } = await Documents.findAndCountAll({
+      limit,
+      offset,
       where: {
         type: req.params.type,
         title: {
@@ -150,6 +195,9 @@ const getDocByType = async (req, res, next) => {
     });
     res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalDocs: count,
       docs,
     });
   } catch (err) {

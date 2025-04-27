@@ -34,9 +34,29 @@ const updateTerms = async (req, res, next) => {
 
 const getAllTerms = async (req, res, next) => {
   try {
-    const terms = await TermsConditions.findAll();
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const terms = await TermsConditions.findAll();
+      res.status(200).json({
+        status: "success",
+        terms,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: terms } = await TermsConditions.findAndCountAll({
+      limit,
+      offset,
+    });
+
     res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalTerms: count,
       terms,
     });
   } catch (err) {
