@@ -3,7 +3,10 @@ const {
   Submissions,
   Periods,
   Copyrights,
+  TypeCreations,
+  SubTypeCreations,
   Patents,
+  PatentTypes,
   Brands,
   IndustrialDesigns,
   AdditionalDatas,
@@ -86,10 +89,23 @@ const getAllUserSubmission = async (req, res, next) => {
               {
                 model: Copyrights,
                 as: "copyright",
+                include: [
+                  { model: TypeCreations, as: "typeCreation" },
+                  {
+                    model: SubTypeCreations,
+                    as: "subTypeCreation",
+                  },
+                ],
               },
               {
                 model: Patents,
                 as: "patent",
+                include: [
+                  {
+                    model: PatentTypes,
+                    as: "patentType",
+                  },
+                ],
               },
               {
                 model: Brands,
@@ -136,10 +152,26 @@ const getAllUserSubmission = async (req, res, next) => {
               {
                 model: Copyrights,
                 as: "copyright",
+                include: [
+                  {
+                    model: TypeCreations,
+                    as: "typeCreation",
+                  },
+                  {
+                    model: SubTypeCreations,
+                    as: "subTypeCreation",
+                  },
+                ],
               },
               {
                 model: Patents,
                 as: "patent",
+                include: [
+                  {
+                    model: PatentTypes,
+                    as: "patentType",
+                  },
+                ],
               },
               {
                 model: Brands,
@@ -194,10 +226,26 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: Copyrights,
               as: "copyright",
+              include: [
+                {
+                  model: TypeCreations,
+                  as: "typeCreation",
+                },
+                {
+                  model: SubTypeCreations,
+                  as: "subTypeCreation",
+                },
+              ],
             },
             {
               model: Patents,
               as: "patent",
+              include: [
+                {
+                  model: PatentTypes,
+                  as: "patentType",
+                },
+              ],
             },
             {
               model: Brands,
@@ -255,10 +303,26 @@ const getByIdSubmissionType = async (req, res, next) => {
               {
                 model: Copyrights,
                 as: "copyright",
+                include: [
+                  {
+                    model: TypeCreations,
+                    as: "typeCreation",
+                  },
+                  {
+                    model: SubTypeCreations,
+                    as: "subTypeCreation",
+                  },
+                ],
               },
               {
                 model: Patents,
                 as: "patent",
+                include: [
+                  {
+                    model: PatentTypes,
+                    as: "patentType",
+                  },
+                ],
               },
               {
                 model: Brands,
@@ -310,10 +374,26 @@ const getByIdSubmissionType = async (req, res, next) => {
               {
                 model: Copyrights,
                 as: "copyright",
+                include: [
+                  {
+                    model: TypeCreations,
+                    as: "typeCreation",
+                  },
+                  {
+                    model: SubTypeCreations,
+                    as: "subTypeCreation",
+                  },
+                ],
               },
               {
                 model: Patents,
                 as: "patent",
+                include: [
+                  {
+                    model: PatentTypes,
+                    as: "patentType",
+                  },
+                ],
               },
               {
                 model: Brands,

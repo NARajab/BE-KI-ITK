@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
   Brands.init(
     {
       applicationType: DataTypes.STRING,
-      brandType: DataTypes.STRING,
+      brandTypeId: DataTypes.INTEGER,
       referenceName: DataTypes.STRING,
       elementColor: DataTypes.STRING,
       translate: DataTypes.STRING,

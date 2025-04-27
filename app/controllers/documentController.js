@@ -155,6 +155,7 @@ const getAllDoc = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalDocs: count,
+      limit: limit,
       docs,
     });
   } catch (err) {
@@ -198,6 +199,7 @@ const getDocByType = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalDocs: count,
+      limit: limit,
       docs,
     });
   } catch (err) {

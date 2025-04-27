@@ -56,6 +56,7 @@ const getAllUsers = async (req, res, next) => {
       return res.status(200).json({
         status: "success",
         totalUsers: users.length,
+        limit: users.length,
         users,
       });
     }
@@ -72,6 +73,7 @@ const getAllUsers = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalUsers: count,
+      limit: limit,
       users,
     });
   } catch (err) {

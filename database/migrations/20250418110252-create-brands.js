@@ -1,70 +1,70 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Brands', {
+    await queryInterface.createTable("Brands", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       applicationType: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
-      brandType: {
-        type: Sequelize.STRING
+      brandTypeId: {
+        type: Sequelize.INTEGER,
       },
       referenceName: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       elementColor: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       translate: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       pronunciation: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       disclaimer: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       description: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       documentType: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       information: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       labelBrand: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       fileUploade: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       signature: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       InformationLetter: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       letterStatment: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Brands');
-  }
+    await queryInterface.dropTable("Brands");
+  },
 };

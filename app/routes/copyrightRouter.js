@@ -4,6 +4,10 @@ const Copyright = require("../controllers/copyrightController");
 const authenticate = require("../middlewares/authenticat");
 const { uploadFields } = require("../middlewares/multer");
 
+router.post("/type", Copyright.createTypeCreation);
+
+router.post("/sub-type/:id", Copyright.createSubTypeCreation);
+
 router.post(
   "/",
   authenticate,
@@ -43,5 +47,17 @@ router.patch(
   },
   Copyright.updateCopyright
 );
+
+router.patch("/type/:id", Copyright.updateTypeCreation);
+
+router.patch("/sub-type/:id", Copyright.updateSubTypeCreation);
+
+router.get("/type", Copyright.getAllTypeCreation);
+
+router.get("/sub-type/:id", Copyright.getAllSubTypeCreationByTypeCreation);
+
+router.delete("/type/:id", Copyright.deleteTypeCreation);
+
+router.delete("/sub-type/:id", Copyright.deleteSubTypeCreation);
 
 module.exports = router;

@@ -3,12 +3,27 @@ const {
   Submissions,
   Patents,
   PersonalDatas,
-  Periods,
+  PatentTypes,
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
+
+const createPatentType = async (req, res, next) => {
+  try {
+    const { title } = req.body;
+
+    await PatentTypes.create({ title });
+
+    return res.status(201).json({
+      status: "success",
+      message: "Kategori paten berhasil dibuat",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
 
 const createPatent = async (req, res, next) => {
   try {
@@ -64,9 +79,26 @@ const createPatent = async (req, res, next) => {
   }
 };
 
+const updatePatentType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { title } = req.body;
+
+    await PatentTypes.update({ title }, { where: { id } });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori paten berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updatePatent = async (req, res, next) => {
   try {
-    const { inventionTitle, patentType, numberClaims } = req.body;
+    const { inventionTitle, patentTypeId, numberClaims } = req.body;
 
     const { id } = req.params;
 
@@ -113,7 +145,7 @@ const updatePatent = async (req, res, next) => {
 
     await patent.update({
       inventionTitle,
-      patentType,
+      patentTypeId,
       numberClaims,
       entirePatentDocument:
         entirePatentDocument?.filename || patent.entirePatentDocument,
@@ -140,7 +172,39 @@ const updatePatent = async (req, res, next) => {
   }
 };
 
+const getAllPatentTypes = async (req, res, next) => {
+  try {
+    const patentTypes = await PatentTypes.findAll();
+
+    return res.status(200).json({
+      status: "success",
+      patentTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const deletePatentType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await PatentTypes.destroy({ where: { id } });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori paten berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createPatent,
+  createPatentType,
   updatePatent,
+  updatePatentType,
+  getAllPatentTypes,
+  deletePatentType,
 };

@@ -3,19 +3,144 @@ const {
   Submissions,
   Copyrights,
   PersonalDatas,
-  Periods,
+  TypeCreations,
+  SubTypeCreations,
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
 
+const createTypeCreation = async (req, res, next) => {
+  try {
+    const { title } = req.body;
+    await TypeCreations.create({ title: title });
+    res.status(200).json({
+      status: "success",
+      message: "Kategori Hak Cipta berhasil ditambahkan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const createSubTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { title } = req.body;
+    await SubTypeCreations.create({ typeCreationId: id, title: title });
+    res.status(200).json({
+      status: "success",
+      message: "Sub Kategori Hak Cipta berhasil ditambahkan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllTypeCreation = async (req, res, next) => {
+  try {
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const typeCreation = await TypeCreations.findAll();
+      res.status(200).json({
+        status: "success",
+        typeCreation,
+      });
+    }
+
+    const typeCreation = await TypeCreations.findAndCountAll({
+      limit: limit,
+      offset: (page - 1) * limit,
+    });
+
+    res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(typeCreation.count / limit),
+      limit: limit,
+      typeCreation,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllSubTypeCreationByTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const subTypeCreation = await SubTypeCreations.findAll({
+        where: { typeCreationId: id },
+      });
+
+      res.status(200).json({
+        status: "success",
+        subTypeCreation,
+      });
+    }
+
+    const subTypeCreation = await SubTypeCreations.findAndCountAll({
+      where: { typeCreationId: id },
+      limit: limit,
+      offset: (page - 1) * limit,
+    });
+
+    res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(subTypeCreation.count / limit),
+      limit: limit,
+      subTypeCreation,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { title } = req.body;
+    await TypeCreations.update({ title: title }, { where: { id: id } });
+    res.status(200).json({
+      status: "success",
+      message: "Kategori Hak Cipta berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateSubTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { title } = req.body;
+    await SubTypeCreations.update({ title: title }, { where: { id: id } });
+    res.status(200).json({
+      status: "success",
+      message: "Sub Kategori Hak Cipta berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const createCopyright = async (req, res, next) => {
   try {
     const {
       titleInvention,
-      typeCreation,
-      subTypeCreation,
+      typeCreationId,
+      subTypeCreationId,
       countryFirstAnnounced,
       cityFirstAnnounced,
       timeFirstAnnounced,
@@ -37,8 +162,8 @@ const createCopyright = async (req, res, next) => {
 
     const copyright = await Copyrights.create({
       titleInvention,
-      typeCreation,
-      subTypeCreation,
+      typeCreationId,
+      subTypeCreationId,
       countryFirstAnnounced,
       cityFirstAnnounced,
       timeFirstAnnounced,
@@ -198,7 +323,61 @@ const updateCopyright = async (req, res, next) => {
   }
 };
 
+const deleteTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const typeCreation = await TypeCreations.findByPk(id);
+    if (!typeCreation) {
+      return res.status(404).json({ message: "Type Creation tidak ditemukan" });
+    }
+
+    await SubTypeCreations.destroy({
+      where: { typeCreationId: id },
+    });
+
+    await typeCreation.destroy();
+
+    res.status(200).json({
+      status: "success",
+      message: "Type Creation berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const deleteSubTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const subTypeCreation = await SubTypeCreations.findByPk(id);
+    if (!subTypeCreation) {
+      return res
+        .status(404)
+        .json({ message: "Sub Type Creation tidak ditemukan" });
+    }
+
+    await subTypeCreation.destroy();
+
+    res.status(200).json({
+      status: "success",
+      message: "Sub Type Creation berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
+  createTypeCreation,
+  createSubTypeCreation,
   createCopyright,
   updateCopyright,
+  updateTypeCreation,
+  updateSubTypeCreation,
+  getAllTypeCreation,
+  getAllSubTypeCreationByTypeCreation,
+  deleteTypeCreation,
+  deleteSubTypeCreation,
 };

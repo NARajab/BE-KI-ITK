@@ -106,6 +106,7 @@ const getAllFaq = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalFaqs: count,
+      limit: limit,
       faqs,
     });
   } catch (err) {
@@ -151,6 +152,7 @@ const getFaqByType = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalFaqs: count,
+      limit: limit,
       faqs,
     });
   } catch (err) {

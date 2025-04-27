@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "patentId",
         as: "submission",
       });
+      Patents.belongsTo(models.PatentTypes, {
+        foreignKey: "patentTypeId",
+        as: "patentType",
+      });
     }
   }
   Patents.init(
@@ -19,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       draftPatentApplicationFile: DataTypes.STRING,
       entirePatentDocument: DataTypes.STRING,
       inventionTitle: DataTypes.STRING,
-      patentType: DataTypes.STRING,
+      patentTypeId: DataTypes.INTEGER,
       numberClaims: DataTypes.STRING,
       description: DataTypes.STRING,
       abstract: DataTypes.STRING,

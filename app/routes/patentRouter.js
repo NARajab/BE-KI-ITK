@@ -22,6 +22,8 @@ router.post(
   Patent.createPatent
 );
 
+router.post("/type", Patent.createPatentType);
+
 router.patch(
   "/:id",
   authenticate,
@@ -45,5 +47,11 @@ router.patch(
   },
   Patent.updatePatent
 );
+
+router.patch("/type/:id", Patent.updatePatentType);
+
+router.get("/type", Patent.getAllPatentTypes);
+
+router.delete("/type/:id", Patent.deletePatentType);
 
 module.exports = router;

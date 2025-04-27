@@ -1,61 +1,61 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Patents', {
+    await queryInterface.createTable("Patents", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       draftPatentApplicationFile: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       entirePatentDocument: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       inventionTitle: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
-      patentType: {
-        type: Sequelize.STRING
+      patentTypeId: {
+        type: Sequelize.INTEGER,
       },
       numberClaims: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       description: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       abstract: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       claim: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       inventionImage: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       statementInventionOwnership: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       letterTransferRightsInvention: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       letterPassedReviewStage: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Patents');
-  }
+    await queryInterface.dropTable("Patents");
+  },
 };

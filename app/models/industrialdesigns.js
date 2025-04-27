@@ -18,8 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       titleDesign: DataTypes.STRING,
       type: DataTypes.STRING,
-      typeDesign: DataTypes.STRING,
-      subtypeDesign: DataTypes.STRING,
+      typeDesignId: DataTypes.INTEGER,
+      subtypeDesignId: DataTypes.INTEGER,
       claim: DataTypes.STRING,
       looksPerspective: DataTypes.STRING,
       frontView: DataTypes.STRING,

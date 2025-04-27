@@ -57,6 +57,7 @@ const getAllTerms = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalTerms: count,
+      limit: limit,
       terms,
     });
   } catch (err) {

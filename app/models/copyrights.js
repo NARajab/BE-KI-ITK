@@ -12,13 +12,22 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "copyrightId",
         as: "submission",
       });
+      Copyrights.belongsTo(models.TypeCreations, {
+        foreignKey: "typeCreationId",
+        as: "typeCreation",
+      });
+
+      Copyrights.belongsTo(models.SubTypeCreations, {
+        foreignKey: "subTypeCreationId",
+        as: "subTypeCreation",
+      });
     }
   }
   Copyrights.init(
     {
       titleInvention: DataTypes.STRING,
-      typeCreation: DataTypes.STRING,
-      subTypeCreation: DataTypes.STRING,
+      typeCreationId: DataTypes.INTEGER,
+      subTypeCreationId: DataTypes.INTEGER,
       countryFirstAnnounced: DataTypes.STRING,
       cityFirstAnnounced: DataTypes.STRING,
       timeFirstAnnounced: DataTypes.STRING,
