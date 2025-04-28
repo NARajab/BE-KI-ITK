@@ -264,7 +264,29 @@ const getAllGroupByYear = async (req, res, next) => {
 
 const getAllPeriod = async (req, res, next) => {
   try {
-    const periods = await Periods.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const periods = await Periods.findAll({
+        where: {
+          group: {
+            [Op.ne]: null,
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: "success",
+        periods,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: periods } = await Periods.findAndCountAll({
+      limit,
+      offset,
       where: {
         group: {
           [Op.ne]: null,
@@ -272,8 +294,12 @@ const getAllPeriod = async (req, res, next) => {
       },
     });
 
-    return res.status(200).json({
+    res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalPeriods: count,
+      limit: limit,
       periods,
     });
   } catch (err) {
@@ -358,19 +384,6 @@ const deletePeriod = async (req, res, next) => {
   }
 };
 
-const getSubmissionType = async (req, res, next) => {
-  try {
-    const submissionsType = await SubmissionTypes.findAll();
-
-    res.status(200).json({
-      status: "success",
-      submissionsType,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
 module.exports = {
   createPeriod,
   createGroup,
@@ -382,5 +395,4 @@ module.exports = {
   getByYear,
   getByGroup,
   deletePeriod,
-  getSubmissionType,
 };
