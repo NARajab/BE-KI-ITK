@@ -82,4 +82,27 @@ const getTermsById = async (req, res, next) => {
   }
 };
 
-module.exports = { createTerms, updateTerms, getAllTerms, getTermsById };
+const deleteTerms = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const terms = await TermsConditions.findByPk(id);
+    if (!terms) {
+      return next(new ApiError("Terms and conditions tidak ditemukan", 404));
+    }
+    await terms.destroy();
+    res.status(200).json({
+      status: "success",
+      message: "Terms and conditions berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+module.exports = {
+  createTerms,
+  updateTerms,
+  getAllTerms,
+  getTermsById,
+  deleteTerms,
+};

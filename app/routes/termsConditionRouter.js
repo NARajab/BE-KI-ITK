@@ -22,4 +22,11 @@ router.get("/", Terms.getAllTerms);
 
 router.get("/:id", Terms.getTermsById);
 
+router.delete(
+  "/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Terms.deleteTerms
+);
+
 module.exports = router;
