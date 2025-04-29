@@ -19,7 +19,7 @@ const createTypeFaq = async (req, res, next) => {
 const updateFaqType = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { newType } = req.body;
+    const { type } = req.body;
 
     const affectedFaqs = await Faqs.findOne({
       where: { id },
@@ -29,11 +29,11 @@ const updateFaqType = async (req, res, next) => {
       return next(new ApiError("Tidak ada dokumen dengan id tersebut", 404));
     }
 
-    await Faqs.update({ type: newType }, { where: { id } });
+    await Faqs.update({ type }, { where: { id } });
 
     res.status(200).json({
       status: "success",
-      message: `Faqs berhasil diperbaharui menjadi ${newType}`,
+      message: `Faqs berhasil diperbaharui`,
     });
   } catch (error) {
     next(new ApiError(error.message, 500));
