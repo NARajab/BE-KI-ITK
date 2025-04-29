@@ -168,40 +168,66 @@ const getAllDocType = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
+    const whereCondition = {
+      title: {
+        [Op.eq]: null,
+      },
+    };
+
     if (limit <= 0) {
       const docs = await Documents.findAll({
         attributes: ["id", "type", "createdAt", "updatedAt"],
-        where: {
-          title: {
-            [Op.eq]: null,
-          },
-        },
+        where: whereCondition,
       });
+
+      // Hitung total penggunaan untuk setiap type
+      const enrichedDocs = await Promise.all(
+        docs.map(async (doc) => {
+          const count = await Documents.count({
+            where: { type: doc.type },
+          });
+          return {
+            ...doc.toJSON(),
+            totalTypeDigunakan: count - 1, // dikurangi 1 karena termasuk dirinya sendiri
+          };
+        })
+      );
+
       return res.status(200).json({
         status: "success",
         totalDocs: docs.length,
-        docs,
+        docs: enrichedDocs,
       });
     }
+
     const offset = (page - 1) * limit;
 
     const { count, rows: docs } = await Documents.findAndCountAll({
       limit,
       offset,
       attributes: ["id", "type", "createdAt", "updatedAt"],
-      where: {
-        title: {
-          [Op.eq]: null,
-        },
-      },
+      where: whereCondition,
     });
+
+    const enrichedDocs = await Promise.all(
+      docs.map(async (doc) => {
+        const count = await Documents.count({
+          where: { type: doc.type },
+        });
+        return {
+          ...doc.toJSON(),
+          totalTypeDigunakan: count - 1,
+        };
+      })
+    );
+
     return res.status(200).json({
       status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalDocs: count,
       limit: limit,
-      docs,
+      docs: enrichedDocs,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
