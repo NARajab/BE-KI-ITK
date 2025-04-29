@@ -43,4 +43,11 @@ router.delete(
   Document.deleteDoc
 );
 
+router.delete(
+  "/type/:type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.deleteTypeDoc
+);
+
 module.exports = router;

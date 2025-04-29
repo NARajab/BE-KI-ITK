@@ -52,6 +52,13 @@ router.delete(
   Period.deletePeriod
 );
 
+router.delete(
+  "/year/:year",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.deleteYearPeriod
+);
+
 router.get("/filter/year", Period.getByYear);
 router.get("/filter/group", Period.getByGroup);
 

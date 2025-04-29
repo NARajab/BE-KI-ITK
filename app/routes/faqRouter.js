@@ -45,4 +45,11 @@ router.delete(
   Faq.deleteFaq
 );
 
+router.delete(
+  "/type/:type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Faq.deleteTypeFaq
+);
+
 module.exports = router;

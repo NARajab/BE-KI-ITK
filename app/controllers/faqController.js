@@ -253,6 +253,27 @@ const deleteFaq = async (req, res, next) => {
   }
 };
 
+const deleteTypeFaq = async (req, res, next) => {
+  try {
+    const { type } = req.params;
+
+    const faqs = await Faqs.findAll({ where: { type } });
+
+    if (faqs.length === 0) {
+      return next(new ApiError("Tidak ada Faq dengan type tersebut", 404));
+    }
+
+    await Faqs.destroy({ where: { type } });
+
+    res.status(200).json({
+      status: "success",
+      message: `Semua Faq dengan type '${type}' berhasil dihapus`,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createTypeFaq,
   createFaqByType,
@@ -262,4 +283,5 @@ module.exports = {
   updateFaq,
   updateFaqType,
   deleteFaq,
+  deleteTypeFaq,
 };

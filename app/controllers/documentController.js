@@ -284,6 +284,39 @@ const deleteDoc = async (req, res, next) => {
   }
 };
 
+const deleteTypeDoc = async (req, res, next) => {
+  try {
+    const { type } = req.params;
+
+    const docs = await Documents.findAll({ where: { type } });
+
+    if (docs.length === 0) {
+      return next(new ApiError("Tidak ada document dengan type tersebut", 404));
+    }
+
+    if (docs.document) {
+      const filePath = path.join(
+        __dirname,
+        "../../uploads/documents",
+        docs.document
+      );
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await Documents.destroy({ where: { type } });
+
+    res.status(200).json({
+      status: "success",
+      message: `Semua document dengan type '${type}' berhasil dihapus`,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createDocumentType,
   createDocByType,
@@ -293,4 +326,5 @@ module.exports = {
   getAllDocType,
   getDocByType,
   deleteDoc,
+  deleteTypeDoc,
 };

@@ -436,6 +436,29 @@ const deletePeriod = async (req, res, next) => {
   }
 };
 
+const deleteYearPeriod = async (req, res, next) => {
+  try {
+    const { year } = req.params;
+
+    const period = await Periods.findAll({ where: { year } });
+
+    if (!period) {
+      return next(
+        new ApiError("Periode dengan tahun tersebut tidak ditemukan.", 404)
+      );
+    }
+
+    await Periods.destroy({ where: { year } });
+
+    res.status(200).json({
+      status: "success",
+      message: "Periode berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createPeriod,
   createGroup,
@@ -448,4 +471,5 @@ module.exports = {
   getByYear,
   getByGroup,
   deletePeriod,
+  deleteYearPeriod,
 };
