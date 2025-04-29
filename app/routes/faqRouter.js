@@ -20,6 +20,8 @@ router.post(
 
 router.get("/", Faq.getAllFaq);
 
+router.get("/by-type", Faq.getAllTypeFaq);
+
 router.get("/by-type/:type", Faq.getFaqByType);
 
 router.patch(

@@ -163,6 +163,51 @@ const getAllDoc = async (req, res, next) => {
   }
 };
 
+const getAllDocType = async (req, res, next) => {
+  try {
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const docs = await Documents.findAll({
+        attributes: ["id", "type", "createdAt", "updatedAt"],
+        where: {
+          title: {
+            [Op.eq]: null,
+          },
+        },
+      });
+      return res.status(200).json({
+        status: "success",
+        totalDocs: docs.length,
+        docs,
+      });
+    }
+    const offset = (page - 1) * limit;
+
+    const { count, rows: docs } = await Documents.findAndCountAll({
+      limit,
+      offset,
+      attributes: ["id", "type", "createdAt", "updatedAt"],
+      where: {
+        title: {
+          [Op.eq]: null,
+        },
+      },
+    });
+    return res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalDocs: count,
+      limit: limit,
+      docs,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getDocByType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
@@ -245,6 +290,7 @@ module.exports = {
   updateDocumentType,
   updateDoc,
   getAllDoc,
+  getAllDocType,
   getDocByType,
   deleteDoc,
 };

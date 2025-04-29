@@ -19,6 +19,9 @@ router.post(
 );
 
 router.get("/", Period.getAllPeriod);
+
+router.get("/by-year", Period.getAllYearPeriod);
+
 router.get("/group/:year", Period.getAllGroupByYear);
 
 router.patch(

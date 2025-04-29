@@ -114,6 +114,52 @@ const getAllFaq = async (req, res, next) => {
   }
 };
 
+const getAllTypeFaq = async (req, res, next) => {
+  try {
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const faqs = await Faqs.findAll({
+        attributes: ["id", "type", "createdAt", "updatedAt"],
+        where: {
+          question: {
+            [Op.eq]: null,
+          },
+        },
+      });
+      res.status(200).json({
+        status: "success",
+        faqs,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: faqs } = await Faqs.findAndCountAll({
+      limit,
+      offset,
+      attributes: ["id", "type", "createdAt", "updatedAt"],
+      where: {
+        question: {
+          [Op.eq]: null,
+        },
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalFaqs: count,
+      limit: limit,
+      faqs,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getFaqByType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
@@ -200,6 +246,7 @@ module.exports = {
   createTypeFaq,
   createFaqByType,
   getAllFaq,
+  getAllTypeFaq,
   getFaqByType,
   updateFaq,
   updateFaqType,

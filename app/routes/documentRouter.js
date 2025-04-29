@@ -32,6 +32,8 @@ router.patch(
 
 router.get("/", Document.getAllDoc);
 
+router.get("/by-type", Document.getAllDocType);
+
 router.get("/by-type/:type", Document.getDocByType);
 
 router.delete(

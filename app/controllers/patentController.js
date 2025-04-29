@@ -1,5 +1,6 @@
 const {
   UserSubmissions,
+  Users,
   Submissions,
   Patents,
   PersonalDatas,
@@ -9,6 +10,8 @@ const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
+const SendEmail = require("../../emails/services/sendMail");
+const patentSubmissionMail = require("../../emails/templates/patentSubmissionMail");
 
 const createPatentType = async (req, res, next) => {
   try {
@@ -68,6 +71,18 @@ const createPatent = async (req, res, next) => {
       submissionId: submission.id,
       centralStatus: "pending",
       reviewStatus: "pending",
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "Pengajuan Paten Berhasil Dibuat",
+      html: patentSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+      }),
     });
 
     return res.status(201).json({

@@ -307,6 +307,53 @@ const getAllPeriod = async (req, res, next) => {
   }
 };
 
+const getAllYearPeriod = async (req, res, next) => {
+  try {
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const periods = await Periods.findAll({
+        attributes: ["id", "year", "createdAt", "updatedAt"],
+        where: {
+          group: {
+            [Op.eq]: null,
+          },
+        },
+      });
+
+      return res.status(200).json({
+        status: "success",
+        periods,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: periods } = await Periods.findAndCountAll({
+      limit,
+      offset,
+      attributes: ["id", "year", "createdAt", "updatedAt"],
+      where: {
+        group: {
+          [Op.eq]: null,
+        },
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalPeriods: count,
+      limit: limit,
+      periods,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getByYear = async (req, res, next) => {
   try {
     const { year } = req.query;
@@ -391,6 +438,7 @@ module.exports = {
   updateGroup,
   updateQuota,
   getAllPeriod,
+  getAllYearPeriod,
   getAllGroupByYear,
   getByYear,
   getByGroup,

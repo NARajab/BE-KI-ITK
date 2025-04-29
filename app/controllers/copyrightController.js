@@ -1,5 +1,6 @@
 const {
   UserSubmissions,
+  Users,
   Submissions,
   Copyrights,
   PersonalDatas,
@@ -10,6 +11,8 @@ const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
+const SendEmail = require("../../emails/services/sendMail");
+const copyrightSubmissionMail = require("../../emails/templates/copyrightSubmissionMail");
 
 const createTypeCreation = async (req, res, next) => {
   try {
@@ -208,6 +211,19 @@ const createCopyright = async (req, res, next) => {
       submissionId: submission.id,
       centralStatus: "pending",
       reviewStatus: "pending",
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "New Copyright Submission",
+      html: copyrightSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        titleInvention,
+      }),
     });
 
     res.status(201).json({
