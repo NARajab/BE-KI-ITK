@@ -4,12 +4,14 @@ const {
   Brands,
   PersonalDatas,
   AdditionalDatas,
-  Periods,
+  Users,
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
 
 const ApiError = require("../../utils/apiError");
+const SendMail = require("../../emails/services/sendMail");
+const brandSubmissionMail = require("../../emails/templates/brandSubmissionMail");
 
 const createBrand = async (req, res, next) => {
   try {
@@ -101,6 +103,18 @@ const createBrand = async (req, res, next) => {
       submissionId: submission.id,
       centralStatus: "pending",
       reviewStatus: "pending",
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendMail({
+      to: adminEmails,
+      subject: "Pengajuan Brand",
+      html: brandSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+      }),
     });
 
     return res.status(200).json({

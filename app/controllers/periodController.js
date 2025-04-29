@@ -246,6 +246,7 @@ const updateQuota = async (req, res, next) => {
 const getAllGroupByYear = async (req, res, next) => {
   try {
     const groups = await Periods.findAll({
+      order: [["id", "ASC"]],
       where: {
         year: req.params.year,
         group: {
@@ -269,6 +270,7 @@ const getAllPeriod = async (req, res, next) => {
 
     if (limit <= 0) {
       const periods = await Periods.findAll({
+        order: [["id", "ASC"]],
         where: {
           group: {
             [Op.ne]: null,
@@ -287,6 +289,7 @@ const getAllPeriod = async (req, res, next) => {
     const { count, rows: periods } = await Periods.findAndCountAll({
       limit,
       offset,
+      order: [["id", "ASC"]],
       where: {
         group: {
           [Op.ne]: null,
@@ -315,6 +318,7 @@ const getAllYearPeriod = async (req, res, next) => {
     if (limit <= 0) {
       const periods = await Periods.findAll({
         attributes: ["id", "year", "createdAt", "updatedAt"],
+        order: [["id", "ASC"]],
         where: {
           group: {
             [Op.eq]: null,
@@ -334,6 +338,7 @@ const getAllYearPeriod = async (req, res, next) => {
       limit,
       offset,
       attributes: ["id", "year", "createdAt", "updatedAt"],
+      order: [["id", "ASC"]],
       where: {
         group: {
           [Op.eq]: null,

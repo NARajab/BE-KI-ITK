@@ -50,6 +50,7 @@ const getAllTerms = async (req, res, next) => {
     const { count, rows: terms } = await TermsConditions.findAndCountAll({
       limit,
       offset,
+      order: [["id", "ASC"]],
     });
 
     res.status(200).json({

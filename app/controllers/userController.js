@@ -66,6 +66,7 @@ const getAllUsers = async (req, res, next) => {
     const { count, rows: users } = await Users.findAndCountAll({
       limit,
       offset,
+      order: [["id", "ASC"]],
     });
 
     return res.status(200).json({

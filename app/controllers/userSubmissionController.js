@@ -77,6 +77,7 @@ const getAllUserSubmission = async (req, res, next) => {
 
     if (limit <= 0) {
       const userSubmissions = await UserSubmissions.findAll({
+        order: [["id", "ASC"]],
         include: [
           {
             model: Users,
@@ -140,6 +141,7 @@ const getAllUserSubmission = async (req, res, next) => {
       await UserSubmissions.findAndCountAll({
         limit,
         offset,
+        order: [["id", "ASC"]],
         include: [
           {
             model: Users,
@@ -288,6 +290,7 @@ const getByIdSubmissionType = async (req, res, next) => {
 
     if (limit <= 0) {
       const userSubmissions = await UserSubmissions.findAll({
+        order: [["id", "ASC"]],
         include: [
           {
             model: Users,
@@ -359,6 +362,7 @@ const getByIdSubmissionType = async (req, res, next) => {
       await UserSubmissions.findAndCountAll({
         limit,
         offset,
+        order: [["id", "ASC"]],
         include: [
           {
             model: Users,

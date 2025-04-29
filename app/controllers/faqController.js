@@ -18,21 +18,22 @@ const createTypeFaq = async (req, res, next) => {
 
 const updateFaqType = async (req, res, next) => {
   try {
-    const { oldType, newType } = req.body;
+    const { id } = req.params;
+    const { newType } = req.body;
 
-    const affectedFaqs = await Faqs.findAll({
-      where: { type: oldType },
+    const affectedFaqs = await Faqs.findOne({
+      where: { id },
     });
 
     if (affectedFaqs.length === 0) {
-      return next(new ApiError("Tidak ada dokumen dengan tipe tersebut", 404));
+      return next(new ApiError("Tidak ada dokumen dengan id tersebut", 404));
     }
 
-    await Faqs.update({ type: newType }, { where: { type: oldType } });
+    await Faqs.update({ type: newType }, { where: { id } });
 
     res.status(200).json({
       status: "success",
-      message: `Semua Faqs dengan type '${oldType}' berhasil diubah menjadi '${newType}'`,
+      message: `Faqs berhasil diperbaharui menjadi ${newType}`,
     });
   } catch (error) {
     next(new ApiError(error.message, 500));
@@ -77,6 +78,7 @@ const getAllFaq = async (req, res, next) => {
 
     if (limit <= 0) {
       const faqs = await Faqs.findAll({
+        order: [["id", "ASC"]],
         where: {
           question: {
             [Op.ne]: null,
@@ -94,6 +96,7 @@ const getAllFaq = async (req, res, next) => {
     const { count, rows: faqs } = await Faqs.findAndCountAll({
       limit,
       offset,
+      order: [["id", "ASC"]],
       where: {
         question: {
           [Op.ne]: null,
@@ -119,27 +122,13 @@ const getAllTypeFaq = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const faqs = await Faqs.findAll({
-        attributes: ["id", "type", "createdAt", "updatedAt"],
-        where: {
-          question: {
-            [Op.eq]: null,
-          },
-        },
-      });
-      res.status(200).json({
-        status: "success",
-        faqs,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: faqs } = await Faqs.findAndCountAll({
       limit,
       offset,
       attributes: ["id", "type", "createdAt", "updatedAt"],
+      order: [["id", "ASC"]],
       where: {
         question: {
           [Op.eq]: null,
@@ -147,19 +136,39 @@ const getAllTypeFaq = async (req, res, next) => {
       },
     });
 
+    const typeCountsRaw = await Faqs.findAll({
+      attributes: [
+        "type",
+        [
+          Faqs.sequelize.fn("COUNT", Faqs.sequelize.col("type")),
+          "totalTypeDigunakan",
+        ],
+      ],
+      group: ["type"],
+    });
+
+    const typeCountMap = {};
+    typeCountsRaw.forEach((item) => {
+      typeCountMap[item.type] = parseInt(item.dataValues.totalTypeDigunakan);
+    });
+
+    const faqsWithTotal = faqs.map((faq) => ({
+      ...faq.dataValues,
+      totalTypeDigunakan: (typeCountMap[faq.type] || 0) - 1,
+    }));
+
     res.status(200).json({
       status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalFaqs: count,
-      limit: limit,
-      faqs,
+      limit,
+      faqs: faqsWithTotal,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
 };
-
 const getFaqByType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
@@ -167,6 +176,7 @@ const getFaqByType = async (req, res, next) => {
 
     if (limit <= 0) {
       const faqs = await Faqs.findAll({
+        order: [["id", "ASC"]],
         where: {
           type: req.params.type,
           question: {
@@ -185,6 +195,7 @@ const getFaqByType = async (req, res, next) => {
     const { count, rows: faqs } = await Faqs.findAndCountAll({
       limit,
       offset,
+      order: [["id", "ASC"]],
       where: {
         type: req.params.type,
         question: {
