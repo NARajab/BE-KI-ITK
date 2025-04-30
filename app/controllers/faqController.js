@@ -18,18 +18,17 @@ const createTypeFaq = async (req, res, next) => {
 
 const updateFaqType = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { type } = req.body;
+    const { oldType, newType } = req.body;
 
-    const affectedFaqs = await Faqs.findOne({
-      where: { id },
+    const affectedFaqs = await Faqs.findAll({
+      where: { type: oldType },
     });
 
     if (affectedFaqs.length === 0) {
       return next(new ApiError("Tidak ada dokumen dengan id tersebut", 404));
     }
 
-    await Faqs.update({ type }, { where: { id } });
+    await Faqs.update({ type: newType }, { where: { type: oldType } });
 
     res.status(200).json({
       status: "success",
@@ -217,6 +216,22 @@ const getFaqByType = async (req, res, next) => {
   }
 };
 
+const getById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const faq = await Faqs.findByPk(id);
+    if (!faq) {
+      return next(new ApiError("Faq tidak ditemukan", 404));
+    }
+    res.status(200).json({
+      status: "success",
+      faq,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updateFaq = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -280,6 +295,7 @@ module.exports = {
   getAllFaq,
   getAllTypeFaq,
   getFaqByType,
+  getById,
   updateFaq,
   updateFaqType,
   deleteFaq,

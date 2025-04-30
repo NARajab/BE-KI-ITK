@@ -180,7 +180,6 @@ const getAllDocType = async (req, res, next) => {
         where: whereCondition,
       });
 
-      // Hitung total penggunaan untuk setiap type
       const enrichedDocs = await Promise.all(
         docs.map(async (doc) => {
           const count = await Documents.count({
@@ -188,7 +187,7 @@ const getAllDocType = async (req, res, next) => {
           });
           return {
             ...doc.toJSON(),
-            totalTypeDigunakan: count - 1, // dikurangi 1 karena termasuk dirinya sendiri
+            totalTypeDigunakan: count - 1,
           };
         })
       );
@@ -278,6 +277,22 @@ const getDocByType = async (req, res, next) => {
   }
 };
 
+const getById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const doc = await Documents.findByPk(id);
+    if (!doc) {
+      return next(new ApiError("Document tidak ditemukan", 404));
+    }
+    res.status(200).json({
+      status: "success",
+      doc,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteDoc = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -351,6 +366,7 @@ module.exports = {
   getAllDoc,
   getAllDocType,
   getDocByType,
+  getById,
   deleteDoc,
   deleteTypeDoc,
 };
