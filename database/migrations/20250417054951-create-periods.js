@@ -9,41 +9,8 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      group: {
-        type: Sequelize.STRING,
-      },
-      startDate: {
-        type: Sequelize.DATE,
-      },
-      endDate: {
-        type: Sequelize.DATE,
-      },
       year: {
         type: Sequelize.STRING,
-      },
-      patentQuota: {
-        type: Sequelize.INTEGER,
-      },
-      remainingPatentQuota: {
-        type: Sequelize.INTEGER,
-      },
-      copyrightQuota: {
-        type: Sequelize.INTEGER,
-      },
-      remainingCopyrightQuota: {
-        type: Sequelize.INTEGER,
-      },
-      industrialDesignQuota: {
-        type: Sequelize.INTEGER,
-      },
-      remainingIndustrialDesignQuota: {
-        type: Sequelize.INTEGER,
-      },
-      brandQuota: {
-        type: Sequelize.INTEGER,
-      },
-      remainingBrandQuota: {
-        type: Sequelize.INTEGER,
       },
       createdAt: {
         allowNull: false,

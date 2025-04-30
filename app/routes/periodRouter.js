@@ -12,7 +12,7 @@ router.post(
 );
 
 router.post(
-  "/group/:year",
+  "/group/:id",
   authenticat,
   checkRole(["superAdmin", "admin"]),
   Period.createGroup
@@ -20,11 +20,11 @@ router.post(
 
 router.get("/", Period.getAllPeriod);
 
-router.get("/by-year", Period.getAllYearPeriod);
+router.get("/group/:id", Period.getAllGroupByYear);
 
-router.get("/group/:year", Period.getAllGroupByYear);
+router.get("/quota", Period.getAllQuotas);
 
-router.get("/:id", Period.getById);
+router.get("/quota/:id", Period.getQuotaById);
 
 router.patch(
   "/year",
@@ -51,17 +51,14 @@ router.delete(
   "/:id",
   authenticat,
   checkRole(["superAdmin", "admin"]),
-  Period.deletePeriod
+  Period.deleteGroup
 );
 
 router.delete(
-  "/year/:year",
+  "/year/:id",
   authenticat,
   checkRole(["superAdmin", "admin"]),
-  Period.deleteYearPeriod
+  Period.deletePeriod
 );
-
-router.get("/filter/year", Period.getByYear);
-router.get("/filter/group", Period.getByGroup);
 
 module.exports = router;

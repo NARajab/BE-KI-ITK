@@ -1,5 +1,5 @@
-const { Periods, SubmissionTypes } = require("../models");
-const { Op, where } = require("sequelize");
+const { Periods, Groups, Quotas } = require("../models");
+const { Op } = require("sequelize");
 
 const ApiError = require("../../utils/apiError");
 
@@ -8,9 +8,7 @@ const createPeriod = async (req, res, next) => {
     const { year } = req.body;
 
     const existingPeriod = await Periods.findOne({
-      where: {
-        year,
-      },
+      where: { year },
     });
 
     if (existingPeriod) {
@@ -19,91 +17,33 @@ const createPeriod = async (req, res, next) => {
       );
     }
 
-    const newPeriod = await Periods.create({
-      year,
+    const newPeriod = await Periods.create({ year });
+
+    const gelombangs = [
+      "Gelombang 1",
+      "Gelombang 2",
+      "Gelombang 3",
+      "Gelombang 4",
+    ];
+    const groupData = gelombangs.map((group) => ({
+      periodId: newPeriod.id,
+      group,
+    }));
+
+    const createdGroups = await Groups.bulkCreate(groupData, {
+      returning: true,
     });
+
+    const quotaData = createdGroups.map((group) => ({
+      groupId: group.id,
+    }));
+
+    await Quotas.bulkCreate(quotaData);
 
     res.status(201).json({
       status: "success",
-      message: "Periode berhasil ditambahkan",
+      message: "Periode berhasil ditambahkan beserta 4 Gelombang",
       newPeriod,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const createGroup = async (req, res, next) => {
-  try {
-    const { year } = req.params;
-    const { group, startDate, endDate } = req.body;
-
-    const formatDate = (date) => new Date(date).toISOString();
-
-    const existingGroup = await Periods.findOne({
-      where: {
-        year,
-        group,
-      },
-    });
-
-    if (existingGroup) {
-      return next(
-        new ApiError(
-          "Periode dengan gelombang dan tahun yang sama sudah ada.",
-          400
-        )
-      );
-    }
-
-    if (group) {
-      const duplicate = await Periods.findOne({
-        where: {
-          group: group,
-          id: { [Op.ne]: year },
-        },
-      });
-
-      if (duplicate) {
-        return next(
-          new ApiError("Periode dengan gelombang dan tahun ini sudah ada.", 400)
-        );
-      }
-    }
-
-    if (startDate && endDate) {
-      const formattedStart = formatDate(startDate);
-      const formattedEnd = formatDate(endDate);
-
-      const sameDate = await Periods.findOne({
-        where: {
-          startDate: formattedStart,
-          endDate: formattedEnd,
-          id: { [Op.ne]: year },
-        },
-      });
-
-      if (sameDate) {
-        return next(
-          new ApiError(
-            "Tanggal mulai dan akhir sudah digunakan oleh periode lain.",
-            400
-          )
-        );
-      }
-    }
-
-    const newGroup = await Periods.create(
-      { year: year, group, startDate, endDate },
-      {
-        where: { year },
-      }
-    );
-
-    res.status(201).json({
-      status: "success",
-      message: "Periode berhasil ditambahkan",
-      newGroup,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -154,43 +94,86 @@ const updatePeriod = async (req, res, next) => {
   }
 };
 
+const createGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const period = await Periods.findByPk(id);
+    if (!period) {
+      return next(new ApiError("Periode tidak ditemukan.", 404));
+    }
+
+    const { group, startDate, endDate } = req.body;
+
+    const duplicate = await Groups.findOne({
+      where: {
+        group,
+        periodId: id,
+      },
+    });
+
+    if (duplicate) {
+      return next(
+        new ApiError("Nama gelombang sudah digunakan oleh gelombang lain.", 400)
+      );
+    }
+
+    const newGroup = await Groups.create({
+      periodId: id,
+      group,
+      startDate,
+      endDate,
+    });
+
+    const newQuota = await Quotas.create({
+      groupId: newGroup.id,
+    });
+
+    res.status(201).json({
+      status: "success",
+      message: "Gelombang berhasil ditambahkan",
+      newGroup,
+      newQuota,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updateGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const group = await Periods.findByPk(id);
-
+    const group = await Groups.findByPk(id);
     if (!group) {
       return next(new ApiError("Gelombang tidak ditemukan.", 404));
     }
 
-    const updateData = req.body;
+    const { group: newGroup, startDate, endDate } = req.body;
 
-    const formatDate = (date) => new Date(date).toISOString();
-
-    if (updateData.group) {
-      const duplicate = await Periods.findOne({
+    if (newGroup && newGroup !== group.group) {
+      const duplicate = await Groups.findOne({
         where: {
-          group: updateData.group,
+          group: newGroup,
           id: { [Op.ne]: id },
         },
       });
 
       if (duplicate) {
         return next(
-          new ApiError("Periode dengan gelombang dan tahun ini sudah ada.", 400)
+          new ApiError(
+            "Nama gelombang sudah digunakan oleh gelombang lain.",
+            400
+          )
         );
       }
     }
 
-    if (updateData.startDate && updateData.endDate) {
-      const formattedStart = formatDate(updateData.startDate);
-      const formattedEnd = formatDate(updateData.endDate);
-
-      const sameDate = await Periods.findOne({
+    if (startDate && endDate) {
+      const sameDate = await Groups.findOne({
         where: {
-          startDate: formattedStart,
-          endDate: formattedEnd,
+          startDate: new Date(startDate).toISOString(),
+          endDate: new Date(endDate).toISOString(),
           id: { [Op.ne]: id },
         },
       });
@@ -198,12 +181,17 @@ const updateGroup = async (req, res, next) => {
       if (sameDate) {
         return next(
           new ApiError(
-            "Tanggal mulai dan akhir sudah digunakan oleh periode lain.",
+            "Tanggal mulai dan akhir sudah digunakan oleh gelombang lain.",
             400
           )
         );
       }
     }
+
+    const updateData = {};
+    if (newGroup) updateData.group = newGroup;
+    if (startDate) updateData.startDate = new Date(startDate);
+    if (endDate) updateData.endDate = new Date(endDate);
 
     await group.update(updateData);
 
@@ -223,13 +211,13 @@ const updateQuota = async (req, res, next) => {
     const { copyrightQuota, patentQuota, brandQuota, industrialDesignQuota } =
       req.body;
 
-    const period = await Periods.findByPk(id);
+    const quota = await Quotas.findByPk(id);
 
-    if (!period) {
-      return next(new ApiError("Periode tidak ditemukan.", 404));
+    if (!quota) {
+      return next(new ApiError("Quota tidak ditemukan.", 404));
     }
 
-    await period.update({
+    await quota.update({
       copyrightQuota,
       remainingCopyrightQuota: copyrightQuota,
       patentQuota,
@@ -243,7 +231,7 @@ const updateQuota = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Kuota berhasil diperbarui",
-      period,
+      quota,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -252,13 +240,10 @@ const updateQuota = async (req, res, next) => {
 
 const getAllGroupByYear = async (req, res, next) => {
   try {
-    const groups = await Periods.findAll({
+    const groups = await Groups.findAll({
       order: [["id", "ASC"]],
       where: {
-        year: req.params.year,
-        group: {
-          [Op.ne]: null,
-        },
+        periodId: req.params.id,
       },
     });
     return res.status(200).json({
@@ -278,11 +263,6 @@ const getAllPeriod = async (req, res, next) => {
     if (limit <= 0) {
       const periods = await Periods.findAll({
         order: [["id", "ASC"]],
-        where: {
-          group: {
-            [Op.ne]: null,
-          },
-        },
       });
 
       return res.status(200).json({
@@ -297,60 +277,6 @@ const getAllPeriod = async (req, res, next) => {
       limit,
       offset,
       order: [["id", "ASC"]],
-      where: {
-        group: {
-          [Op.ne]: null,
-        },
-      },
-    });
-
-    res.status(200).json({
-      status: "success",
-      currentPage: page,
-      totalPages: Math.ceil(count / limit),
-      totalPeriods: count,
-      limit: limit,
-      periods,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const getAllYearPeriod = async (req, res, next) => {
-  try {
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
-
-    if (limit <= 0) {
-      const periods = await Periods.findAll({
-        attributes: ["id", "year", "createdAt", "updatedAt"],
-        order: [["id", "ASC"]],
-        where: {
-          group: {
-            [Op.eq]: null,
-          },
-        },
-      });
-
-      return res.status(200).json({
-        status: "success",
-        periods,
-      });
-    }
-
-    const offset = (page - 1) * limit;
-
-    const { count, rows: periods } = await Periods.findAndCountAll({
-      limit,
-      offset,
-      attributes: ["id", "year", "createdAt", "updatedAt"],
-      order: [["id", "ASC"]],
-      where: {
-        group: {
-          [Op.eq]: null,
-        },
-      },
     });
 
     res.status(200).json({
@@ -422,20 +348,59 @@ const getByGroup = async (req, res, next) => {
   }
 };
 
-const getById = async (req, res, next) => {
+const getAllQuotas = async (req, res, next) => {
+  try {
+    const quotas = await Quotas.findAll();
+
+    res.status(200).json({
+      status: "success",
+      message: "Data quota berhasil diambil",
+      quotas,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getQuotaById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const period = await Periods.findByPk(id);
+    const quotas = await Quotas.findByPk(id);
 
-    if (!period) {
-      return next(new ApiError("Periode tidak ditemukan.", 404));
+    if (!quotas) {
+      return next(new ApiError("Quota tidak ditemukan.", 404));
     }
 
     res.status(200).json({
       status: "success",
-      message: "Data periode berhasil diambil",
-      period,
+      message: "Data quota berhasil diambil",
+      quotas,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const deleteGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const group = await Groups.findByPk(id);
+
+    if (!group) {
+      return next(new ApiError("Gelombang tidak ditemukan.", 404));
+    }
+
+    await Quotas.destroy({
+      where: { groupId: id },
+    });
+
+    await group.destroy();
+
+    res.status(200).json({
+      status: "success",
+      message: "Gelombang dan quota terkait berhasil dihapus",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -449,37 +414,24 @@ const deletePeriod = async (req, res, next) => {
     const period = await Periods.findByPk(id);
 
     if (!period) {
-      return next(new ApiError("Periode tidak ditemukan.", 404));
-    }
-
-    await period.destroy();
-
-    res.status(200).json({
-      status: "success",
-      message: "Periode berhasil dihapus",
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const deleteYearPeriod = async (req, res, next) => {
-  try {
-    const { year } = req.params;
-
-    const period = await Periods.findAll({ where: { year } });
-
-    if (!period) {
       return next(
-        new ApiError("Periode dengan tahun tersebut tidak ditemukan.", 404)
+        new ApiError("Periode dengan ID tersebut tidak ditemukan.", 404)
       );
     }
 
-    await Periods.destroy({ where: { year } });
+    const groups = await Groups.findAll({ where: { periodId: id } });
+
+    const groupIds = groups.map((group) => group.id);
+
+    await Quotas.destroy({ where: { groupId: groupIds } });
+
+    await Groups.destroy({ where: { periodId: id } });
+
+    await Periods.destroy({ where: { id } });
 
     res.status(200).json({
       status: "success",
-      message: "Periode berhasil dihapus",
+      message: "Periode dan semua data terkait berhasil dihapus.",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -488,16 +440,14 @@ const deleteYearPeriod = async (req, res, next) => {
 
 module.exports = {
   createPeriod,
-  createGroup,
   updatePeriod,
+  createGroup,
   updateGroup,
   updateQuota,
   getAllPeriod,
-  getAllYearPeriod,
   getAllGroupByYear,
-  getByYear,
-  getByGroup,
-  getById,
+  getAllQuotas,
+  getQuotaById,
+  deleteGroup,
   deletePeriod,
-  deleteYearPeriod,
 };
