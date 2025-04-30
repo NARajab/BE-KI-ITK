@@ -415,6 +415,26 @@ const getByGroup = async (req, res, next) => {
   }
 };
 
+const getById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const period = await Periods.findByPk(id);
+
+    if (!period) {
+      return next(new ApiError("Periode tidak ditemukan.", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Data periode berhasil diambil",
+      period,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deletePeriod = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -470,6 +490,7 @@ module.exports = {
   getAllGroupByYear,
   getByYear,
   getByGroup,
+  getById,
   deletePeriod,
   deleteYearPeriod,
 };
