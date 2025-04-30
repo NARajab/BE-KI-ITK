@@ -112,15 +112,24 @@ const createGroup = async (req, res, next) => {
 
 const updatePeriod = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { oldYear, newYear } = req.body;
 
-    const period = await Periods.findByPk(id);
+    const period = await Periods.findAll({
+      where: {
+        year: oldYear,
+      },
+    });
 
-    if (!period) {
+    if (period.length === 0) {
       return next(new ApiError("Periode tidak ditemukan.", 404));
     }
 
-    const updateData = req.body;
+    const updateData = await Periods.update(
+      { year: newYear },
+      {
+        where: { year: oldYear },
+      }
+    );
 
     if (updateData.year) {
       const duplicate = await Periods.findOne({
@@ -134,8 +143,6 @@ const updatePeriod = async (req, res, next) => {
         return next(new ApiError("Periode dengan tahun ini sudah ada.", 400));
       }
     }
-
-    await period.update(updateData);
 
     res.status(200).json({
       status: "success",

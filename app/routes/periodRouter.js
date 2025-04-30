@@ -27,7 +27,7 @@ router.get("/group/:year", Period.getAllGroupByYear);
 router.get("/:id", Period.getById);
 
 router.patch(
-  "/:id",
+  "/year",
   authenticat,
   checkRole(["superAdmin", "admin"]),
   Period.updatePeriod
