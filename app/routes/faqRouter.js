@@ -20,9 +20,9 @@ router.post(
 
 router.get("/", Faq.getAllFaq);
 
-router.get("/:id", Faq.getById);
-
 router.get("/by-type", Faq.getAllTypeFaq);
+
+router.get("/:id", Faq.getById);
 
 router.get("/by-type/:type", Faq.getFaqByType);
 
