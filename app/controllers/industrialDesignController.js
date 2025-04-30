@@ -42,6 +42,75 @@ const createSubTypeDesignIndustri = async (req, res, next) => {
   }
 };
 
+const createDesignIndustri = async (req, res, next) => {
+  try {
+    const { submissionTypeId, periodId, personalDatas } = req.body;
+
+    const draftDesainIndustriApplicationFile = req.files
+      ?.draftDesainIndustriApplicationFile
+      ? req.files.draftDesainIndustriApplicationFile[0]
+      : null;
+
+    const designIndustri = await IndustrialDesigns.create({
+      draftDesainIndustriApplicationFile: draftDesainIndustriApplicationFile
+        ? draftDesainIndustriApplicationFile.filename
+        : null,
+    });
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const ktpFiles = req.files.ktp || [];
+
+    const submission = await Submissions.create({
+      submissionTypeId,
+      industrialDesignId: designIndustri.id,
+      periodId,
+    });
+
+    const personalDatasWithSubmissionId = parsedPersonalDatas.map(
+      (data, index) => ({
+        ...data,
+        submissionId: submission.id,
+        ktp: ktpFiles[index] ? ktpFiles[index].filename : null,
+        isLeader: index === 0,
+      })
+    );
+
+    await PersonalDatas.bulkCreate(personalDatasWithSubmissionId);
+
+    const userSubmissions = await UserSubmissions.create({
+      userId: req.user.id,
+      submissionId: submission.id,
+      centralStatus: "pending",
+      reviewStatus: "pending",
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "Pengajuan Desain Industri Baru",
+      text: "Pengajuan Desain Industri Baru",
+      html: IndustrialDesignSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+      }),
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Pengajuan Desain Industri berhasil ditambahkan",
+      userSubmissions,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getAllTypeDesignIndustri = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
@@ -147,7 +216,6 @@ const deleteTypeDesignIndustri = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Cari type design berdasarkan ID
     const typeDesign = await TypeDesigns.findByPk(id);
     if (!typeDesign) {
       return next(
@@ -197,6 +265,7 @@ const deleteSubTypeDesignIndustri = async (req, res, next) => {
 module.exports = {
   createTypeDesignIndustri,
   createSubTypeDesignIndustri,
+  createDesignIndustri,
   getAllTypeDesignIndustri,
   getSubTypeDesignIndustri,
   updateTypeDesignIndustri,

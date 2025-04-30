@@ -9,6 +9,9 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
+      draftDesainIndustriApplicationFile: {
+        type: Sequelize.STRING,
+      },
       titleDesign: {
         type: Sequelize.STRING,
       },

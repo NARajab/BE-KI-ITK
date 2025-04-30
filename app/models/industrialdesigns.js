@@ -16,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   IndustrialDesigns.init(
     {
+      draftDesainIndustriApplicationFile: DataTypes.STRING,
       titleDesign: DataTypes.STRING,
       type: DataTypes.STRING,
       typeDesignId: DataTypes.INTEGER,
