@@ -7,6 +7,8 @@ const {
   SubTypeDesigns,
   Users,
 } = require("../models");
+const fs = require("fs");
+const path = require("path");
 
 const ApiError = require("../../utils/apiError");
 const SendEmail = require("../../emails/services/sendMail");
@@ -44,7 +46,7 @@ const createSubTypeDesignIndustri = async (req, res, next) => {
 
 const createDesignIndustri = async (req, res, next) => {
   try {
-    const { submissionTypeId, periodId, personalDatas } = req.body;
+    const { submissionTypeId, personalDatas } = req.body;
 
     const draftDesainIndustriApplicationFile = req.files
       ?.draftDesainIndustriApplicationFile
@@ -67,7 +69,6 @@ const createDesignIndustri = async (req, res, next) => {
     const submission = await Submissions.create({
       submissionTypeId,
       industrialDesignId: designIndustri.id,
-      periodId,
     });
 
     const personalDatasWithSubmissionId = parsedPersonalDatas.map(
@@ -212,6 +213,93 @@ const updateSubTypeDesignIndustri = async (req, res, next) => {
   }
 };
 
+const updateIndustrialDesign = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { titleDesign, type, typeDesignId, subtypeDesignId, claim } =
+      req.body;
+
+    const industrialDesign = await IndustrialDesigns.findByPk(id);
+    if (!industrialDesign) {
+      return next(new ApiError("Desain Industri tidak ditemukan", 404));
+    }
+
+    const removeOldFile = (oldFileName, folder = "documents") => {
+      if (!oldFileName) return;
+      const filePath = path.join(
+        __dirname,
+        `../../uploads/${folder}/`,
+        oldFileName
+      );
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    };
+
+    const looksPerspective = req.files.looksPerspective
+      ? req.files.looksPerspective[0]
+      : null;
+    const frontView = req.files.frontView ? req.files.frontView[0] : null;
+    const backView = req.files.backView ? req.files.backView[0] : null;
+    const rightSideView = req.files.rightSideView
+      ? req.files.rightSideView[0]
+      : null;
+    const lefttSideView = req.files.lefttSideView
+      ? req.files.lefttSideView[0]
+      : null;
+    const topView = req.files.topView ? req.files.topView[0] : null;
+    const downView = req.files.downView ? req.files.downView[0] : null;
+    const moreImages = req.files.moreImages ? req.files.moreImages[0] : null;
+    const letterTransferDesignRights = req.files.letterTransferDesignRights
+      ? req.files.letterTransferDesignRights[0]
+      : null;
+    const designOwnershipLetter = req.files.designOwnershipLetter
+      ? req.files.designOwnershipLetter[0]
+      : null;
+
+    if (looksPerspective)
+      removeOldFile(industrialDesign.looksPerspective, "image");
+    if (frontView) removeOldFile(industrialDesign.frontView, "image");
+    if (backView) removeOldFile(industrialDesign.backView, "image");
+    if (rightSideView) removeOldFile(industrialDesign.rightSideView, "image");
+    if (lefttSideView) removeOldFile(industrialDesign.lefttSideView, "image");
+    if (topView) removeOldFile(industrialDesign.topView, "image");
+    if (downView) removeOldFile(industrialDesign.downView, "image");
+    if (moreImages) removeOldFile(industrialDesign.moreImages);
+    if (letterTransferDesignRights)
+      removeOldFile(industrialDesign.letterTransferDesignRights);
+    if (designOwnershipLetter)
+      removeOldFile(industrialDesign.designOwnershipLetter);
+
+    await industrialDesign.update({
+      titleDesign: titleDesign,
+      type: type,
+      typeDesignId: typeDesignId,
+      subtypeDesignId: subtypeDesignId,
+      claim: claim,
+      looksPerspective: looksPerspective?.filename || null,
+      frontView: frontView?.filename || null,
+      backView: backView?.filename || null,
+      rightSideView: rightSideView?.filename || null,
+      lefttSideView: lefttSideView?.filename || null,
+      topView: topView?.filename || null,
+      downView: downView?.filename || null,
+      moreImages: moreImages?.filename || null,
+      letterTransferDesignRights: letterTransferDesignRights?.filename || null,
+      designOwnershipLetter: designOwnershipLetter?.filename || null,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Desain Industri berhasil diperbarui",
+      industrialDesign,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteTypeDesignIndustri = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -270,6 +358,7 @@ module.exports = {
   getSubTypeDesignIndustri,
   updateTypeDesignIndustri,
   updateSubTypeDesignIndustri,
+  updateIndustrialDesign,
   deleteTypeDesignIndustri,
   deleteSubTypeDesignIndustri,
 };

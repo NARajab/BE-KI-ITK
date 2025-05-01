@@ -2,6 +2,7 @@ const {
   UserSubmissions,
   Submissions,
   Brands,
+  BrandTypes,
   PersonalDatas,
   AdditionalDatas,
   Users,
@@ -13,12 +14,25 @@ const ApiError = require("../../utils/apiError");
 const SendMail = require("../../emails/services/sendMail");
 const brandSubmissionMail = require("../../emails/templates/brandSubmissionMail");
 
+const createBrandType = async (req, res, next) => {
+  try {
+    const { title } = req.body;
+    await BrandTypes.create({ title });
+    return res.status(201).json({
+      status: "success",
+      message: "Kategori merek berhasil dibuat",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const createBrand = async (req, res, next) => {
   try {
     const {
       submissionTypeId,
       applicationType,
-      brandType,
+      brandTypeId,
       referenceName,
       elementColor,
       translate,
@@ -27,7 +41,6 @@ const createBrand = async (req, res, next) => {
       description,
       documentType,
       information,
-      periodId,
       personalDatas,
     } = req.body;
 
@@ -39,7 +52,7 @@ const createBrand = async (req, res, next) => {
 
     const brand = await Brands.create({
       applicationType,
-      brandType,
+      brandTypeId,
       referenceName,
       elementColor,
       translate,
@@ -84,7 +97,6 @@ const createBrand = async (req, res, next) => {
     const submission = await Submissions.create({
       submissionTypeId,
       brandId: brand.id,
-      periodId,
     });
 
     const personalDatasWithSubmissionId = parsedPersonalDatas.map(
@@ -129,6 +141,23 @@ const createBrand = async (req, res, next) => {
   }
 };
 
+const updateBrandType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { title } = req.body;
+
+    await BrandTypes.update({ title }, { where: { id } });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori merek berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updateBrand = async (req, res, next) => {
   try {
     const {
@@ -142,7 +171,6 @@ const updateBrand = async (req, res, next) => {
       description,
       documentType,
       information,
-      periodId,
       personalDatas,
     } = req.body || {};
 
@@ -235,6 +263,20 @@ const updateBrand = async (req, res, next) => {
   }
 };
 
+const getAllBrandTypes = async (req, res, next) => {
+  try {
+    const brandTypes = await BrandTypes.findAll({
+      order: [["id", "ASC"]],
+    });
+    return res.status(200).json({
+      status: "success",
+      brandTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getAllAdditionalDatas = async (req, res, next) => {
   try {
     const additionalDatas = await AdditionalDatas.findAll();
@@ -303,9 +345,28 @@ const updateAdditionalDatas = async (req, res, next) => {
   }
 };
 
+const deleteBrandType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await BrandTypes.destroy({ where: { id } });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori brand berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createBrand,
+  createBrandType,
   updateBrand,
+  updateBrandType,
+  getAllBrandTypes,
   getAllAdditionalDatas,
   updateAdditionalDatas,
+  deleteBrandType,
 };

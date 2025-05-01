@@ -149,7 +149,6 @@ const createCopyright = async (req, res, next) => {
       timeFirstAnnounced,
       briefDescriptionCreation,
       submissionTypeId,
-      periodId,
       personalDatas,
     } = req.body;
 
@@ -192,7 +191,6 @@ const createCopyright = async (req, res, next) => {
     const submission = await Submissions.create({
       submissionTypeId,
       copyrightId: copyright.id,
-      periodId,
     });
 
     const personalDatasWithSubmissionId = parsedPersonalDatas.map(
@@ -296,8 +294,6 @@ const updateCopyright = async (req, res, next) => {
       typeof personalDatas === "string"
         ? JSON.parse(personalDatas)
         : personalDatas;
-
-    console.log("parsedPersonalDatas:", parsedPersonalDatas);
 
     if (parsedPersonalDatas && Array.isArray(parsedPersonalDatas)) {
       const submission = await Submissions.findOne({

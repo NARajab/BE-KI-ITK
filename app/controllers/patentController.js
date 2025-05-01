@@ -30,7 +30,7 @@ const createPatentType = async (req, res, next) => {
 
 const createPatent = async (req, res, next) => {
   try {
-    const { submissionTypeId, periodId, personalDatas } = req.body;
+    const { submissionTypeId, personalDatas } = req.body;
 
     const draftPatentApplicationFile = req.files?.draftPatentApplicationFile
       ? req.files.draftPatentApplicationFile[0]
@@ -52,7 +52,6 @@ const createPatent = async (req, res, next) => {
     const submission = await Submissions.create({
       submissionTypeId,
       patentId: patent.id,
-      periodId,
     });
 
     const personalDatasWithSubmissionId = parsedPersonalDatas.map(

@@ -12,6 +12,15 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "industrialDesignId",
         as: "submission",
       });
+      IndustrialDesigns.belongsTo(models.TypeDesigns, {
+        foreignKey: "typeDesignId",
+        as: "typeDesign",
+      });
+
+      IndustrialDesigns.belongsTo(models.SubTypeDesigns, {
+        foreignKey: "subtypeDesignId",
+        as: "subTypeDesign",
+      });
     }
   }
   IndustrialDesigns.init(

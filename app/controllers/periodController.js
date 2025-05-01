@@ -262,7 +262,7 @@ const getAllPeriod = async (req, res, next) => {
 
     if (limit <= 0) {
       const periods = await Periods.findAll({
-        order: [["id", "ASC"]],
+        order: [["year", "DESC"]],
       });
 
       return res.status(200).json({
@@ -276,7 +276,7 @@ const getAllPeriod = async (req, res, next) => {
     const { count, rows: periods } = await Periods.findAndCountAll({
       limit,
       offset,
-      order: [["id", "ASC"]],
+      order: [["year", "DESC"]],
     });
 
     res.status(200).json({
@@ -292,56 +292,30 @@ const getAllPeriod = async (req, res, next) => {
   }
 };
 
-const getByYear = async (req, res, next) => {
+const getGroupById = async (req, res, next) => {
   try {
-    const { year } = req.query;
+    const { id } = req.params;
 
-    if (!year) {
-      return next(new ApiError("Parameter 'year' wajib diisi.", 400));
-    }
-
-    const periods = await Periods.findAll({
-      where: { year, group: { [Op.ne]: null } },
-      order: [["group", "ASC"]],
+    const group = await Groups.findOne({
+      where: {
+        id,
+      },
+      include: [
+        {
+          model: Quotas,
+          as: "quota",
+        },
+      ],
     });
-
-    if (periods.length === 0) {
-      return next(new ApiError("Periode ditahun itu tidak ditemukan", 404));
-    }
-
-    res.status(200).json({
-      status: "success",
-      message: "Data periode berhasil diambil",
-      periods,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const getByGroup = async (req, res, next) => {
-  try {
-    const { group } = req.query;
 
     if (!group) {
-      return next(new ApiError("Parameter 'group' wajib diisi.", 400));
-    }
-
-    const periods = await Periods.findAll({
-      where: { group },
-      order: [["year", "ASC"]],
-    });
-
-    if (periods.length === 0) {
-      return next(
-        new ApiError("Periode dengan gelombang tersebut tidak ditemukan.", 404)
-      );
+      return next(new ApiError("Gelombang tidak ditemukan.", 404));
     }
 
     res.status(200).json({
       status: "success",
-      message: "Data periode berdasarkan gelombang berhasil diambil",
-      periods,
+      message: "Data gelombang berhasil diambil",
+      group,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -376,6 +350,35 @@ const getQuotaById = async (req, res, next) => {
       status: "success",
       message: "Data quota berhasil diambil",
       quotas,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAll = async (req, res, next) => {
+  try {
+    const periods = await Periods.findAll({
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: Groups,
+          as: "group",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [
+            {
+              model: Quotas,
+              as: "quota",
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      status: "success",
+      periods,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -446,8 +449,10 @@ module.exports = {
   updateQuota,
   getAllPeriod,
   getAllGroupByYear,
+  getGroupById,
   getAllQuotas,
   getQuotaById,
+  getAll,
   deleteGroup,
   deletePeriod,
 };

@@ -1,7 +1,7 @@
 const {
   UserSubmissions,
   Submissions,
-  Periods,
+  Quotas,
   Copyrights,
   TypeCreations,
   SubTypeCreations,
@@ -9,6 +9,8 @@ const {
   PatentTypes,
   Brands,
   IndustrialDesigns,
+  TypeDesigns,
+  SubTypeDesigns,
   AdditionalDatas,
   PersonalDatas,
   Users,
@@ -20,7 +22,7 @@ const ApiError = require("../../utils/apiError");
 const updateSubmissionScheme = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { submissionScheme } = req.body;
+    const { groupId, submissionScheme } = req.body;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -38,6 +40,7 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("Submission tidak ditemukan", 404));
     }
 
+    submission.periodId = groupId;
     submission.submissionScheme = submissionScheme;
     await submission.save();
 
@@ -53,9 +56,9 @@ const updateSubmissionScheme = async (req, res, next) => {
         : null;
 
       if (fieldToDecrement) {
-        await Periods.decrement(fieldToDecrement, {
+        await Quotas.decrement(fieldToDecrement, {
           by: 1,
-          where: { id: submission.periodId },
+          where: { groupId: groupId },
         });
       }
     }
@@ -116,6 +119,16 @@ const getAllUserSubmission = async (req, res, next) => {
               {
                 model: IndustrialDesigns,
                 as: "industrialDesign",
+                include: [
+                  {
+                    model: TypeDesigns,
+                    as: "typeDesign",
+                  },
+                  {
+                    model: SubTypeDesigns,
+                    as: "subTypeDesign",
+                  },
+                ],
               },
               {
                 model: SubmissionTypes,
@@ -183,6 +196,16 @@ const getAllUserSubmission = async (req, res, next) => {
               {
                 model: IndustrialDesigns,
                 as: "industrialDesign",
+                include: [
+                  {
+                    model: TypeDesigns,
+                    as: "typeDesign",
+                  },
+                  {
+                    model: SubTypeDesigns,
+                    as: "subTypeDesign",
+                  },
+                ],
               },
               {
                 model: SubmissionTypes,
@@ -257,6 +280,16 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: IndustrialDesigns,
               as: "industrialDesign",
+              include: [
+                {
+                  model: TypeDesigns,
+                  as: "typeDesign",
+                },
+                {
+                  model: SubTypeDesigns,
+                  as: "subTypeDesign",
+                },
+              ],
             },
             {
               model: SubmissionTypes,
@@ -334,6 +367,16 @@ const getByIdSubmissionType = async (req, res, next) => {
               {
                 model: IndustrialDesigns,
                 as: "industrialDesign",
+                include: [
+                  {
+                    model: TypeDesigns,
+                    as: "typeDesign",
+                  },
+                  {
+                    model: SubTypeDesigns,
+                    as: "subTypeDesign",
+                  },
+                ],
               },
               {
                 model: SubmissionTypes,
@@ -406,6 +449,16 @@ const getByIdSubmissionType = async (req, res, next) => {
               {
                 model: IndustrialDesigns,
                 as: "industrialDesign",
+                include: [
+                  {
+                    model: TypeDesigns,
+                    as: "typeDesign",
+                  },
+                  {
+                    model: SubTypeDesigns,
+                    as: "subTypeDesign",
+                  },
+                ],
               },
               {
                 model: SubmissionTypes,
