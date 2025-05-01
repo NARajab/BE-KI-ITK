@@ -17,9 +17,11 @@ module.exports = {
       },
       quota: {
         type: Sequelize.INTEGER,
+        defaultValue: 0,
       },
       remainingQuota: {
         type: Sequelize.INTEGER,
+        defaultValue: 0,
       },
       createdAt: {
         allowNull: false,

@@ -39,6 +39,8 @@ const createPeriod = async (req, res, next) => {
         quotaData.push({
           groupId: group.id,
           title,
+          quota: 0,
+          remainingQuota: 0,
         });
       });
     });
@@ -214,30 +216,23 @@ const updateGroup = async (req, res, next) => {
 const updateQuota = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { copyrightQuota, patentQuota, brandQuota, industrialDesignQuota } =
-      req.body;
+    const { quota, remainingQuota } = req.body;
 
-    const quota = await Quotas.findByPk(id);
+    const kuota = await Quotas.findByPk(id);
 
-    if (!quota) {
+    if (!kuota) {
       return next(new ApiError("Quota tidak ditemukan.", 404));
     }
 
-    await quota.update({
-      copyrightQuota,
-      remainingCopyrightQuota: copyrightQuota,
-      patentQuota,
-      remainingPatentQuota: patentQuota,
-      brandQuota,
-      remainingBrandQuota: brandQuota,
-      industrialDesignQuota,
-      remainingIndustrialDesignQuota: industrialDesignQuota,
+    await kuota.update({
+      quota,
+      remainingQuota,
     });
 
     res.status(200).json({
       status: "success",
       message: "Kuota berhasil diperbarui",
-      quota,
+      kuota,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));

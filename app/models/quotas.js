@@ -18,8 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     {
       groupId: DataTypes.INTEGER,
       title: DataTypes.INTEGER,
-      quota: DataTypes.INTEGER,
-      remainingQuota: DataTypes.INTEGER,
+      quota: { type: DataTypes.INTEGER, defaultValue: 0 },
+      remainingQuota: { type: DataTypes.INTEGER, defaultValue: 0 },
     },
     {
       sequelize,
