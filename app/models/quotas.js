@@ -17,14 +17,9 @@ module.exports = (sequelize, DataTypes) => {
   Quotas.init(
     {
       groupId: DataTypes.INTEGER,
-      copyrightQuota: DataTypes.INTEGER,
-      remainingCopyrightQuota: DataTypes.INTEGER,
-      patentQuota: DataTypes.INTEGER,
-      remainingPatentQuota: DataTypes.INTEGER,
-      industrialDesignQuota: DataTypes.INTEGER,
-      remainingIndustrialDesignQuota: DataTypes.INTEGER,
-      brandQuota: DataTypes.INTEGER,
-      remainingBrandQuota: DataTypes.INTEGER,
+      title: DataTypes.INTEGER,
+      quota: DataTypes.INTEGER,
+      remainingQuota: DataTypes.INTEGER,
     },
     {
       sequelize,

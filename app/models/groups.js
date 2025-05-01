@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "periodId",
         as: "period",
       });
-      Groups.hasOne(models.Quotas, {
+      Groups.hasMany(models.Quotas, {
         foreignKey: "groupId",
         as: "quota",
       });

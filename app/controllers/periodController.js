@@ -7,10 +7,7 @@ const createPeriod = async (req, res, next) => {
   try {
     const { year } = req.body;
 
-    const existingPeriod = await Periods.findOne({
-      where: { year },
-    });
-
+    const existingPeriod = await Periods.findOne({ where: { year } });
     if (existingPeriod) {
       return next(
         new ApiError("Periode dengan tahun yang sama sudah ada.", 400)
@@ -34,15 +31,24 @@ const createPeriod = async (req, res, next) => {
       returning: true,
     });
 
-    const quotaData = createdGroups.map((group) => ({
-      groupId: group.id,
-    }));
+    const titles = ["Hak Cipta", "Patent", "Merek", "Desain Industri"];
+
+    const quotaData = [];
+    createdGroups.forEach((group) => {
+      titles.forEach((title) => {
+        quotaData.push({
+          groupId: group.id,
+          title,
+        });
+      });
+    });
 
     await Quotas.bulkCreate(quotaData);
 
     res.status(201).json({
       status: "success",
-      message: "Periode berhasil ditambahkan beserta 4 Gelombang",
+      message:
+        "Periode berhasil ditambahkan beserta 4 Gelombang dan masing-masing dengan 4 entri quota.",
       newPeriod,
     });
   } catch (err) {
