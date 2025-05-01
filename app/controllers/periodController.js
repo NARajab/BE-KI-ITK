@@ -241,14 +241,39 @@ const updateQuota = async (req, res, next) => {
 
 const getAllGroupByYear = async (req, res, next) => {
   try {
-    const groups = await Groups.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const groups = await Groups.findAll({
+        order: [["id", "ASC"]],
+        where: {
+          periodId: req.params.id,
+        },
+      });
+      return res.status(200).json({
+        status: "success",
+        groups,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: groups } = await Groups.findAndCountAll({
+      limit,
+      offset,
       order: [["id", "ASC"]],
       where: {
         periodId: req.params.id,
       },
     });
-    return res.status(200).json({
+
+    res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalPeriods: count,
+      limit: limit,
       groups,
     });
   } catch (err) {
@@ -296,27 +321,39 @@ const getAllPeriod = async (req, res, next) => {
 const getGroupById = async (req, res, next) => {
   try {
     const { id } = req.params;
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
 
-    const group = await Groups.findOne({
-      where: {
-        id,
-      },
-      include: [
-        {
-          model: Quotas,
-          as: "quota",
-        },
-      ],
-    });
-
+    // Pastikan grupnya ada
+    const group = await Groups.findOne({ where: { id } });
     if (!group) {
       return next(new ApiError("Gelombang tidak ditemukan.", 404));
     }
 
+    // Hitung total quota untuk group tersebut
+    const totalQuota = await Quotas.count({
+      where: { groupId: id },
+    });
+
+    // Pagination logic
+    const offset = (page - 1) * limit;
+
+    // Ambil data Quotas berdasarkan groupId
+    const quotas = await Quotas.findAll({
+      where: { groupId: id },
+      limit,
+      offset,
+      order: [["id", "ASC"]],
+    });
+
     res.status(200).json({
       status: "success",
-      message: "Data gelombang berhasil diambil",
       group,
+      quota: quotas,
+      currentPage: page,
+      totalPages: Math.ceil(totalQuota / limit),
+      totalQuota,
+      limit,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -325,11 +362,32 @@ const getGroupById = async (req, res, next) => {
 
 const getAllQuotas = async (req, res, next) => {
   try {
-    const quotas = await Quotas.findAll();
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const quotas = await Quotas.findAll();
+
+      return res.status(200).json({
+        status: "success",
+        quotas,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: quotas } = await Quotas.findAndCountAll({
+      limit,
+      offset,
+      order: [["id", "ASC"]],
+    });
 
     res.status(200).json({
       status: "success",
-      message: "Data quota berhasil diambil",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalPeriods: count,
+      limit: limit,
       quotas,
     });
   } catch (err) {
