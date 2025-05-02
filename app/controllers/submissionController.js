@@ -5,10 +5,32 @@ const { where } = require("sequelize");
 
 const getSubmissionType = async (req, res, next) => {
   try {
-    const submissionsType = await SubmissionTypes.findAll();
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const submissionsType = await SubmissionTypes.findAll();
+
+      res.status(200).json({
+        status: "success",
+        submissionsType,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: submissionsType } =
+      await SubmissionTypes.findAndCountAll({
+        limit,
+        offset,
+      });
 
     res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalTypes: count,
+      limit: limit,
       submissionsType,
     });
   } catch (err) {
