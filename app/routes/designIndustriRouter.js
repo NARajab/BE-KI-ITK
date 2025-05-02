@@ -25,7 +25,9 @@ router.post(
 );
 
 router.get("/type", DesignIndustri.getAllTypeDesignIndustri);
+router.get("/type/:id", DesignIndustri.getTypeById);
 router.get("/sub-type/:id", DesignIndustri.getSubTypeDesignIndustri);
+router.get("/sub-type/by-id/:id", DesignIndustri.getSubTypeById);
 
 router.patch("/type/:id", DesignIndustri.updateTypeDesignIndustri);
 router.patch("/sub-type/:id", DesignIndustri.updateSubTypeDesignIndustri);

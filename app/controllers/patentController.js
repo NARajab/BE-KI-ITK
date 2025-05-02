@@ -188,11 +188,51 @@ const updatePatent = async (req, res, next) => {
 
 const getAllPatentTypes = async (req, res, next) => {
   try {
-    const patentTypes = await PatentTypes.findAll();
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const patentTypes = await PatentTypes.findAll();
+      return res.status(200).json({
+        status: "success",
+        patentTypes,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: patentTypes } = await PatentTypes.findAndCountAll({
+      limit,
+      offset,
+    });
 
     return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalTypes: count,
+      limit: limit,
       patentTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getPatentTypeById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const patentType = await PatentTypes.findByPk(id);
+
+    if (!patentType) {
+      return next(new ApiError("Kategori paten tidak ditemukan", 404));
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori paten berhasil ditemukan",
+      patentType,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -220,5 +260,6 @@ module.exports = {
   updatePatent,
   updatePatentType,
   getAllPatentTypes,
+  getPatentTypeById,
   deletePatentType,
 };

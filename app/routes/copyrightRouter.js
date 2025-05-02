@@ -53,8 +53,10 @@ router.patch("/type/:id", Copyright.updateTypeCreation);
 router.patch("/sub-type/:id", Copyright.updateSubTypeCreation);
 
 router.get("/type", Copyright.getAllTypeCreation);
+router.get("/type/:id", Copyright.getByIdTypeCreation);
 
 router.get("/sub-type/:id", Copyright.getAllSubTypeCreationByTypeCreation);
+router.get("/sub-type/by-id/:id", Copyright.getByIdSubType);
 
 router.delete("/type/:id", Copyright.deleteTypeCreation);
 

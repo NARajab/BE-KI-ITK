@@ -265,12 +265,50 @@ const updateBrand = async (req, res, next) => {
 
 const getAllBrandTypes = async (req, res, next) => {
   try {
-    const brandTypes = await BrandTypes.findAll({
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    if (limit <= 0) {
+      const brandTypes = await BrandTypes.findAll({
+        order: [["id", "ASC"]],
+      });
+      return res.status(200).json({
+        status: "success",
+        brandTypes,
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: brandTypes } = await BrandTypes.findAndCountAll({
+      limit,
+      offset,
       order: [["id", "ASC"]],
     });
+
     return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalTypes: count,
+      limit: limit,
       brandTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getByIdBrandType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const brandType = await BrandTypes.findByPk(id);
+    if (!brandType) {
+      return next(new ApiError("BrandType tidak ditemukan", 404));
+    }
+    return res.status(200).json({
+      status: "success",
+      brandType,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -366,6 +404,7 @@ module.exports = {
   updateBrand,
   updateBrandType,
   getAllBrandTypes,
+  getByIdBrandType,
   getAllAdditionalDatas,
   updateAdditionalDatas,
   deleteBrandType,

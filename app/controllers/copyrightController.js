@@ -55,7 +55,7 @@ const getAllTypeCreation = async (req, res, next) => {
       });
     }
 
-    const typeCreation = await TypeCreations.findAndCountAll({
+    const { count, rows: typeCreation } = await TypeCreations.findAndCountAll({
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -63,7 +63,7 @@ const getAllTypeCreation = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       currentPage: page,
-      totalPages: Math.ceil(typeCreation.count / limit),
+      totalPages: Math.ceil(count / limit),
       limit: limit,
       typeCreation,
     });
@@ -90,16 +90,17 @@ const getAllSubTypeCreationByTypeCreation = async (req, res, next) => {
       });
     }
 
-    const subTypeCreation = await SubTypeCreations.findAndCountAll({
-      where: { typeCreationId: id },
-      limit: limit,
-      offset: (page - 1) * limit,
-    });
+    const { count, rows: subTypeCreation } =
+      await SubTypeCreations.findAndCountAll({
+        where: { typeCreationId: id },
+        limit: limit,
+        offset: (page - 1) * limit,
+      });
 
     res.status(200).json({
       status: "success",
       currentPage: page,
-      totalPages: Math.ceil(subTypeCreation.count / limit),
+      totalPages: Math.ceil(count / limit),
       limit: limit,
       subTypeCreation,
     });
@@ -117,6 +118,38 @@ const updateTypeCreation = async (req, res, next) => {
     res.status(200).json({
       status: "success",
       message: "Kategori Hak Cipta berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getByIdTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const typeCreation = await TypeCreations.findByPk(id);
+    if (!typeCreation) {
+      return next(new ApiError("TypeCreation tidak ditemukan", 404));
+    }
+    return res.status(200).json({
+      status: "success",
+      typeCreation,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getByIdSubType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const subTypeCreation = await SubTypeCreations.findByPk(id);
+    if (!subTypeCreation) {
+      return next(new ApiError("SubTypeCreation tidak ditemukan", 404));
+    }
+    return res.status(200).json({
+      status: "success",
+      subTypeCreation,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -390,6 +423,8 @@ module.exports = {
   updateSubTypeCreation,
   getAllTypeCreation,
   getAllSubTypeCreationByTypeCreation,
+  getByIdTypeCreation,
+  getByIdSubType,
   deleteTypeCreation,
   deleteSubTypeCreation,
 };

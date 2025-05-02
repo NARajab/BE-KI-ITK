@@ -126,7 +126,7 @@ const getAllTypeDesignIndustri = async (req, res, next) => {
       });
     }
 
-    const typeDesigns = await TypeDesigns.findAndCountAll({
+    const { count, rows: typeDesigns } = await TypeDesigns.findAndCountAll({
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -135,9 +135,29 @@ const getAllTypeDesignIndustri = async (req, res, next) => {
       status: "success",
       message: "Kategori Desain Industri berhasil ditemukan",
       currentPage: page,
-      totalPages: Math.ceil(typeDesigns.count / limit),
+      totalPages: Math.ceil(count / limit),
       limit: limit,
       typeDesigns,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getTypeById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const typeDesign = await TypeDesigns.findByPk(id);
+    if (!typeDesign) {
+      return next(
+        new ApiError("Kategori Desain Industri tidak ditemukan", 404)
+      );
+    }
+    res.status(200).json({
+      status: "success",
+      message: "Kategori Desain Industri berhasil ditemukan",
+      typeDesign,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -167,17 +187,40 @@ const getSubTypeDesignIndustri = async (req, res, next) => {
       });
     }
 
-    const subTypeDesign = await SubTypeDesigns.findAndCountAll({
-      where: { typeDesignId: id },
-      limit: limit,
-      offset: (page - 1) * limit,
-    });
+    const { count, rows: subTypeDesign } = await SubTypeDesigns.findAndCountAll(
+      {
+        where: { typeDesignId: id },
+        limit: limit,
+        offset: (page - 1) * limit,
+      }
+    );
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Desain Industri berhasil ditemukan",
       currentPage: page,
-      totalPages: Math.ceil(subTypeDesign.count / limit),
+      totalPages: Math.ceil(count / limit),
       limit: limit,
+      subTypeDesign,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getSubTypeById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const subTypeDesign = await SubTypeDesigns.findByPk(id);
+    if (!subTypeDesign) {
+      return next(
+        new ApiError("Sub Kategori Desain Industri tidak ditemukan", 404)
+      );
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Sub Kategori Desain Industri berhasil ditemukan",
       subTypeDesign,
     });
   } catch (err) {
@@ -355,7 +398,9 @@ module.exports = {
   createSubTypeDesignIndustri,
   createDesignIndustri,
   getAllTypeDesignIndustri,
+  getTypeById,
   getSubTypeDesignIndustri,
+  getSubTypeById,
   updateTypeDesignIndustri,
   updateSubTypeDesignIndustri,
   updateIndustrialDesign,

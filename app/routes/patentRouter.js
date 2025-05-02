@@ -52,6 +52,8 @@ router.patch("/type/:id", Patent.updatePatentType);
 
 router.get("/type", Patent.getAllPatentTypes);
 
+router.get("/type/:id", Patent.getPatentTypeById);
+
 router.delete("/type/:id", Patent.deletePatentType);
 
 module.exports = router;

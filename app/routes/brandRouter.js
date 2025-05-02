@@ -5,6 +5,7 @@ const authenticat = require("../middlewares/authenticat");
 const { uploadFields } = require("../middlewares/multer");
 
 router.get("/type", Brand.getAllBrandTypes);
+router.get("/type/:id", Brand.getByIdBrandType);
 router.post("/type", Brand.createBrandType);
 router.patch("/type/:id", Brand.updateBrandType);
 router.delete("/type/:id", Brand.deleteBrandType);
