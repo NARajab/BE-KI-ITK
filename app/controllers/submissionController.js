@@ -38,6 +38,25 @@ const getSubmissionType = async (req, res, next) => {
   }
 };
 
+const getSubmissionTypeById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const type = await SubmissionTypes.findByPk(id);
+
+    if (!type) {
+      return next(new ApiError("Jenis pengajuan tidak ditemukan", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      type,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const createSubmissionType = async (req, res, next) => {
   try {
     const { title, isPublish } = req.body;
@@ -102,6 +121,7 @@ const deleteSubmissionType = async (req, res, next) => {
 
 module.exports = {
   getSubmissionType,
+  getSubmissionTypeById,
   createSubmissionType,
   updateSubmissionType,
   deleteSubmissionType,
