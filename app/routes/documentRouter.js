@@ -5,7 +5,12 @@ const authenticat = require("../middlewares/authenticat");
 const { uploadSingle } = require("../middlewares/multer");
 const checkRole = require("../middlewares/checkRole");
 
-router.post("/", Document.createDocumentType);
+router.post(
+  "/",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.createDocumentType
+);
 
 router.post(
   "/by-type/:type",

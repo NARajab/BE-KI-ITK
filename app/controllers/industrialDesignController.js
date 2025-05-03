@@ -10,6 +10,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const SendEmail = require("../../emails/services/sendMail");
 const IndustrialDesignSubmissionMail = require("../../emails/templates/industrialDesignSubmissionMail");
@@ -19,6 +20,14 @@ const createTypeDesignIndustri = async (req, res, next) => {
     const { title } = req.body;
 
     await TypeDesigns.create({ title: title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil menambah kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",
@@ -35,6 +44,15 @@ const createSubTypeDesignIndustri = async (req, res, next) => {
 
     const { title } = req.body;
     await SubTypeDesigns.create({ typeDesignId: id, title: title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Sub Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil menambah sub kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Desain Industri berhasil ditambahkan",
@@ -100,6 +118,14 @@ const createDesignIndustri = async (req, res, next) => {
         fullname: req.user.fullname,
         email: req.user.email,
       }),
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Pengajuan Desain Industri",
+      description: `${req.user.fullname} berhasil menambah pengajuan desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(200).json({
@@ -233,6 +259,15 @@ const updateTypeDesignIndustri = async (req, res, next) => {
     const { id } = req.params;
     const { title } = req.body;
     await TypeDesigns.update({ title: title }, { where: { id: id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil mengubah kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Kategori Desain Industri berhasil diperbarui",
@@ -247,6 +282,15 @@ const updateSubTypeDesignIndustri = async (req, res, next) => {
     const { id } = req.params;
     const { title } = req.body;
     await SubTypeDesigns.update({ title: title }, { where: { id: id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Sub Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil mengubah sub kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Desain Industri berhasil diperbarui",
@@ -333,6 +377,14 @@ const updateIndustrialDesign = async (req, res, next) => {
       designOwnershipLetter: designOwnershipLetter?.filename || null,
     });
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Melengkapi Data Pengajuan Desain Industri",
+      description: `${req.user.fullname} berhasil melengkapi data pengajuan desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Desain Industri berhasil diperbarui",
@@ -362,6 +414,14 @@ const deleteTypeDesignIndustri = async (req, res, next) => {
       where: { id: id },
     });
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil menghapus kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message:
@@ -384,6 +444,15 @@ const deleteSubTypeDesignIndustri = async (req, res, next) => {
     }
 
     await subTypeCreation.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Sub Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil menghapus sub kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Desain Industri berhasil dihapus",

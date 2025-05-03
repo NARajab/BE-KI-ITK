@@ -6,9 +6,9 @@ const { uploadFields } = require("../middlewares/multer");
 
 router.get("/type", Brand.getAllBrandTypes);
 router.get("/type/:id", Brand.getByIdBrandType);
-router.post("/type", Brand.createBrandType);
-router.patch("/type/:id", Brand.updateBrandType);
-router.delete("/type/:id", Brand.deleteBrandType);
+router.post("/type", authenticat, Brand.createBrandType);
+router.patch("/type/:id", authenticat, Brand.updateBrandType);
+router.delete("/type/:id", authenticat, Brand.deleteBrandType);
 
 router.post(
   "/",
@@ -58,6 +58,7 @@ router.patch(
 router.get("/", Brand.getAllAdditionalDatas);
 router.patch(
   "/additional-data/:id",
+  authenticat,
   (req, res, next) => {
     uploadFields([{ name: "file", maxCount: 1 }])(req, res, (err) => {
       if (err) {

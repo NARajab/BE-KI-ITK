@@ -10,6 +10,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const SendMail = require("../../emails/services/sendMail");
 const brandSubmissionMail = require("../../emails/templates/brandSubmissionMail");
@@ -18,6 +19,15 @@ const createBrandType = async (req, res, next) => {
   try {
     const { title } = req.body;
     await BrandTypes.create({ title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Merek",
+      description: `${req.user.fullname} berhasil menambah kategori merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     return res.status(201).json({
       status: "success",
       message: "Kategori merek berhasil dibuat",
@@ -127,6 +137,14 @@ const createBrand = async (req, res, next) => {
         fullname: req.user.fullname,
         email: req.user.email,
       }),
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Pengajuan Merek",
+      description: `${req.user.fullname} berhasil menambah pengajuan merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     return res.status(200).json({
@@ -252,6 +270,14 @@ const updateBrand = async (req, res, next) => {
       await PersonalDatas.bulkCreate(personalDatasWithSubmissionId);
     }
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Melengkapi Data Pengajuan Merek",
+      description: `${req.user.fullname} berhasil melengkapi data pengajuan merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     return res.status(200).json({
       status: "success",
       message: "Brand berhasil diupdate",
@@ -359,7 +385,7 @@ const updateAdditionalDatas = async (req, res, next) => {
       );
 
       if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath); // Hapus file lama
+        fs.unlinkSync(oldFilePath);
       }
 
       await additionalData.update({
@@ -373,6 +399,14 @@ const updateAdditionalDatas = async (req, res, next) => {
     if (description !== undefined) {
       await additionalData.update({ description });
     }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Data Tambahan",
+      description: `${req.user.fullname} berhasil memperbaharui data tambahan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     return res.status(200).json({
       status: "success",
@@ -388,6 +422,14 @@ const deleteBrandType = async (req, res, next) => {
     const { id } = req.params;
 
     await BrandTypes.destroy({ where: { id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Merek",
+      description: `${req.user.fullname} berhasil menghapus kategori merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     return res.status(200).json({
       status: "success",

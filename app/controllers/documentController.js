@@ -3,6 +3,7 @@ const { Op } = require("sequelize");
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 
 const createDocumentType = async (req, res, next) => {
@@ -11,6 +12,15 @@ const createDocumentType = async (req, res, next) => {
     await Documents.create({
       type,
     });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Unduhan",
+      description: `${req.user.fullname} berhasil menambahkan kategori unduhan: ${type}.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       status: "success",
       message: "Dokumen berhasil ditambahkan",
@@ -33,6 +43,14 @@ const updateDocumentType = async (req, res, next) => {
     }
 
     await Documents.update({ type: newType }, { where: { type: oldType } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Kategori Unduhan",
+      description: `${req.user.fullname} berhasil memperbaharui kategori unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",
@@ -64,6 +82,14 @@ const createDocByType = async (req, res, next) => {
       type: type,
       title,
       document: document ? document.filename : null,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Unduhan",
+      description: `${req.user.fullname} berhasil menambahkan unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(200).json({
@@ -109,6 +135,14 @@ const updateDoc = async (req, res, next) => {
     }
 
     await doc.save();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Unduhan",
+      description: `${req.user.fullname} berhasil memperbaharui unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",
@@ -316,6 +350,14 @@ const deleteDoc = async (req, res, next) => {
 
     await doc.destroy();
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Unduhan",
+      description: `${req.user.fullname} berhasil menghapus unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Document berhasil dihapus",
@@ -348,6 +390,14 @@ const deleteTypeDoc = async (req, res, next) => {
     }
 
     await Documents.destroy({ where: { type } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Unduhan",
+      description: `${req.user.fullname} berhasil menghapus kategori unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

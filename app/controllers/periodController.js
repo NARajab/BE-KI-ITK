@@ -1,6 +1,7 @@
 const { Periods, Groups, Quotas } = require("../models");
 const { Op } = require("sequelize");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 
 const createPeriod = async (req, res, next) => {
@@ -47,6 +48,14 @@ const createPeriod = async (req, res, next) => {
 
     await Quotas.bulkCreate(quotaData);
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Periode",
+      description: `${req.user.fullname} berhasil menambah periode.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(201).json({
       status: "success",
       message:
@@ -92,6 +101,14 @@ const updatePeriod = async (req, res, next) => {
       }
     }
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Periode",
+      description: `${req.user.fullname} berhasil memperbaharui periode.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Periode berhasil diperbarui",
@@ -135,6 +152,14 @@ const createGroup = async (req, res, next) => {
 
     const newQuota = await Quotas.create({
       groupId: newGroup.id,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Gelombang",
+      description: `${req.user.fullname} berhasil menambah gelombang.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(201).json({
@@ -203,6 +228,14 @@ const updateGroup = async (req, res, next) => {
 
     await group.update(updateData);
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Periode",
+      description: `${req.user.fullname} berhasil memperbaharui periode.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Gelombang berhasil diperbarui",
@@ -227,6 +260,14 @@ const updateQuota = async (req, res, next) => {
     await kuota.update({
       quota,
       remainingQuota,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Kuota",
+      description: `${req.user.fullname} berhasil memperbaharui kuota.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(200).json({
@@ -460,6 +501,14 @@ const deleteGroup = async (req, res, next) => {
 
     await group.destroy();
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Gelombang",
+      description: `${req.user.fullname} berhasil menghapus gelombang.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Gelombang dan quota terkait berhasil dihapus",
@@ -490,6 +539,14 @@ const deletePeriod = async (req, res, next) => {
     await Groups.destroy({ where: { periodId: id } });
 
     await Periods.destroy({ where: { id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Periode",
+      description: `${req.user.fullname} berhasil menghapus periode.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

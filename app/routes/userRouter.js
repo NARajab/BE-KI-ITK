@@ -23,7 +23,7 @@ router.get(
 
 router.get("/:id", User.getUserById);
 
-router.patch("/:id", uploadSingle("image"), User.updateUser);
+router.patch("/:id", authenticate, uploadSingle("image"), User.updateUser);
 
 router.delete(
   "/:id",

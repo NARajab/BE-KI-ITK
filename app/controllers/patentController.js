@@ -9,6 +9,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const SendEmail = require("../../emails/services/sendMail");
 const patentSubmissionMail = require("../../emails/templates/patentSubmissionMail");
@@ -18,6 +19,14 @@ const createPatentType = async (req, res, next) => {
     const { title } = req.body;
 
     await PatentTypes.create({ title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Paten",
+      description: `${req.user.fullname} berhasil menambah kategori paten.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     return res.status(201).json({
       status: "success",
@@ -82,6 +91,14 @@ const createPatent = async (req, res, next) => {
         fullname: req.user.fullname,
         email: req.user.email,
       }),
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Membuat Pengajuan Paten",
+      description: `${req.user.fullname} berhasil membuat pengajuan paten.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     return res.status(201).json({
@@ -177,6 +194,14 @@ const updatePatent = async (req, res, next) => {
         letterPassedReviewStage?.filename || patent.letterPassedReviewStage,
     });
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Melengkapi Data Pengajuan Patent",
+      description: `${req.user.fullname} berhasil melengkapi data pengajuan patent.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       message: "Patent berhasil diperbaharui",
       patent,
@@ -244,6 +269,14 @@ const deletePatentType = async (req, res, next) => {
     const { id } = req.params;
 
     await PatentTypes.destroy({ where: { id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Paten",
+      description: `${req.user.fullname} berhasil menghapus kategori paten.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     return res.status(200).json({
       status: "success",

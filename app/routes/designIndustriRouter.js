@@ -4,8 +4,12 @@ const DesignIndustri = require("../controllers/industrialDesignController");
 const authenticate = require("../middlewares/authenticat");
 const { uploadFields } = require("../middlewares/multer");
 
-router.post("/type", DesignIndustri.createTypeDesignIndustri);
-router.post("/sub-type/:id", DesignIndustri.createSubTypeDesignIndustri);
+router.post("/type", authenticate, DesignIndustri.createTypeDesignIndustri);
+router.post(
+  "/sub-type/:id",
+  authenticate,
+  DesignIndustri.createSubTypeDesignIndustri
+);
 router.post(
   "/",
   authenticate,
@@ -29,8 +33,16 @@ router.get("/type/:id", DesignIndustri.getTypeById);
 router.get("/sub-type/:id", DesignIndustri.getSubTypeDesignIndustri);
 router.get("/sub-type/by-id/:id", DesignIndustri.getSubTypeById);
 
-router.patch("/type/:id", DesignIndustri.updateTypeDesignIndustri);
-router.patch("/sub-type/:id", DesignIndustri.updateSubTypeDesignIndustri);
+router.patch(
+  "/type/:id",
+  authenticate,
+  DesignIndustri.updateTypeDesignIndustri
+);
+router.patch(
+  "/sub-type/:id",
+  authenticate,
+  DesignIndustri.updateSubTypeDesignIndustri
+);
 
 router.patch(
   "/:id",
@@ -58,7 +70,15 @@ router.patch(
   DesignIndustri.updateIndustrialDesign
 );
 
-router.delete("/type/:id", DesignIndustri.deleteTypeDesignIndustri);
-router.delete("/sub-type/:id", DesignIndustri.deleteSubTypeDesignIndustri);
+router.delete(
+  "/type/:id",
+  authenticate,
+  DesignIndustri.deleteTypeDesignIndustri
+);
+router.delete(
+  "/sub-type/:id",
+  authenticate,
+  DesignIndustri.deleteSubTypeDesignIndustri
+);
 
 module.exports = router;

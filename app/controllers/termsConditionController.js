@@ -1,10 +1,20 @@
 const { TermsConditions } = require("../models");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 
 const createTerms = async (req, res, next) => {
   try {
     const terms = await TermsConditions.create(req.body);
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Syarat dan Ketentuan",
+      description: `${req.user.fullname} berhasil menambah syarat dan ketentuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Terms and conditions berhasil dibuat",
@@ -22,6 +32,15 @@ const updateTerms = async (req, res, next) => {
       return next(new ApiError("Terms and conditions tidak ditemukan", 404));
     }
     await terms.update(req.body);
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Syarat dan Ketentuan",
+      description: `${req.user.fullname} berhasil memperbaharui syarat dan ketentuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Terms and conditions berhasil diperbarui",
@@ -90,6 +109,15 @@ const deleteTerms = async (req, res, next) => {
       return next(new ApiError("Terms and conditions tidak ditemukan", 404));
     }
     await terms.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Syarat dan Ketentuan",
+      description: `${req.user.fullname} berhasil menghapus syarat dan ketentuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Terms and conditions berhasil dihapus",

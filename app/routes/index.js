@@ -13,6 +13,8 @@ const DesignIndustri = require("./designIndustriRouter");
 const Faqs = require("./faqRouter");
 const Documents = require("./documentRouter");
 const Terms = require("./termsConditionRouter");
+const HelpCenter = require("./helpCenterRouter");
+const ActivityLog = require("./activityLogRouter");
 
 router.use("/api/v1/auth", Auth);
 router.use("/api/v1/user", User);
@@ -26,5 +28,7 @@ router.use("/api/v1/design-industri", DesignIndustri);
 router.use("/api/v1/faq", Faqs);
 router.use("/api/v1/document", Documents);
 router.use("/api/v1/terms", Terms);
+router.use("/api/v1/help-center", HelpCenter);
+router.use("/api/v1/activity-log", ActivityLog);
 
 module.exports = router;

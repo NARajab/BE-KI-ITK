@@ -10,6 +10,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const SendEmail = require("../../emails/services/sendMail");
 const copyrightSubmissionMail = require("../../emails/templates/copyrightSubmissionMail");
@@ -18,6 +19,15 @@ const createTypeCreation = async (req, res, next) => {
   try {
     const { title } = req.body;
     await TypeCreations.create({ title: title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil menambah kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Kategori Hak Cipta berhasil ditambahkan",
@@ -33,6 +43,15 @@ const createSubTypeCreation = async (req, res, next) => {
 
     const { title } = req.body;
     await SubTypeCreations.create({ typeCreationId: id, title: title });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Sub Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil menambah sub kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Hak Cipta berhasil ditambahkan",
@@ -115,6 +134,15 @@ const updateTypeCreation = async (req, res, next) => {
 
     const { title } = req.body;
     await TypeCreations.update({ title: title }, { where: { id: id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Kategori Merek",
+      description: `${req.user.fullname} berhasil mengubah kategori merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Kategori Hak Cipta berhasil diperbarui",
@@ -162,6 +190,15 @@ const updateSubTypeCreation = async (req, res, next) => {
 
     const { title } = req.body;
     await SubTypeCreations.update({ title: title }, { where: { id: id } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Sub Kategori Merek",
+      description: `${req.user.fullname} berhasil mengubah sub kategori merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Hak Cipta berhasil diperbarui",
@@ -255,6 +292,14 @@ const createCopyright = async (req, res, next) => {
         email: req.user.email,
         titleInvention,
       }),
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Pengajuan Hak Cipta Baru",
+      description: `${req.user.fullname} berhasil menambah pengajuan hak cipta baru.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(201).json({
@@ -359,6 +404,14 @@ const updateCopyright = async (req, res, next) => {
       }
     }
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Melengkapi Data Pengajuan Hak Cipta",
+      description: `${req.user.fullname} berhasil melengkapi data pengajuan hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       message: "Copyright berhasil diperbaharui",
       copyright,
@@ -383,6 +436,14 @@ const deleteTypeCreation = async (req, res, next) => {
 
     await typeCreation.destroy();
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil menghapus kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Type Creation berhasil dihapus",
@@ -404,6 +465,14 @@ const deleteSubTypeCreation = async (req, res, next) => {
     }
 
     await subTypeCreation.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Sub Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil menghapus sub kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

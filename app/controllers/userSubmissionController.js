@@ -17,6 +17,7 @@ const {
   SubmissionTypes,
 } = require("../models");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 
 const updateSubmissionScheme = async (req, res, next) => {
@@ -62,6 +63,14 @@ const updateSubmissionScheme = async (req, res, next) => {
         });
       }
     }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Memilih Skema Pengajuan",
+      description: `${req.user.fullname} berhasil memilih skema pengajuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     return res.status(200).json({
       status: "success",

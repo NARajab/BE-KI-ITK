@@ -1,5 +1,6 @@
 const { Faqs } = require("../models");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const { Op } = require("sequelize");
 
@@ -7,6 +8,15 @@ const createTypeFaq = async (req, res, next) => {
   try {
     const { type } = req.body;
     await Faqs.create({ type: type });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Kategori Faq",
+      description: `${req.user.fullname} berhasil menambahkan kategori FAQ: ${type}.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Kategori Faq berhasil ditambahkan",
@@ -29,6 +39,14 @@ const updateFaqType = async (req, res, next) => {
     }
 
     await Faqs.update({ type: newType }, { where: { type: oldType } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Kategori Faq",
+      description: `${req.user.fullname} berhasil memperbaharui kategori FAQ: ${newType}.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",
@@ -58,6 +76,14 @@ const createFaqByType = async (req, res, next) => {
       type: type,
       question,
       answer,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Faq",
+      description: `${req.user.fullname} berhasil menambahkan FAQ.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     res.status(200).json({
@@ -241,6 +267,15 @@ const updateFaq = async (req, res, next) => {
       return next(new ApiError("Faq tidak ditemukan", 404));
     }
     await faq.update({ question, answer });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Faq",
+      description: `${req.user.fullname} berhasil memperbaharui FAQ.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Faq berhasil diperbarui",
@@ -259,6 +294,15 @@ const deleteFaq = async (req, res, next) => {
       return next(new ApiError("Faq tidak ditemukan", 404));
     }
     await faq.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Faq",
+      description: `${req.user.fullname} berhasil menghapus FAQ.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "Faq berhasil dihapus",
@@ -279,6 +323,14 @@ const deleteTypeFaq = async (req, res, next) => {
     }
 
     await Faqs.destroy({ where: { type } });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Kategori Faq",
+      description: `${req.user.fullname} berhasil menghapus kategori FAQ.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

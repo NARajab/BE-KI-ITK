@@ -22,7 +22,7 @@ router.post(
   Patent.createPatent
 );
 
-router.post("/type", Patent.createPatentType);
+router.post("/type", authenticate, Patent.createPatentType);
 
 router.patch(
   "/:id",
@@ -48,12 +48,12 @@ router.patch(
   Patent.updatePatent
 );
 
-router.patch("/type/:id", Patent.updatePatentType);
+router.patch("/type/:id", authenticate, Patent.updatePatentType);
 
 router.get("/type", Patent.getAllPatentTypes);
 
 router.get("/type/:id", Patent.getPatentTypeById);
 
-router.delete("/type/:id", Patent.deletePatentType);
+router.delete("/type/:id", authenticate, Patent.deletePatentType);
 
 module.exports = router;

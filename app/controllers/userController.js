@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
 
+const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
 const { containsProfanity } = require("../../utils/profanityFilter");
 
@@ -35,6 +36,14 @@ const createUser = async (req, res, next) => {
       isVerified: true,
       phoneNumber,
       role,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambah Pengguna Baru",
+      description: `${req.user.fullname} berhasil menambah pengguna baru.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     return res.status(201).json({
@@ -136,6 +145,15 @@ const updateUser = async (req, res, next) => {
     }
 
     await user.update(req.body);
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Data Pengguna",
+      description: `${req.user.fullname} berhasil memperbaharui data pengguna.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     return res.status(200).json({ message: "Pengguna berhasil diperbaharui" });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -149,6 +167,15 @@ const deleteUser = async (req, res, next) => {
       return res.status(404).json({ message: "Pengguna tidak ditemukan" });
     }
     await user.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Pengguna",
+      description: `${req.user.fullname} berhasil menghapus pengguna.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     return res.status(200).json({ message: "Penggunas berhasil dihapus" });
   } catch (err) {
     next(new ApiError(err.message, 500));

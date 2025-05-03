@@ -2,33 +2,27 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable("HelpCenters", {
+    await queryInterface.createTable("ActivityLogs", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER,
       },
-      email: {
+      userId: {
+        type: Sequelize.INTEGER,
+      },
+      action: {
         type: Sequelize.STRING,
       },
-      phoneNumber: {
+      description: {
         type: Sequelize.STRING,
       },
-      problem: {
+      device: {
         type: Sequelize.STRING,
       },
-      message: {
-        type: Sequelize.TEXT,
-      },
-      answer: {
-        type: Sequelize.TEXT,
-      },
-      document: {
+      ip_address: {
         type: Sequelize.STRING,
-      },
-      status: {
-        type: Sequelize.BOOLEAN,
       },
       createdAt: {
         allowNull: false,
@@ -41,6 +35,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable("HelpCenters");
+    await queryInterface.dropTable("ActivityLogs");
   },
 };

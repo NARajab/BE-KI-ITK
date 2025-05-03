@@ -1,4 +1,5 @@
 const { admin, client } = require("../../config/firebase");
+const logActivity = require("../helpers/activityLogs");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { Users } = require("../models");
@@ -113,6 +114,14 @@ const login = async (req, res, next) => {
         expiresIn: "6h",
       });
 
+      await logActivity({
+        userId: user.id,
+        action: "Login",
+        description: `${user.fullname} berhasil login.`,
+        device: req.headers["user-agent"],
+        ipAddress: req.ip,
+      });
+
       return res.status(200).json({
         message: "Login berhasil",
         role: user.role,
@@ -172,6 +181,15 @@ const loginGoogle = async (req, res, next) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+
+    await logActivity({
+      userId: user.id,
+      action: "Login Google",
+      description: `${user.fullname} berhasil login.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     return res.status(200).json({
       message: "Login berhasil",
       token,
@@ -288,6 +306,14 @@ const resetPassword = async (req, res, next) => {
     user.password = hashedPassword;
 
     await user.save();
+
+    await logActivity({
+      userId: user.id,
+      action: "Reset Password",
+      description: `${user.fullname} berhasil reset password.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({ message: "Password berhasil diubah." });
   } catch (err) {
