@@ -14,11 +14,13 @@ const {
   AdditionalDatas,
   PersonalDatas,
   Users,
+  RevisionFiles,
   SubmissionTypes,
 } = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
+const { where } = require("sequelize");
 
 const updateSubmissionScheme = async (req, res, next) => {
   try {
@@ -76,6 +78,122 @@ const updateSubmissionScheme = async (req, res, next) => {
       status: "success",
       message: "SubmissionScheme berhasil diupdate",
       submission,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateSubmissionProgress = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reviewStatus, comments } = req.body;
+
+    const fileNames = JSON.parse(req.body.fileNames || "[]");
+    const files = req.files?.files || [];
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { id },
+    });
+
+    if (!userSubmission) {
+      return res.status(404).json({
+        status: "error",
+        message: "UserSubmission tidak ditemukan",
+      });
+    }
+
+    await userSubmission.update({ reviewStatus });
+
+    await Submissions.update(
+      {
+        comments,
+      },
+      { where: { id: userSubmission.submissionId } }
+    );
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileName = fileNames[i] || file.originalname;
+      await RevisionFiles.create({
+        submissionId: userSubmission.submissionId,
+        fileName: fileName,
+        file: file.filename,
+      });
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "SubmissionProgress berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { centralStatus } = req.body;
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { id },
+    });
+
+    if (!userSubmission) {
+      return res.status(404).json({
+        status: "error",
+        message: "UserSubmission tidak ditemukan",
+      });
+    }
+
+    await userSubmission.update({ centralStatus });
+
+    res.status(200).json({
+      status: "success",
+      message: "Status berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateReviewer = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reviewerId } = req.body;
+
+    const reviewerUser = await Users.findOne({ where: { id: reviewerId } });
+    if (!reviewerUser) {
+      return res.status(404).json({
+        status: "error",
+        message: "Reviewer tidak ditemukan",
+      });
+    }
+
+    if (reviewerUser.role !== "reviewer") {
+      return res.status(400).json({
+        status: "error",
+        message: "User yang dipilih bukan seorang reviewer",
+      });
+    }
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { id },
+    });
+
+    if (!userSubmission) {
+      return res.status(404).json({
+        status: "error",
+        message: "UserSubmission tidak ditemukan",
+      });
+    }
+
+    await userSubmission.update({ reviewerId });
+
+    res.status(200).json({
+      status: "success",
+      message: "Reviewer berhasil diupdate",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -497,9 +615,46 @@ const getByIdSubmissionType = async (req, res, next) => {
   }
 };
 
+const getProgressById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { id },
+      include: [
+        {
+          model: Users,
+          as: "reviewer",
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          include: [
+            {
+              model: RevisionFiles,
+              as: "revisionFile",
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      status: "success",
+      userSubmission,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   updateSubmissionScheme,
+  updateSubmissionProgress,
+  updateStatus,
+  updateReviewer,
   getAllUserSubmission,
   getUserSubmissionById,
   getByIdSubmissionType,
+  getProgressById,
 };

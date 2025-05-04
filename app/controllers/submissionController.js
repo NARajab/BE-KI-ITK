@@ -2,18 +2,10 @@ const {
   UserSubmissions,
   Submissions,
   SubmissionTypes,
-  Copyrights,
-  TypeCreations,
-  SubTypeCreations,
-  Patents,
-  PatentTypes,
-  Brands,
-  IndustrialDesigns,
-  TypeDesigns,
-  SubTypeDesigns,
-  AdditionalDatas,
   PersonalDatas,
 } = require("../models");
+
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -52,15 +44,47 @@ const getSubmissionType = async (req, res, next) => {
     next(new ApiError(err.message, 500));
   }
 };
-
 const getAllSubmissions = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
-
     const offset = (page - 1) * limit;
 
-    const { count, rows: submissions } = await UserSubmissions.findAndCountAll({
+    const {
+      namaPengguna,
+      jenisPengajuan,
+      skemaPengajuan,
+      progressPengajuan,
+      peran,
+      instansi,
+      waktuPengajuan,
+    } = req.query;
+
+    const submissionWhere = {};
+    const userSubmissionWhere = {};
+
+    if (skemaPengajuan) {
+      submissionWhere.submissionScheme = { [Op.iLike]: `%${skemaPengajuan}%` };
+    }
+
+    if (progressPengajuan) {
+      userSubmissionWhere.reviewStatus = {
+        [Op.iLike]: `%${progressPengajuan}%`,
+      };
+    }
+
+    if (waktuPengajuan) {
+      const tanggal = new Date(waktuPengajuan);
+      const nextTanggal = new Date(tanggal);
+      nextTanggal.setDate(nextTanggal.getDate() + 1);
+
+      submissionWhere.createdAt = {
+        [Op.gte]: tanggal,
+        [Op.lt]: nextTanggal,
+      };
+    }
+
+    const { count, rows: submission } = await UserSubmissions.findAndCountAll({
       limit,
       offset,
       order: [["id", "ASC"]],
@@ -68,36 +92,50 @@ const getAllSubmissions = async (req, res, next) => {
         {
           model: Submissions,
           as: "submission",
+          where: submissionWhere,
           include: [
             {
               model: SubmissionTypes,
               as: "submissionType",
+              where: jenisPengajuan
+                ? {
+                    title: { [Op.iLike]: `%${jenisPengajuan}%` },
+                  }
+                : undefined,
             },
             {
               model: PersonalDatas,
               as: "personalDatas",
+              required: false,
+              where: {
+                ...(namaPengguna && {
+                  name: { [Op.iLike]: `%${namaPengguna}%` },
+                }),
+                ...(peran && {
+                  isLeader: peran.toLowerCase() === "ketua",
+                }),
+                ...(instansi && {
+                  institution: { [Op.iLike]: `%${instansi}%` },
+                }),
+              },
             },
           ],
         },
       ],
     });
 
-    const formatted = submissions
-      .map((userSubmission) => {
-        const { submission, isLeader } = userSubmission;
+    const formatted = submission.flatMap((userSubmission) => {
+      const { submission } = userSubmission;
 
-        const namaPengguna = submission.personalDatas?.[0]?.name || "-";
-
-        return {
-          namaPengguna,
-          jenisPengajuan: submission.submissionType?.title || "-",
-          skemaPengajuan: submission.submissionScheme || "-",
-          progressPengajuan: userSubmission.reviewStatus || "-",
-          peran: isLeader ? "Ketua" : "Anggota",
-          waktuPengajuan: submission.createdAt,
-        };
-      })
-      .flat();
+      return submission.personalDatas.map((personalData) => ({
+        namaPengguna: personalData.name || "-",
+        jenisPengajuan: submission.submissionType?.title || "-",
+        skemaPengajuan: submission.submissionScheme || "-",
+        progressPengajuan: userSubmission.reviewStatus || "-",
+        peran: personalData.isLeader ? "Ketua" : "Anggota",
+        waktuPengajuan: submission.createdAt,
+      }));
+    });
 
     res.status(200).json({
       status: "success",

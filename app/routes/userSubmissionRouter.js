@@ -2,6 +2,7 @@ const router = require("express").Router();
 
 const UserSubmission = require("../controllers/userSubmissionController");
 const authenticat = require("../middlewares/authenticat");
+const { uploadFields } = require("../middlewares/multer");
 
 router.patch(
   "/submission-schema/:id",
@@ -9,10 +10,31 @@ router.patch(
   UserSubmission.updateSubmissionScheme
 );
 
+router.patch(
+  "/submission-progress/:id",
+  authenticat,
+  uploadFields([{ name: "files", maxCount: 10 }]),
+  UserSubmission.updateSubmissionProgress
+);
+
+router.patch(
+  "/submission-status/:id",
+  authenticat,
+  UserSubmission.updateStatus
+);
+
+router.patch(
+  "/submission-reviewer/:id",
+  authenticat,
+  UserSubmission.updateReviewer
+);
+
 router.get("/get-by-id", UserSubmission.getUserSubmissionById);
 
 router.get("/get-by-submision-type", UserSubmission.getByIdSubmissionType);
 
 router.get("/", UserSubmission.getAllUserSubmission);
+
+router.get("/progress/:id", UserSubmission.getProgressById);
 
 module.exports = router;

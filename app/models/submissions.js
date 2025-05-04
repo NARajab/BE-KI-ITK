@@ -18,6 +18,11 @@ module.exports = (sequelize, DataTypes) => {
         as: "personalDatas",
       });
 
+      Submissions.hasMany(models.RevisionFiles, {
+        foreignKey: "submissionId",
+        as: "revisionFile",
+      });
+
       Submissions.belongsTo(models.Copyrights, {
         foreignKey: "copyrightId",
         as: "copyright",

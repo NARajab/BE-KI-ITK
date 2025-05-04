@@ -16,11 +16,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "userId",
         as: "user",
       });
+      UserSubmissions.belongsTo(models.Users, {
+        foreignKey: "reviewerId",
+        as: "reviewer",
+      });
     }
   }
   UserSubmissions.init(
     {
       userId: DataTypes.INTEGER,
+      reviewerId: DataTypes.INTEGER,
       submissionId: DataTypes.INTEGER,
       centralStatus: DataTypes.STRING,
       reviewStatus: DataTypes.STRING,
