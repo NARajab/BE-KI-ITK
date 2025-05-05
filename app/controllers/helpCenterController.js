@@ -2,6 +2,7 @@ const { HelpCenters, Users } = require("../models");
 
 const SendEmail = require("../../emails/services/sendMail");
 const helpCenterMailUser = require("../../emails/templates/helpCenterMailUser");
+const helpCenterMailAdmin = require("../../emails/templates/helpCenterMailAdmin");
 const sendNotification = require("../helpers/notifications");
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -61,7 +62,6 @@ const updateHelpCenter = async (req, res, next) => {
 
     const user = await Users.findOne({ where: { email: helpCenter.email } });
 
-    console.log("user.id:", user.id); // Cek apakah id nya benar
     if (isNaN(user.id)) {
       return next(new ApiError("ID pengguna tidak valid", 400));
     }
@@ -74,9 +74,14 @@ const updateHelpCenter = async (req, res, next) => {
       ipAddress: req.ip,
     });
 
-    console.log("user.id:", user.id);
+    await SendEmail({
+      to: user.email,
+      subject: "Pertanyaan di Pusat Bantuan",
+      html: helpCenterMailAdmin({ fullname: user.fullname, message: answer }),
+    });
+
     await sendNotification(
-      user.id, // Kirimkan user.id sebagai parameter langsung
+      user.id,
       "Pertanyaan di Pusat Bantuan",
       "Pertanyaan di Pusat Bantuan telah dijawab"
     );

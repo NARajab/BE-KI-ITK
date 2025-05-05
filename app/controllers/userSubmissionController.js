@@ -19,8 +19,10 @@ const {
 } = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
+const SendEmail = require("../../emails/services/sendMail");
+const progressSubmissionMail = require("../../emails/templates/progressSubmissionMail");
+const statusSubmissionMail = require("../../emails/templates/statusSubmissionMail");
 const ApiError = require("../../utils/apiError");
-const { where } = require("sequelize");
 
 const updateSubmissionScheme = async (req, res, next) => {
   try {
@@ -130,6 +132,20 @@ const updateSubmissionProgress = async (req, res, next) => {
       ipAddress: req.ip,
     });
 
+    const user = await Users.findOne({
+      where: { id: userSubmission.userId },
+    });
+
+    await SendEmail({
+      to: user.email,
+      subject: "Update Progress Pengajuan",
+      html: progressSubmissionMail({
+        fullname: user.fullname,
+        progress: reviewStatus,
+        updatedAt: new Date(),
+      }),
+    });
+
     res.status(200).json({
       status: "success",
       message: "SubmissionProgress berhasil diupdate",
@@ -163,6 +179,20 @@ const updateStatus = async (req, res, next) => {
       description: `${req.user.fullname} berhasil mengubah status pengajuan.`,
       device: req.headers["user-agent"],
       ipAddress: req.ip,
+    });
+
+    const user = await Users.findOne({
+      where: { id: userSubmission.userId },
+    });
+
+    await SendEmail({
+      to: user.email,
+      subject: "Update Status Pengajuan",
+      html: statusSubmissionMail({
+        fullname: user.fullname,
+        status: centralStatus,
+        updatedAt: new Date(),
+      }),
     });
 
     res.status(200).json({
