@@ -359,27 +359,42 @@ const getAllPeriod = async (req, res, next) => {
   }
 };
 
+const getGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const group = await Groups.findOne({ where: { id } });
+
+    if (!group) {
+      return next(new ApiError("Gelombang tidak ditemukan.", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      group,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getGroupById = async (req, res, next) => {
   try {
     const { id } = req.params;
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    // Pastikan grupnya ada
     const group = await Groups.findOne({ where: { id } });
     if (!group) {
       return next(new ApiError("Gelombang tidak ditemukan.", 404));
     }
 
-    // Hitung total quota untuk group tersebut
     const totalQuota = await Quotas.count({
       where: { groupId: id },
     });
 
-    // Pagination logic
     const offset = (page - 1) * limit;
 
-    // Ambil data Quotas berdasarkan groupId
     const quotas = await Quotas.findAll({
       where: { groupId: id },
       limit,
@@ -455,6 +470,27 @@ const getQuotaById = async (req, res, next) => {
     next(new ApiError(err.message, 500));
   }
 };
+const getQuotaByIdGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const quotas = await Quotas.findAll({
+      where: { groupId: id },
+    });
+
+    if (!quotas || quotas.length === 0) {
+      return next(new ApiError("Quota tidak ditemukan.", 404));
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Data quota berhasil diambil",
+      quotas,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
 
 const getAll = async (req, res, next) => {
   try {
@@ -489,7 +525,7 @@ const getAllByThisYear = async (req, res, next) => {
   try {
     const currentYear = new Date().getFullYear().toString();
     const periods = await Periods.findAll({
-      where: { year: currentYear },
+      where: { year: cure },
       order: [["id", "ASC"]],
       include: [
         {
@@ -596,9 +632,11 @@ module.exports = {
   updateQuota,
   getAllPeriod,
   getAllGroupByYear,
+  getGroup,
   getGroupById,
   getAllQuotas,
   getQuotaById,
+  getQuotaByIdGroup,
   getAll,
   getAllByThisYear,
   deleteGroup,

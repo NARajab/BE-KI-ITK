@@ -26,11 +26,15 @@ router.get("/", Period.getAllPeriod);
 
 router.get("/group/by-id/:id", Period.getGroupById);
 
+router.get("/group/group-id/:id", Period.getGroup);
+
 router.get("/group/:id", Period.getAllGroupByYear);
 
 router.get("/quota", Period.getAllQuotas);
 
 router.get("/quota/:id", Period.getQuotaById);
+
+router.get("/quota/by-groupid/:id", Period.getQuotaByIdGroup);
 
 router.patch(
   "/year",
