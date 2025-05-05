@@ -20,6 +20,8 @@ router.post(
 
 router.get("/all", Period.getAll);
 
+router.get("/this-year", Period.getAllByThisYear);
+
 router.get("/", Period.getAllPeriod);
 
 router.get("/group/by-id/:id", Period.getGroupById);

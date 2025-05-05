@@ -122,6 +122,14 @@ const updateSubmissionProgress = async (req, res, next) => {
       });
     }
 
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Progress Pengajuan",
+      description: `${req.user.fullname} berhasil mengubah progress pengajuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
     res.status(200).json({
       status: "success",
       message: "SubmissionProgress berhasil diupdate",
@@ -148,6 +156,14 @@ const updateStatus = async (req, res, next) => {
     }
 
     await userSubmission.update({ centralStatus });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Status Pengajuan",
+      description: `${req.user.fullname} berhasil mengubah status pengajuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",
@@ -190,6 +206,14 @@ const updateReviewer = async (req, res, next) => {
     }
 
     await userSubmission.update({ reviewerId });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Reviewer Pengajuan",
+      description: `${req.user.fullname} berhasil mengubah reviewer pengajuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

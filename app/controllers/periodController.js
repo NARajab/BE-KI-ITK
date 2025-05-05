@@ -485,6 +485,37 @@ const getAll = async (req, res, next) => {
   }
 };
 
+const getAllByThisYear = async (req, res, next) => {
+  try {
+    const currentYear = new Date().getFullYear().toString();
+    const periods = await Periods.findAll({
+      where: { year: currentYear },
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: Groups,
+          as: "group",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [
+            {
+              model: Quotas,
+              as: "quota",
+            },
+          ],
+        },
+      ],
+    });
+
+    res.status(200).json({
+      status: "success",
+      periods,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -569,6 +600,7 @@ module.exports = {
   getAllQuotas,
   getQuotaById,
   getAll,
+  getAllByThisYear,
   deleteGroup,
   deletePeriod,
 };
