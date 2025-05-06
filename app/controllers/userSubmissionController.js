@@ -259,76 +259,6 @@ const getAllUserSubmission = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const userSubmissions = await UserSubmissions.findAll({
-        order: [["id", "ASC"]],
-        include: [
-          {
-            model: Users,
-            as: "user",
-          },
-          {
-            model: Submissions,
-            as: "submission",
-            include: [
-              {
-                model: Copyrights,
-                as: "copyright",
-                include: [
-                  { model: TypeCreations, as: "typeCreation" },
-                  {
-                    model: SubTypeCreations,
-                    as: "subTypeCreation",
-                  },
-                ],
-              },
-              {
-                model: Patents,
-                as: "patent",
-                include: [
-                  {
-                    model: PatentTypes,
-                    as: "patentType",
-                  },
-                ],
-              },
-              {
-                model: Brands,
-                as: "brand",
-                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
-              },
-              {
-                model: IndustrialDesigns,
-                as: "industrialDesign",
-                include: [
-                  {
-                    model: TypeDesigns,
-                    as: "typeDesign",
-                  },
-                  {
-                    model: SubTypeDesigns,
-                    as: "subTypeDesign",
-                  },
-                ],
-              },
-              {
-                model: SubmissionTypes,
-                as: "submissionType",
-              },
-              {
-                model: PersonalDatas,
-                as: "personalDatas",
-              },
-            ],
-          },
-        ],
-      });
-      return res.status(200).json({
-        status: "success",
-        userSubmissions,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: userSubmissions } =
@@ -406,6 +336,7 @@ const getAllUserSubmission = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalUserSubmissions: count,
+      limit: limit,
       userSubmissions,
     });
   } catch (err) {
@@ -415,7 +346,7 @@ const getAllUserSubmission = async (req, res, next) => {
 
 const getUserSubmissionById = async (req, res, next) => {
   try {
-    const { id } = req.body;
+    const { id } = req.params;
     const userSubmission = await UserSubmissions.findOne({
       where: {
         id,
@@ -498,87 +429,9 @@ const getUserSubmissionById = async (req, res, next) => {
 
 const getByIdSubmissionType = async (req, res, next) => {
   try {
-    const { submissionTypeId } = req.body;
+    const { id } = req.params;
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
-
-    if (limit <= 0) {
-      const userSubmissions = await UserSubmissions.findAll({
-        order: [["id", "ASC"]],
-        include: [
-          {
-            model: Users,
-            as: "user",
-          },
-          {
-            model: Submissions,
-            as: "submission",
-            where: {
-              submissionTypeId: submissionTypeId,
-            },
-            include: [
-              {
-                model: Copyrights,
-                as: "copyright",
-                include: [
-                  {
-                    model: TypeCreations,
-                    as: "typeCreation",
-                  },
-                  {
-                    model: SubTypeCreations,
-                    as: "subTypeCreation",
-                  },
-                ],
-              },
-              {
-                model: Patents,
-                as: "patent",
-                include: [
-                  {
-                    model: PatentTypes,
-                    as: "patentType",
-                  },
-                ],
-              },
-              {
-                model: Brands,
-                as: "brand",
-              },
-              {
-                model: IndustrialDesigns,
-                as: "industrialDesign",
-                include: [
-                  {
-                    model: TypeDesigns,
-                    as: "typeDesign",
-                  },
-                  {
-                    model: SubTypeDesigns,
-                    as: "subTypeDesign",
-                  },
-                ],
-              },
-              {
-                model: SubmissionTypes,
-                as: "submissionType",
-              },
-              {
-                model: PersonalDatas,
-                as: "personalDatas",
-              },
-            ],
-          },
-        ],
-      });
-      if (userSubmissions.length === 0)
-        return next(new ApiError("UserSubmissions tidak ditemukan", 404));
-
-      return res.status(200).json({
-        status: "success",
-        userSubmissions,
-      });
-    }
 
     const offset = (page - 1) * limit;
 
@@ -596,7 +449,7 @@ const getByIdSubmissionType = async (req, res, next) => {
             model: Submissions,
             as: "submission",
             where: {
-              submissionTypeId: submissionTypeId,
+              submissionTypeId: id,
             },
             include: [
               {
@@ -662,6 +515,7 @@ const getByIdSubmissionType = async (req, res, next) => {
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalUserSubmissions: count,
+      limit: limit,
       userSubmissions,
     });
   } catch (err) {

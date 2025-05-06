@@ -29,9 +29,9 @@ router.patch(
   UserSubmission.updateReviewer
 );
 
-router.get("/get-by-id", UserSubmission.getUserSubmissionById);
+router.get("/get-by-id/:id", UserSubmission.getUserSubmissionById);
 
-router.get("/get-by-submision-type", UserSubmission.getByIdSubmissionType);
+router.get("/get-by-submision-type/:id", UserSubmission.getByIdSubmissionType);
 
 router.get("/", UserSubmission.getAllUserSubmission);
 
