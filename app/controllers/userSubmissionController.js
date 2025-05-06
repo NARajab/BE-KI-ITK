@@ -19,6 +19,7 @@ const {
 } = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
+const sendNotification = require("../helpers/notifications");
 const SendEmail = require("../../emails/services/sendMail");
 const progressSubmissionMail = require("../../emails/templates/progressSubmissionMail");
 const statusSubmissionMail = require("../../emails/templates/statusSubmissionMail");
@@ -145,6 +146,12 @@ const updateSubmissionProgress = async (req, res, next) => {
         updatedAt: new Date(),
       }),
     });
+
+    await sendNotification(
+      user.id,
+      "Progress Pengajuan",
+      `Progress Pengajuan anda telah berubah menjadi ${reviewStatus}`
+    );
 
     res.status(200).json({
       status: "success",
@@ -435,78 +442,81 @@ const getByIdSubmissionType = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
-    const { count, rows: userSubmissions } =
-      await UserSubmissions.findAndCountAll({
-        limit,
-        offset,
-        order: [["id", "ASC"]],
-        include: [
-          {
-            model: Users,
-            as: "user",
+    const { count, rows } = await UserSubmissions.findAndCountAll({
+      limit,
+      offset,
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: Users,
+          as: "user",
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          where: {
+            submissionTypeId: id,
           },
-          {
-            model: Submissions,
-            as: "submission",
-            where: {
-              submissionTypeId: id,
+          include: [
+            {
+              model: Copyrights,
+              as: "copyright",
+              include: [
+                {
+                  model: TypeCreations,
+                  as: "typeCreation",
+                },
+                {
+                  model: SubTypeCreations,
+                  as: "subTypeCreation",
+                },
+              ],
             },
-            include: [
-              {
-                model: Copyrights,
-                as: "copyright",
-                include: [
-                  {
-                    model: TypeCreations,
-                    as: "typeCreation",
-                  },
-                  {
-                    model: SubTypeCreations,
-                    as: "subTypeCreation",
-                  },
-                ],
-              },
-              {
-                model: Patents,
-                as: "patent",
-                include: [
-                  {
-                    model: PatentTypes,
-                    as: "patentType",
-                  },
-                ],
-              },
-              {
-                model: Brands,
-                as: "brand",
-              },
-              {
-                model: IndustrialDesigns,
-                as: "industrialDesign",
-                include: [
-                  {
-                    model: TypeDesigns,
-                    as: "typeDesign",
-                  },
-                  {
-                    model: SubTypeDesigns,
-                    as: "subTypeDesign",
-                  },
-                ],
-              },
-              {
-                model: SubmissionTypes,
-                as: "submissionType",
-              },
-              {
-                model: PersonalDatas,
-                as: "personalDatas",
-              },
-            ],
-          },
-        ],
-      });
+            {
+              model: Patents,
+              as: "patent",
+              include: [
+                {
+                  model: PatentTypes,
+                  as: "patentType",
+                },
+              ],
+            },
+            {
+              model: Brands,
+              as: "brand",
+            },
+            {
+              model: IndustrialDesigns,
+              as: "industrialDesign",
+              include: [
+                {
+                  model: TypeDesigns,
+                  as: "typeDesign",
+                },
+                {
+                  model: SubTypeDesigns,
+                  as: "subTypeDesign",
+                },
+              ],
+            },
+            {
+              model: SubmissionTypes,
+              as: "submissionType",
+            },
+            {
+              model: PersonalDatas,
+              as: "personalDatas",
+            },
+          ],
+        },
+      ],
+    });
 
+    const userSubmissions = rows.map((item) => ({
+      ...item.toJSON(),
+      reviewerId: item.reviewerId === null ? "-" : item.reviewerId,
+    }));
     if (userSubmissions.length === 0)
       return next(new ApiError("UserSubmissions tidak ditemukan", 404));
 

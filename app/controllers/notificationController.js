@@ -14,6 +14,61 @@ const getAllNotifications = async (req, res, next) => {
   }
 };
 
+const getNotificationByUserId = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const notification = await Notifications.findAll({ where: { userId: id } });
+    if (!notification || notification.length === 0) {
+      return next(new ApiError("Notifikasi tidak ditemukan", 404));
+    }
+    return res.json({
+      status: "success",
+      notification,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getNotificationById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const notification = await Notifications.findByPk(id);
+    if (!notification) {
+      return next(new ApiError("Notifikasi tidak ditemukan", 404));
+    }
+    return res.json({
+      status: "success",
+      notification,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updateNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const notification = await Notifications.findByPk(id);
+    if (!notification) {
+      return next(new ApiError("Notifikasi tidak ditemukan", 404));
+    }
+
+    await Notifications.update({ isRead: true }, { where: { id } });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Notifikasi berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   getAllNotifications,
+  getNotificationByUserId,
+  getNotificationById,
+  updateNotification,
 };
