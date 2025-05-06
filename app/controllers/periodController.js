@@ -525,7 +525,7 @@ const getAllByThisYear = async (req, res, next) => {
   try {
     const currentYear = new Date().getFullYear().toString();
     const periods = await Periods.findAll({
-      where: { year: cure },
+      where: { year: currentYear },
       order: [["id", "ASC"]],
       include: [
         {

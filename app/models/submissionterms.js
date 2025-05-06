@@ -1,28 +1,32 @@
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class TermsConditions extends Model {
+  class SubmissionTerms extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      TermsConditions.belongsToMany(models.Submissions, {
-        through: "SubmissionTerms",
+      SubmissionTerms.belongsTo(models.Submissions, {
+        foreignKey: "submissionId",
+        as: "submission",
+      });
+      SubmissionTerms.belongsTo(models.TermsConditions, {
         foreignKey: "termsConditionId",
-        as: "submissions",
+        as: "termsCondition",
       });
     }
   }
-  TermsConditions.init(
+  SubmissionTerms.init(
     {
-      terms: DataTypes.TEXT,
+      submissionId: DataTypes.INTEGER,
+      termsConditionId: DataTypes.INTEGER,
     },
     {
       sequelize,
-      modelName: "TermsConditions",
+      modelName: "SubmissionTerms",
     }
   );
-  return TermsConditions;
+  return SubmissionTerms;
 };

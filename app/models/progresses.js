@@ -12,12 +12,18 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "userSubmissionId",
         as: "userSubmission",
       });
+
+      Progresses.hasMany(models.RevisionFiles, {
+        foreignKey: "progressId",
+        as: "revisionFile",
+      });
     }
   }
   Progresses.init(
     {
       userSubmissionId: DataTypes.INTEGER,
       status: DataTypes.STRING,
+      comment: DataTypes.TEXT,
       createdBy: DataTypes.STRING,
     },
     {

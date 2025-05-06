@@ -13,14 +13,15 @@ module.exports = (sequelize, DataTypes) => {
         as: "userSubmissions",
       });
 
+      Submissions.belongsToMany(models.TermsConditions, {
+        through: "SubmissionTerms",
+        foreignKey: "submissionId",
+        as: "termsConditions",
+      });
+
       Submissions.hasMany(models.PersonalDatas, {
         foreignKey: "submissionId",
         as: "personalDatas",
-      });
-
-      Submissions.hasMany(models.RevisionFiles, {
-        foreignKey: "submissionId",
-        as: "revisionFile",
       });
 
       Submissions.belongsTo(models.Copyrights, {

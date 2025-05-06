@@ -1,6 +1,8 @@
 const {
   UserSubmissions,
   Submissions,
+  TermsConditions,
+  SubmissionTerms,
   Progresses,
   Quotas,
   Copyrights,
@@ -29,7 +31,7 @@ const ApiError = require("../../utils/apiError");
 const updateSubmissionScheme = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { groupId, submissionScheme } = req.body;
+    const { groupId, submissionScheme, termsConditionId } = req.body;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -47,26 +49,43 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("Submission tidak ditemukan", 404));
     }
 
+    if (submissionScheme === "pendanaan" && Array.isArray(termsConditionId)) {
+      const submissionTermsData = termsConditionId.map((termId) => ({
+        submissionId: submission.id,
+        termsConditionId: termId,
+      }));
+
+      await SubmissionTerms.bulkCreate(submissionTermsData);
+    }
+
     submission.periodId = groupId;
     submission.submissionScheme = submissionScheme;
     await submission.save();
 
     if (submissionScheme === "pendanaan") {
-      const fieldToDecrement = submission.copyrightId
-        ? "remainingCopyrightQuota"
-        : submission.patentId
-        ? "remainingPatentQuota"
-        : submission.brandId
-        ? "remainingBrandQuota"
-        : submission.industrialDesignId
-        ? "remainingIndustrialDesignQuota"
-        : null;
+      let quotaTitle = null;
 
-      if (fieldToDecrement) {
-        await Quotas.decrement(fieldToDecrement, {
-          by: 1,
-          where: { groupId: groupId },
+      if (submission.copyrightId) quotaTitle = "Hak Cipta";
+      else if (submission.patentId) quotaTitle = "Patent";
+      else if (submission.brandId) quotaTitle = "Merek";
+      else if (submission.industrialDesignId) quotaTitle = "Desain Industri";
+
+      if (quotaTitle) {
+        const quota = await Quotas.findOne({
+          where: {
+            groupId: groupId,
+            title: quotaTitle,
+          },
         });
+
+        if (quota && quota.remainingQuota > 0) {
+          await Quotas.update(
+            { remainingQuota: quota.remainingQuota - 1 },
+            { where: { id: quota.id } }
+          );
+        } else {
+          throw new Error("Kuota tidak tersedia atau sudah habis.");
+        }
       }
     }
 
@@ -110,6 +129,7 @@ const updateSubmissionProgress = async (req, res, next) => {
     const newProgress = await Progresses.create({
       userSubmissionId: id,
       status: reviewStatus,
+      comment: comments,
       createdBy: req.user.fullname,
     });
 
@@ -120,18 +140,11 @@ const updateSubmissionProgress = async (req, res, next) => {
       { where: { id } }
     );
 
-    await Submissions.update(
-      {
-        comments,
-      },
-      { where: { id: userSubmission.submissionId } }
-    );
-
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileName = fileNames[i] || file.originalname;
       await RevisionFiles.create({
-        submissionId: userSubmission.submissionId,
+        progressId: newProgress.id,
         fileName: fileName,
         file: file.filename,
       });
@@ -282,6 +295,7 @@ const getAllUserSubmission = async (req, res, next) => {
 
     const { count, rows: userSubmissions } =
       await UserSubmissions.findAndCountAll({
+        distinct: true,
         limit,
         offset,
         order: [["id", "ASC"]],
@@ -307,6 +321,11 @@ const getAllUserSubmission = async (req, res, next) => {
                     as: "subTypeCreation",
                   },
                 ],
+              },
+              {
+                model: TermsConditions,
+                as: "termsConditions",
+                through: { attributes: [] },
               },
               {
                 model: Patents,
@@ -394,6 +413,11 @@ const getUserSubmissionById = async (req, res, next) => {
               ],
             },
             {
+              model: TermsConditions,
+              as: "termsConditions",
+              through: { attributes: [] },
+            },
+            {
               model: Patents,
               as: "patent",
               include: [
@@ -455,6 +479,7 @@ const getByIdSubmissionType = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await UserSubmissions.findAndCountAll({
+      distinct: true,
       limit,
       offset,
       order: [["id", "ASC"]],
@@ -483,6 +508,11 @@ const getByIdSubmissionType = async (req, res, next) => {
                   as: "subTypeCreation",
                 },
               ],
+            },
+            {
+              model: TermsConditions,
+              as: "termsConditions",
+              through: { attributes: [] },
             },
             {
               model: Patents,
@@ -559,16 +589,16 @@ const getProgressById = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
-        },
-        {
-          model: Submissions,
-          as: "submission",
           include: [
             {
               model: RevisionFiles,
               as: "revisionFile",
             },
           ],
+        },
+        {
+          model: Submissions,
+          as: "submission",
         },
       ],
     });

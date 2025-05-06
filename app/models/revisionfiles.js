@@ -8,15 +8,15 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      RevisionFiles.belongsTo(models.Submissions, {
-        foreignKey: "submissionId",
-        as: "submission",
+      RevisionFiles.belongsTo(models.Progresses, {
+        foreignKey: "progressId",
+        as: "progress",
       });
     }
   }
   RevisionFiles.init(
     {
-      submissionId: DataTypes.INTEGER,
+      progressId: DataTypes.INTEGER,
       fileName: DataTypes.STRING,
       file: DataTypes.STRING,
     },
