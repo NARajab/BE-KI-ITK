@@ -2,6 +2,7 @@ const {
   UserSubmissions,
   Users,
   Submissions,
+  Progresses,
   Copyrights,
   PersonalDatas,
   TypeCreations,
@@ -277,8 +278,12 @@ const createCopyright = async (req, res, next) => {
     const userSubmission = await UserSubmissions.create({
       userId: req.user.id,
       submissionId: submission.id,
-      centralStatus: "pending",
-      reviewStatus: "pending",
+      centralStatus: "Draft",
+    });
+
+    await Progresses.create({
+      userSubmissionId: userSubmission.id,
+      status: "Pending",
     });
 
     const admins = await Users.findAll({ where: { role: "admin" } });

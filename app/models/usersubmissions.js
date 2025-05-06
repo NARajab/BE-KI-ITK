@@ -20,6 +20,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "reviewerId",
         as: "reviewer",
       });
+      UserSubmissions.hasMany(models.Progresses, {
+        foreignKey: "userSubmissionId",
+        as: "progress",
+      });
     }
   }
   UserSubmissions.init(
@@ -28,7 +32,6 @@ module.exports = (sequelize, DataTypes) => {
       reviewerId: DataTypes.INTEGER,
       submissionId: DataTypes.INTEGER,
       centralStatus: DataTypes.STRING,
-      reviewStatus: DataTypes.STRING,
     },
     {
       sequelize,

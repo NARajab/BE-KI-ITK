@@ -21,6 +21,8 @@ router.get(
   User.getAllUsers
 );
 
+router.get("/reviewer", User.getAllUserReviewer);
+
 router.get("/:id", User.getUserById);
 
 router.patch("/:id", authenticate, uploadSingle("image"), User.updateUser);

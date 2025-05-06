@@ -1,6 +1,7 @@
 const {
   UserSubmissions,
   Submissions,
+  Progresses,
   Quotas,
   Copyrights,
   TypeCreations,
@@ -106,7 +107,18 @@ const updateSubmissionProgress = async (req, res, next) => {
       });
     }
 
-    await userSubmission.update({ reviewStatus });
+    const newProgress = await Progresses.create({
+      userSubmissionId: id,
+      status: reviewStatus,
+      createdBy: req.user.fullname,
+    });
+
+    await UserSubmissions.update(
+      {
+        progressId: newProgress.id,
+      },
+      { where: { id } }
+    );
 
     await Submissions.update(
       {
@@ -545,6 +557,10 @@ const getProgressById = async (req, res, next) => {
           as: "reviewer",
         },
         {
+          model: Progresses,
+          as: "progress",
+        },
+        {
           model: Submissions,
           as: "submission",
           include: [
@@ -566,6 +582,19 @@ const getProgressById = async (req, res, next) => {
   }
 };
 
+const getAllProgress = async (req, res, next) => {
+  try {
+    const progress = await Progresses.findAll();
+
+    res.status(200).json({
+      status: "success",
+      progress,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   updateSubmissionScheme,
   updateSubmissionProgress,
@@ -575,4 +604,5 @@ module.exports = {
   getUserSubmissionById,
   getByIdSubmissionType,
   getProgressById,
+  getAllProgress,
 };

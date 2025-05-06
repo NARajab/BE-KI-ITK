@@ -37,4 +37,6 @@ router.get("/", UserSubmission.getAllUserSubmission);
 
 router.get("/progress/:id", UserSubmission.getProgressById);
 
+router.get("/progress", UserSubmission.getAllProgress);
+
 module.exports = router;

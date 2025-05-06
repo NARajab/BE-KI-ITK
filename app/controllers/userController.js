@@ -106,6 +106,18 @@ const getUserById = async (req, res, next) => {
   }
 };
 
+const getAllUserReviewer = async (req, res, next) => {
+  try {
+    const users = await Users.findAll({ where: { role: "reviewer" } });
+    return res.status(200).json({
+      status: "success",
+      users,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updateUser = async (req, res, next) => {
   try {
     const user = await Users.findByPk(req.params.id);
@@ -186,6 +198,7 @@ module.exports = {
   createUser,
   getAllUsers,
   getUserById,
+  getAllUserReviewer,
   updateUser,
   deleteUser,
 };
