@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       typeDesignId: DataTypes.INTEGER,
       subtypeDesignId: DataTypes.INTEGER,
-      claim: DataTypes.STRING,
+      claim: DataTypes.ARRAY(DataTypes.STRING),
       looksPerspective: DataTypes.STRING,
       frontView: DataTypes.STRING,
       backView: DataTypes.STRING,

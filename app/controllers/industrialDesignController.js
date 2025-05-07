@@ -364,12 +364,14 @@ const updateIndustrialDesign = async (req, res, next) => {
     if (designOwnershipLetter)
       removeOldFile(industrialDesign.designOwnershipLetter);
 
+    const claimArray = typeof claim === "string" ? JSON.parse(claim) : claim;
+
     await industrialDesign.update({
       titleDesign: titleDesign,
       type: type,
       typeDesignId: typeDesignId,
       subtypeDesignId: subtypeDesignId,
-      claim: claim,
+      claim: claimArray,
       looksPerspective: looksPerspective?.filename || null,
       frontView: frontView?.filename || null,
       backView: backView?.filename || null,
