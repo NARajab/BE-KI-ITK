@@ -110,6 +110,7 @@ const createDesignIndustri = async (req, res, next) => {
     await Progresses.create({
       userSubmissionId: userSubmissions.id,
       status: "Pending",
+      createdBy: req.user.fullname,
     });
 
     const admins = await Users.findAll({ where: { role: "admin" } });

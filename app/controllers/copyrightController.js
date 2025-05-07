@@ -284,6 +284,7 @@ const createCopyright = async (req, res, next) => {
     await Progresses.create({
       userSubmissionId: userSubmission.id,
       status: "Pending",
+      createdBy: req.user.fullname,
     });
 
     const admins = await Users.findAll({ where: { role: "admin" } });
