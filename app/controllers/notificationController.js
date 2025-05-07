@@ -16,8 +16,10 @@ const getAllNotifications = async (req, res, next) => {
 
 const getNotificationByUserId = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const notification = await Notifications.findAll({ where: { userId: id } });
+    const notification = await Notifications.findAll({
+      where: { userId: req.user.id },
+      order: [["createdAt", "DESC"]],
+    });
     if (!notification || notification.length === 0) {
       return next(new ApiError("Notifikasi tidak ditemukan", 404));
     }

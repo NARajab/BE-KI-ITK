@@ -305,6 +305,20 @@ const getAllUserSubmission = async (req, res, next) => {
             as: "user",
           },
           {
+            model: Users,
+            as: "reviewer",
+          },
+          {
+            model: Progresses,
+            as: "progress",
+            include: [
+              {
+                model: RevisionFiles,
+                as: "revisionFile",
+              },
+            ],
+          },
+          {
             model: Submissions,
             as: "submission",
             include: [
@@ -393,6 +407,20 @@ const getUserSubmissionById = async (req, res, next) => {
         {
           model: Users,
           as: "user",
+        },
+        {
+          model: Users,
+          as: "reviewer",
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          include: [
+            {
+              model: RevisionFiles,
+              as: "revisionFile",
+            },
+          ],
         },
         {
           model: Submissions,
@@ -487,6 +515,20 @@ const getByIdSubmissionType = async (req, res, next) => {
         {
           model: Users,
           as: "user",
+        },
+        {
+          model: Users,
+          as: "reviewer",
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          include: [
+            {
+              model: RevisionFiles,
+              as: "revisionFile",
+            },
+          ],
         },
         {
           model: Submissions,
