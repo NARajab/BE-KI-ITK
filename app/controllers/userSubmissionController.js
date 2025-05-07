@@ -4,6 +4,8 @@ const {
   TermsConditions,
   SubmissionTerms,
   Progresses,
+  Periods,
+  Groups,
   Quotas,
   Copyrights,
   TypeCreations,
@@ -20,6 +22,7 @@ const {
   RevisionFiles,
   SubmissionTypes,
 } = require("../models");
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const sendNotification = require("../helpers/notifications");
@@ -323,6 +326,16 @@ const getAllUserSubmission = async (req, res, next) => {
             as: "submission",
             include: [
               {
+                model: Periods,
+                as: "period",
+                include: [
+                  {
+                    model: Groups,
+                    as: "group",
+                  },
+                ],
+              },
+              {
                 model: Copyrights,
                 as: "copyright",
                 include: [
@@ -381,6 +394,15 @@ const getAllUserSubmission = async (req, res, next) => {
             ],
           },
         ],
+        order: [
+          [
+            { model: Submissions, as: "submission" },
+            { model: Periods, as: "period" },
+            { model: Groups, as: "group" },
+            "id",
+            "ASC",
+          ],
+        ],
       });
 
     return res.status(200).json({
@@ -426,6 +448,16 @@ const getUserSubmissionById = async (req, res, next) => {
           model: Submissions,
           as: "submission",
           include: [
+            {
+              model: Periods,
+              as: "period",
+              include: [
+                {
+                  model: Groups,
+                  as: "group",
+                },
+              ],
+            },
             {
               model: Copyrights,
               as: "copyright",
@@ -485,6 +517,15 @@ const getUserSubmissionById = async (req, res, next) => {
           ],
         },
       ],
+      order: [
+        [
+          { model: Submissions, as: "submission" },
+          { model: Periods, as: "period" },
+          { model: Groups, as: "group" },
+          "id",
+          "ASC",
+        ],
+      ],
     });
     if (!userSubmission)
       return next(new ApiError("UserSubmission tidak ditemukan", 404));
@@ -506,11 +547,18 @@ const getByIdSubmissionType = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
+    const currentYear = new Date().getFullYear();
+
     const { count, rows } = await UserSubmissions.findAndCountAll({
       distinct: true,
       limit,
       offset,
-      order: [["id", "ASC"]],
+      where: {
+        createdAt: {
+          [Op.gte]: new Date(`${currentYear}-01-01`),
+          [Op.lt]: new Date(`${currentYear + 1}-01-01`),
+        },
+      },
       include: [
         {
           model: Users,
@@ -537,6 +585,16 @@ const getByIdSubmissionType = async (req, res, next) => {
             submissionTypeId: id,
           },
           include: [
+            {
+              model: Periods,
+              as: "period",
+              include: [
+                {
+                  model: Groups,
+                  as: "group",
+                },
+              ],
+            },
             {
               model: Copyrights,
               as: "copyright",
@@ -594,6 +652,15 @@ const getByIdSubmissionType = async (req, res, next) => {
             },
           ],
         },
+      ],
+      order: [
+        [
+          { model: Submissions, as: "submission" },
+          { model: Periods, as: "period" },
+          { model: Groups, as: "group" },
+          "id",
+          "ASC",
+        ],
       ],
     });
 

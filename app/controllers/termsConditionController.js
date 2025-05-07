@@ -85,6 +85,18 @@ const getAllTerms = async (req, res, next) => {
   }
 };
 
+const getAllTermsWTPagination = async (req, res, next) => {
+  try {
+    const terms = await TermsConditions.findAll();
+    res.status(200).json({
+      status: "success",
+      terms,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const getTermsById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -131,6 +143,7 @@ module.exports = {
   createTerms,
   updateTerms,
   getAllTerms,
+  getAllTermsWTPagination,
   getTermsById,
   deleteTerms,
 };

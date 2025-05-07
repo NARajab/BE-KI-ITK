@@ -20,6 +20,8 @@ router.patch(
 
 router.get("/", Terms.getAllTerms);
 
+router.get("/not-pagination", Terms.getAllTermsWTPagination);
+
 router.get("/:id", Terms.getTermsById);
 
 router.delete(

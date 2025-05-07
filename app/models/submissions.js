@@ -13,6 +13,11 @@ module.exports = (sequelize, DataTypes) => {
         as: "userSubmissions",
       });
 
+      Submissions.belongsTo(models.Periods, {
+        foreignKey: "periodId",
+        as: "period",
+      });
+
       Submissions.belongsToMany(models.TermsConditions, {
         through: "SubmissionTerms",
         foreignKey: "submissionId",
