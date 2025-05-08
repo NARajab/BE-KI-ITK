@@ -37,6 +37,8 @@ router.patch(
 
 router.get("/", Document.getAllDoc);
 
+router.get("/not-pagination", Document.getAllDocWoutPagination);
+
 router.get("/by-type", Document.getAllDocType);
 
 router.get("/:id", Document.getById);

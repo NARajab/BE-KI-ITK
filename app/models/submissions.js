@@ -53,6 +53,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "submissionTypeId",
         as: "submissionType",
       });
+
+      Submissions.belongsTo(models.Groups, {
+        foreignKey: "groupId",
+        as: "group",
+      });
     }
   }
   Submissions.init(
@@ -63,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       industrialDesignId: DataTypes.INTEGER,
       brandId: DataTypes.INTEGER,
       periodId: DataTypes.INTEGER,
-      comments: DataTypes.TEXT,
+      groupId: DataTypes.INTEGER,
       submissionScheme: DataTypes.STRING,
     },
     {

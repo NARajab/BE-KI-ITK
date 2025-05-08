@@ -159,20 +159,6 @@ const getAllDoc = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const docs = await Documents.findAll({
-        where: {
-          title: {
-            [Op.ne]: null,
-          },
-        },
-      });
-      return res.status(200).json({
-        status: "success",
-        totalDocs: docs.length,
-        docs,
-      });
-    }
     const offset = (page - 1) * limit;
 
     const { count, rows: docs } = await Documents.findAndCountAll({
@@ -190,6 +176,24 @@ const getAllDoc = async (req, res, next) => {
       totalPages: Math.ceil(count / limit),
       totalDocs: count,
       limit: limit,
+      docs,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllDocWoutPagination = async (req, res, next) => {
+  try {
+    const docs = await Documents.findAll({
+      where: {
+        title: {
+          [Op.ne]: null,
+        },
+      },
+    });
+    return res.status(200).json({
+      status: "success",
       docs,
     });
   } catch (err) {
@@ -414,6 +418,7 @@ module.exports = {
   updateDocumentType,
   updateDoc,
   getAllDoc,
+  getAllDocWoutPagination,
   getAllDocType,
   getDocByType,
   getById,

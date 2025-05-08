@@ -1,4 +1,5 @@
 const {
+  sequelize,
   UserSubmissions,
   Submissions,
   TermsConditions,
@@ -34,7 +35,7 @@ const ApiError = require("../../utils/apiError");
 const updateSubmissionScheme = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { groupId, submissionScheme, termsConditionId } = req.body;
+    const { periodId, groupId, submissionScheme, termsConditionId } = req.body;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -61,7 +62,8 @@ const updateSubmissionScheme = async (req, res, next) => {
       await SubmissionTerms.bulkCreate(submissionTermsData);
     }
 
-    submission.periodId = groupId;
+    submission.periodId = periodId;
+    submission.groupId = groupId;
     submission.submissionScheme = submissionScheme;
     await submission.save();
 
@@ -328,12 +330,10 @@ const getAllUserSubmission = async (req, res, next) => {
               {
                 model: Periods,
                 as: "period",
-                include: [
-                  {
-                    model: Groups,
-                    as: "group",
-                  },
-                ],
+              },
+              {
+                model: Groups,
+                as: "group",
               },
               {
                 model: Copyrights,
@@ -394,15 +394,7 @@ const getAllUserSubmission = async (req, res, next) => {
             ],
           },
         ],
-        order: [
-          [
-            { model: Submissions, as: "submission" },
-            { model: Periods, as: "period" },
-            { model: Groups, as: "group" },
-            "id",
-            "ASC",
-          ],
-        ],
+        order: [["id", "ASC"]],
       });
 
     return res.status(200).json({
@@ -451,12 +443,10 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
-              include: [
-                {
-                  model: Groups,
-                  as: "group",
-                },
-              ],
+            },
+            {
+              model: Groups,
+              as: "group",
             },
             {
               model: Copyrights,
@@ -517,15 +507,7 @@ const getUserSubmissionById = async (req, res, next) => {
           ],
         },
       ],
-      order: [
-        [
-          { model: Submissions, as: "submission" },
-          { model: Periods, as: "period" },
-          { model: Groups, as: "group" },
-          "id",
-          "ASC",
-        ],
-      ],
+      order: [["id", "ASC"]],
     });
     if (!userSubmission)
       return next(new ApiError("UserSubmission tidak ditemukan", 404));
@@ -588,12 +570,10 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
-              include: [
-                {
-                  model: Groups,
-                  as: "group",
-                },
-              ],
+            },
+            {
+              model: Groups,
+              as: "group",
             },
             {
               model: Copyrights,
@@ -653,15 +633,7 @@ const getByIdSubmissionType = async (req, res, next) => {
           ],
         },
       ],
-      order: [
-        [
-          { model: Submissions, as: "submission" },
-          { model: Periods, as: "period" },
-          { model: Groups, as: "group" },
-          "id",
-          "ASC",
-        ],
-      ],
+      order: [["id", "ASC"]],
     });
 
     const userSubmissions = rows.map((item) => ({
@@ -734,6 +706,101 @@ const getAllProgress = async (req, res, next) => {
   }
 };
 
+const deleteUserSubmission = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+
+    const userSubmission = await UserSubmissions.findByPk(id, {
+      include: [
+        { model: Progresses, as: "progress" },
+        {
+          model: Submissions,
+          as: "submission",
+          include: ["termsConditions", "personalDatas"],
+        },
+      ],
+    });
+
+    if (!userSubmission) {
+      await transaction.rollback();
+      return next(new ApiError("UserSubmission tidak ditemukan", 404));
+    }
+
+    const submission = userSubmission.submission;
+    const submissionId = submission.id;
+
+    const { copyrightId, patentId, brandId, industrialDesignId } = submission;
+
+    const progressIds = userSubmission.progress.map((p) => p.id);
+
+    if (progressIds.length > 0) {
+      await RevisionFiles.destroy({
+        where: {
+          progressId: progressIds,
+        },
+        transaction,
+      });
+    }
+
+    await Progresses.destroy({
+      where: { userSubmissionId: id },
+      transaction,
+    });
+
+    await PersonalDatas.destroy({
+      where: { submissionId },
+      transaction,
+    });
+
+    if (submission.termsConditions.length > 0) {
+      await submission.setTermsConditions([], { transaction });
+    }
+
+    await UserSubmissions.destroy({
+      where: { id },
+      transaction,
+    });
+
+    await Submissions.destroy({
+      where: { id: submissionId },
+      transaction,
+    });
+
+    if (copyrightId) {
+      await Copyrights.destroy({ where: { id: copyrightId }, transaction });
+    }
+    if (patentId) {
+      await Patents.destroy({ where: { id: patentId }, transaction });
+    }
+    if (brandId) {
+      await Brands.destroy({ where: { id: brandId }, transaction });
+    }
+    if (industrialDesignId) {
+      await IndustrialDesigns.destroy({
+        where: { id: industrialDesignId },
+        transaction,
+      });
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Pengajuan",
+      description: `UserSubmission ID ${id}, submission ID ${submissionId}, dan data terkait berhasil dihapus`,
+    });
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      status: "success",
+      message: "UserSubmission dan seluruh data terkait berhasil dihapus",
+    });
+  } catch (err) {
+    await transaction.rollback();
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   updateSubmissionScheme,
   updateSubmissionProgress,
@@ -744,4 +811,5 @@ module.exports = {
   getByIdSubmissionType,
   getProgressById,
   getAllProgress,
+  deleteUserSubmission,
 };

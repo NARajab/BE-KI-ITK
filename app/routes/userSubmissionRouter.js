@@ -39,4 +39,6 @@ router.get("/progress/:id", UserSubmission.getProgressById);
 
 router.get("/progress", UserSubmission.getAllProgress);
 
+router.delete("/:id", authenticat, UserSubmission.deleteUserSubmission);
+
 module.exports = router;
