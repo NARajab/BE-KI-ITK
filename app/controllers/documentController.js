@@ -72,7 +72,8 @@ const createDocByType = async (req, res, next) => {
       },
     });
 
-    const document = req.file || null;
+    const documentFile = req.files?.document?.[0] || null;
+    const coverFile = req.files?.cover?.[0] || null;
 
     if (!doc) {
       return next(new ApiError("Kategori faq tidak ditemukan", 404));
@@ -81,7 +82,8 @@ const createDocByType = async (req, res, next) => {
     const newDoc = await Documents.create({
       type: type,
       title,
-      document: document ? document.filename : null,
+      document: documentFile ? documentFile.filename : null,
+      cover: coverFile ? coverFile.filename : null,
     });
 
     await logActivity({
@@ -107,7 +109,8 @@ const updateDoc = async (req, res, next) => {
     const { id } = req.params;
     const { title } = req.body;
 
-    const document = req.file || null;
+    const documentFile = req.files?.document?.[0] || null;
+    const coverFile = req.files?.cover?.[0] || null;
 
     const doc = await Documents.findOne({
       where: { id },
@@ -117,22 +120,35 @@ const updateDoc = async (req, res, next) => {
       return next(new ApiError("Kategori faq tidak ditemukan", 404));
     }
 
-    if (document && doc.document) {
-      const oldFilePath = path.join(
+    if (documentFile && doc.document) {
+      const oldDocPath = path.join(
         __dirname,
         "../../",
         "uploads/documents/",
         doc.document
       );
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
+      if (fs.existsSync(oldDocPath)) {
+        fs.unlinkSync(oldDocPath);
       }
     }
 
-    doc.title = title || doc.title;
-    if (document) {
-      doc.document = document.filename;
+    if (coverFile && doc.cover) {
+      const oldCoverPath = path.join(
+        __dirname,
+        "../../",
+        "uploads/image/",
+        doc.cover
+      );
+      if (fs.existsSync(oldCoverPath)) {
+        fs.unlinkSync(oldCoverPath);
+      }
     }
+
+    if (title && title.trim() !== "") {
+      doc.title = title;
+    }
+    if (documentFile) doc.document = documentFile.filename;
+    if (coverFile) doc.cover = coverFile.filename;
 
     await doc.save();
 

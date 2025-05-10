@@ -39,6 +39,8 @@ router.get("/progress/:id", UserSubmission.getProgressById);
 
 router.get("/progress", UserSubmission.getAllProgress);
 
+router.get("/by-reviewer/:id", UserSubmission.getSubmissionsByReviewerId);
+
 router.delete("/:id", authenticat, UserSubmission.deleteUserSubmission);
 
 module.exports = router;

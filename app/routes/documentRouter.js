@@ -2,7 +2,7 @@ const router = require("express").Router();
 
 const Document = require("../controllers/documentController");
 const authenticat = require("../middlewares/authenticat");
-const { uploadSingle } = require("../middlewares/multer");
+const { uploadFields } = require("../middlewares/multer");
 const checkRole = require("../middlewares/checkRole");
 
 router.post(
@@ -16,7 +16,10 @@ router.post(
   "/by-type/:type",
   authenticat,
   checkRole(["superAdmin", "admin"]),
-  uploadSingle("document"),
+  uploadFields([
+    { name: "document", maxCount: 1 },
+    { name: "cover", maxCount: 1 },
+  ]),
   Document.createDocByType
 );
 
@@ -31,7 +34,10 @@ router.patch(
   "/:id",
   authenticat,
   checkRole(["superAdmin", "admin"]),
-  uploadSingle("document"),
+  uploadFields([
+    { name: "document", maxCount: 1 },
+    { name: "cover", maxCount: 1 },
+  ]),
   Document.updateDoc
 );
 
