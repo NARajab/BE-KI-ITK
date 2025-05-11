@@ -708,8 +708,6 @@ const getAllProgress = async (req, res, next) => {
 
 const getSubmissionsByReviewerId = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
@@ -720,7 +718,7 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
         distinct: true,
         limit,
         offset,
-        where: { reviewerId: id },
+        where: { reviewerId: req.user.id },
         include: [
           {
             model: Users,
@@ -830,8 +828,6 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
 
 const getSubmissionsByUserId = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
@@ -842,7 +838,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
         distinct: true,
         limit,
         offset,
-        where: { userId: id },
+        where: { userId: req.user.id },
         include: [
           {
             model: Users,
