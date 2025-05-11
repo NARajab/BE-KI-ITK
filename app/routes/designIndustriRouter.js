@@ -29,8 +29,16 @@ router.post(
 );
 
 router.get("/type", DesignIndustri.getAllTypeDesignIndustri);
+router.get(
+  "/type/not-pagination",
+  DesignIndustri.getAllTypeDesignIndustriWtoPagination
+);
 router.get("/type/:id", DesignIndustri.getTypeById);
 router.get("/sub-type/:id", DesignIndustri.getSubTypeDesignIndustri);
+router.get(
+  "/sub-type/not-pagination/:id",
+  DesignIndustri.getSubTypeDesignIndustriWtoPagination
+);
 router.get("/sub-type/by-id/:id", DesignIndustri.getSubTypeById);
 
 router.patch(

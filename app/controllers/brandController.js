@@ -300,16 +300,6 @@ const getAllBrandTypes = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const brandTypes = await BrandTypes.findAll({
-        order: [["id", "ASC"]],
-      });
-      return res.status(200).json({
-        status: "success",
-        brandTypes,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: brandTypes } = await BrandTypes.findAndCountAll({
@@ -324,6 +314,20 @@ const getAllBrandTypes = async (req, res, next) => {
       totalPages: Math.ceil(count / limit),
       totalTypes: count,
       limit: limit,
+      brandTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllBrandTypesWtoPagination = async (req, res, next) => {
+  try {
+    const brandTypes = await BrandTypes.findAll({
+      order: [["id", "ASC"]],
+    });
+    return res.status(200).json({
+      status: "success",
       brandTypes,
     });
   } catch (err) {
@@ -452,6 +456,7 @@ module.exports = {
   updateBrand,
   updateBrandType,
   getAllBrandTypes,
+  getAllBrandTypesWtoPagination,
   getByIdBrandType,
   getAllAdditionalDatas,
   updateAdditionalDatas,

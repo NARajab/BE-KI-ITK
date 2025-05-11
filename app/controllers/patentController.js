@@ -222,14 +222,6 @@ const getAllPatentTypes = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const patentTypes = await PatentTypes.findAll();
-      return res.status(200).json({
-        status: "success",
-        patentTypes,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: patentTypes } = await PatentTypes.findAndCountAll({
@@ -243,6 +235,18 @@ const getAllPatentTypes = async (req, res, next) => {
       totalPages: Math.ceil(count / limit),
       totalTypes: count,
       limit: limit,
+      patentTypes,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllPatentTypesWtoPagination = async (req, res, next) => {
+  try {
+    const patentTypes = await PatentTypes.findAll();
+    return res.status(200).json({
+      status: "success",
       patentTypes,
     });
   } catch (err) {
@@ -299,6 +303,7 @@ module.exports = {
   updatePatent,
   updatePatentType,
   getAllPatentTypes,
+  getAllPatentTypesWtoPagination,
   getPatentTypeById,
   deletePatentType,
 };

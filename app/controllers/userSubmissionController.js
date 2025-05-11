@@ -828,6 +828,128 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
   }
 };
 
+const getSubmissionsByUserId = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    const { count, rows: userSubmissions } =
+      await UserSubmissions.findAndCountAll({
+        distinct: true,
+        limit,
+        offset,
+        where: { userId: id },
+        include: [
+          {
+            model: Users,
+            as: "user",
+          },
+          {
+            model: Users,
+            as: "reviewer",
+          },
+          {
+            model: Progresses,
+            as: "progress",
+            include: [
+              {
+                model: RevisionFiles,
+                as: "revisionFile",
+              },
+            ],
+          },
+          {
+            model: Submissions,
+            as: "submission",
+            include: [
+              {
+                model: Periods,
+                as: "period",
+              },
+              {
+                model: Groups,
+                as: "group",
+              },
+              {
+                model: Copyrights,
+                as: "copyright",
+                include: [
+                  {
+                    model: TypeCreations,
+                    as: "typeCreation",
+                  },
+                  {
+                    model: SubTypeCreations,
+                    as: "subTypeCreation",
+                  },
+                ],
+              },
+              {
+                model: TermsConditions,
+                as: "termsConditions",
+                through: { attributes: [] },
+              },
+              {
+                model: Patents,
+                as: "patent",
+                include: [
+                  {
+                    model: PatentTypes,
+                    as: "patentType",
+                  },
+                ],
+              },
+              {
+                model: Brands,
+                as: "brand",
+                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+              },
+              {
+                model: IndustrialDesigns,
+                as: "industrialDesign",
+                include: [
+                  {
+                    model: TypeDesigns,
+                    as: "typeDesign",
+                  },
+                  {
+                    model: SubTypeDesigns,
+                    as: "subTypeDesign",
+                  },
+                ],
+              },
+              {
+                model: SubmissionTypes,
+                as: "submissionType",
+              },
+              {
+                model: PersonalDatas,
+                as: "personalDatas",
+              },
+            ],
+          },
+        ],
+        order: [["id", "ASC"]],
+      });
+
+    res.status(200).json({
+      status: "success",
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUserSubmissions: count,
+      limit: limit,
+      userSubmissions,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteUserSubmission = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
@@ -934,5 +1056,6 @@ module.exports = {
   getProgressById,
   getAllProgress,
   getSubmissionsByReviewerId,
+  getSubmissionsByUserId,
   deleteUserSubmission,
 };

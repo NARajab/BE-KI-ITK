@@ -67,14 +67,6 @@ const getAllTypeCreation = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const typeCreation = await TypeCreations.findAll();
-      res.status(200).json({
-        status: "success",
-        typeCreation,
-      });
-    }
-
     const { count, rows: typeCreation } = await TypeCreations.findAndCountAll({
       limit: limit,
       offset: (page - 1) * limit,
@@ -99,29 +91,44 @@ const getAllSubTypeCreationByTypeCreation = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const subTypeCreation = await SubTypeCreations.findAll({
-        where: { typeCreationId: id },
-      });
-
-      res.status(200).json({
-        status: "success",
-        subTypeCreation,
-      });
-    }
-
-    const { count, rows: subTypeCreation } =
-      await SubTypeCreations.findAndCountAll({
-        where: { typeCreationId: id },
-        limit: limit,
-        offset: (page - 1) * limit,
-      });
-
     res.status(200).json({
       status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       limit: limit,
+      subTypeCreation,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllTypeCreationWtoPagination = async (req, res, next) => {
+  try {
+    const typeCreation = await TypeCreations.findAll();
+    res.status(200).json({
+      status: "success",
+      typeCreation,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getAllSubTypeCreationByTypeCreationWtoPagination = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const { id } = req.params;
+
+    const subTypeCreation = await SubTypeCreations.findAll({
+      where: { typeCreationId: id },
+    });
+
+    res.status(200).json({
+      status: "success",
       subTypeCreation,
     });
   } catch (err) {
@@ -498,6 +505,8 @@ module.exports = {
   updateSubTypeCreation,
   getAllTypeCreation,
   getAllSubTypeCreationByTypeCreation,
+  getAllTypeCreationWtoPagination,
+  getAllSubTypeCreationByTypeCreationWtoPagination,
   getByIdTypeCreation,
   getByIdSubType,
   deleteTypeCreation,

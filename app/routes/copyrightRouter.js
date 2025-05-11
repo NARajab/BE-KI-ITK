@@ -53,9 +53,14 @@ router.patch("/type/:id", authenticate, Copyright.updateTypeCreation);
 router.patch("/sub-type/:id", authenticate, Copyright.updateSubTypeCreation);
 
 router.get("/type", Copyright.getAllTypeCreation);
+router.get("/type/not-pagination", Copyright.getAllTypeCreationWtoPagination);
 router.get("/type/:id", Copyright.getByIdTypeCreation);
 
 router.get("/sub-type/:id", Copyright.getAllSubTypeCreationByTypeCreation);
+router.get(
+  "/sub-type/not-pagination/:id",
+  Copyright.getAllSubTypeCreationByTypeCreationWtoPagination
+);
 router.get("/sub-type/by-id/:id", Copyright.getByIdSubType);
 
 router.delete("/type/:id", authenticate, Copyright.deleteTypeCreation);
