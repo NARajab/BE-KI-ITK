@@ -91,6 +91,13 @@ const getAllSubTypeCreationByTypeCreation = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
+    const { count, rows: subTypeCreation } =
+      await SubTypeCreations.findAndCountAll({
+        where: { typeCreationId: id },
+        limit: limit,
+        offset: (page - 1) * limit,
+      });
+
     res.status(200).json({
       status: "success",
       currentPage: page,
