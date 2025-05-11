@@ -387,7 +387,6 @@ const updateCopyright = async (req, res, next) => {
         exampleCreationFile?.filename || copyright.exampleCreation,
     });
 
-    // Handle personalDatas
     const parsedPersonalDatas =
       typeof personalDatas === "string"
         ? JSON.parse(personalDatas)

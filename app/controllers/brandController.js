@@ -91,7 +91,7 @@ const createBrand = async (req, res, next) => {
       fileName: file.originalname,
       size: file.size,
       file: additionalFiles[index] ? additionalFiles[index].filename : null,
-      description: parsedDescriptions[index] || null,
+      description: parsedDescriptions[index]?.description || null,
     }));
 
     if (additionalDatasPayload.length > 0) {
