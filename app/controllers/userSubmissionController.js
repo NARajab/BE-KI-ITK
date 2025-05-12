@@ -22,6 +22,7 @@ const {
   Users,
   RevisionFiles,
   SubmissionTypes,
+  Payments,
   Faqs,
   Documents,
 } = require("../models");
@@ -95,6 +96,21 @@ const updateSubmissionScheme = async (req, res, next) => {
           throw new Error("Kuota tidak tersedia atau sudah habis.");
         }
       }
+
+      const existingPayment = await Payments.findOne({
+        where: {
+          userId: req.user.id,
+          submissionId: submission.id,
+        },
+      });
+
+      if (!existingPayment) {
+        await Payments.create({
+          userId: req.user.id,
+          submissionId: submission.id,
+          paymentStatus: false,
+        });
+      }
     }
 
     await logActivity({
@@ -147,6 +163,18 @@ const updateSubmissionProgress = async (req, res, next) => {
       },
       { where: { id } }
     );
+
+    if (req.body.billingCode) {
+      await Payments.update(
+        { billingCode: req.body.billingCode },
+        {
+          where: {
+            userId: userSubmission.userId,
+            submissionId: userSubmission.submissionId,
+          },
+        }
+      );
+    }
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
