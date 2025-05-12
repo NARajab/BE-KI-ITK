@@ -701,6 +701,8 @@ const getProgressById = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
+          separate: true,
+          order: [["id", "DESC"]],
           include: [
             {
               model: RevisionFiles,
@@ -864,7 +866,6 @@ const getSubmissionsByUserId = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
-    // Ambil submissionTypeId dari query, misal ?submissionTypeId=1 atau ?submissionTypeId=1,2
     const submissionTypeIdParam = req.query.submissionTypeId;
     const submissionTypeIds = submissionTypeIdParam
       ? submissionTypeIdParam.split(",").map((id) => parseInt(id))
@@ -906,7 +907,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
                     [Op.in]: submissionTypeIds,
                   },
                 }
-              : undefined, // biarkan kosong jika tidak difilter
+              : undefined,
             include: [
               {
                 model: Periods,
@@ -978,13 +979,33 @@ const getSubmissionsByUserId = async (req, res, next) => {
         order: [["id", "ASC"]],
       });
 
+    const userSubmissionsSorted = userSubmissions.sort((a, b) => {
+      const aUpdatedAt = new Date(
+        Math.max(
+          new Date(a.updatedAt).getTime(),
+          new Date(a.submission?.updatedAt || 0).getTime(),
+          ...(a.progress || []).map((p) => new Date(p.updatedAt).getTime())
+        )
+      );
+
+      const bUpdatedAt = new Date(
+        Math.max(
+          new Date(b.updatedAt).getTime(),
+          new Date(b.submission?.updatedAt || 0).getTime(),
+          ...(b.progress || []).map((p) => new Date(p.updatedAt).getTime())
+        )
+      );
+
+      return bUpdatedAt - aUpdatedAt; // descending
+    });
+
     res.status(200).json({
       status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalUserSubmissions: count,
       limit: limit,
-      userSubmissions,
+      userSubmissionsSorted,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
