@@ -22,8 +22,11 @@ const {
   Users,
   RevisionFiles,
   SubmissionTypes,
+  Faqs,
+  Documents,
 } = require("../models");
 const { Op } = require("sequelize");
+const moment = require("moment");
 
 const logActivity = require("../helpers/activityLogs");
 const sendNotification = require("../helpers/notifications");
@@ -833,12 +836,20 @@ const getSubmissionsByUserId = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
+    // Ambil submissionTypeId dari query, misal ?submissionTypeId=1 atau ?submissionTypeId=1,2
+    const submissionTypeIdParam = req.query.submissionTypeId;
+    const submissionTypeIds = submissionTypeIdParam
+      ? submissionTypeIdParam.split(",").map((id) => parseInt(id))
+      : null;
+
     const { count, rows: userSubmissions } =
       await UserSubmissions.findAndCountAll({
         distinct: true,
         limit,
         offset,
-        where: { userId: req.user.id },
+        where: {
+          userId: req.user.id,
+        },
         include: [
           {
             model: Users,
@@ -861,6 +872,13 @@ const getSubmissionsByUserId = async (req, res, next) => {
           {
             model: Submissions,
             as: "submission",
+            where: submissionTypeIds
+              ? {
+                  submissionTypeId: {
+                    [Op.in]: submissionTypeIds,
+                  },
+                }
+              : undefined, // biarkan kosong jika tidak difilter
             include: [
               {
                 model: Periods,
@@ -934,7 +952,6 @@ const getSubmissionsByUserId = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalUserSubmissions: count,
@@ -943,6 +960,178 @@ const getSubmissionsByUserId = async (req, res, next) => {
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
+  }
+};
+
+const getAdminDashboard = async (req, res, next) => {
+  try {
+    const [totalHakCipta, totalPaten, totalMerek, totalDesainIndustri] =
+      await Promise.all([
+        Copyrights.count(),
+        Patents.count(),
+        Brands.count(),
+        IndustrialDesigns.count(),
+      ]);
+
+    const [totalPendanaan, totalMandiri] = await Promise.all([
+      Submissions.count({ where: { submissionScheme: "pendanaan" } }),
+      Submissions.count({ where: { submissionScheme: "mandiri" } }),
+    ]);
+
+    const [totalFaq, totalDocuments] = await Promise.all([
+      Faqs.count(),
+      Documents.count(),
+    ]);
+
+    const recentSubmissions = await UserSubmissions.findAll({
+      limit: 5,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Users,
+          as: "user",
+          attributes: ["fullname"],
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          include: [
+            {
+              model: SubmissionTypes,
+              as: "submissionType",
+              attributes: ["title"],
+            },
+          ],
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          attributes: ["status"],
+        },
+      ],
+    });
+
+    const formattedRecent = recentSubmissions.map((item) => ({
+      id: item.id,
+      namaPengguna: item.user?.fullname || "-",
+      jenisPengajuan: item.submission?.submissionType?.title || "-",
+      pendanaan: item.submission?.submissionScheme || "-",
+      progres: item.progress?.status || "-",
+      waktuPengajuan: moment(item.createdAt).format("DD MMMM YYYY"),
+    }));
+
+    const currentYear = new Date().getFullYear();
+
+    // Grafik Pengajuan Berdasarkan Gelombang (per bulan di tahun berjalan)
+    const getMonthlyCount = async (Model) => {
+      const counts = await Promise.all(
+        Array.from({ length: 12 }, (_, i) => {
+          const start = new Date(currentYear, i, 1);
+          const end = new Date(currentYear, i + 1, 1);
+          return Model.count({
+            where: {
+              createdAt: {
+                [Op.gte]: start,
+                [Op.lt]: end,
+              },
+            },
+          });
+        })
+      );
+      return counts;
+    };
+
+    const [hakCiptaMonthly, patenMonthly, merekMonthly, desainIndustriMonthly] =
+      await Promise.all([
+        getMonthlyCount(Copyrights),
+        getMonthlyCount(Patents),
+        getMonthlyCount(Brands),
+        getMonthlyCount(IndustrialDesigns),
+      ]);
+
+    // Grafik Pengajuan Berdasarkan Tahun (5 tahun terakhir)
+    const startYear = currentYear - 4;
+
+    const getYearlyCount = async (Model) => {
+      const counts = await Promise.all(
+        Array.from({ length: 5 }, (_, i) => {
+          const year = startYear + i;
+          const start = new Date(year, 0, 1);
+          const end = new Date(year + 1, 0, 1);
+          return Model.count({
+            where: {
+              createdAt: {
+                [Op.gte]: start,
+                [Op.lt]: end,
+              },
+            },
+          });
+        })
+      );
+      return counts;
+    };
+
+    const [hakCiptaYearly, patenYearly, merekYearly, desainIndustriYearly] =
+      await Promise.all([
+        getYearlyCount(Copyrights),
+        getYearlyCount(Patents),
+        getYearlyCount(Brands),
+        getYearlyCount(IndustrialDesigns),
+      ]);
+
+    res.status(200).json({
+      totalPengajuan: {
+        hakCipta: totalHakCipta,
+        paten: totalPaten,
+        merek: totalMerek,
+        desainIndustri: totalDesainIndustri,
+      },
+      totalPendanaan: {
+        pendanaan: totalPendanaan,
+        mandiri: totalMandiri,
+      },
+      faq: totalFaq,
+      unduhan: totalDocuments,
+      pengajuanTerakhir: formattedRecent,
+
+      berdasarkanGelombang: {
+        labels: [
+          "Januari",
+          "Februari",
+          "Maret",
+          "April",
+          "Mei",
+          "Juni",
+          "Juli",
+          "Agustus",
+          "September",
+          "Oktober",
+          "November",
+          "Desember",
+        ],
+        data: {
+          hakCipta: hakCiptaMonthly,
+          paten: patenMonthly,
+          merek: merekMonthly,
+          desainIndustri: desainIndustriMonthly,
+        },
+      },
+      berdasarkanTahun: {
+        labels: Array.from(
+          { length: 5 },
+          (_, i) => `${currentYear - i}`
+        ).reverse(),
+
+        data: {
+          hakCipta: hakCiptaYearly,
+          paten: patenYearly,
+          merek: merekYearly,
+          desainIndustri: desainIndustriYearly,
+        },
+      },
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
   }
 };
 
@@ -1053,5 +1242,6 @@ module.exports = {
   getAllProgress,
   getSubmissionsByReviewerId,
   getSubmissionsByUserId,
+  getAdminDashboard,
   deleteUserSubmission,
 };

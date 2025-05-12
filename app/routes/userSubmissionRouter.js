@@ -47,6 +47,8 @@ router.get(
 
 router.get("/by-user", authenticat, UserSubmission.getSubmissionsByUserId);
 
+router.get("/admin-dashboard", UserSubmission.getAdminDashboard);
+
 router.delete("/:id", authenticat, UserSubmission.deleteUserSubmission);
 
 module.exports = router;

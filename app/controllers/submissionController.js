@@ -47,8 +47,9 @@ const getSubmissionType = async (req, res, next) => {
 const getAllSubmissions = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
+    const isExport = req.query.export === "true";
+    let limit = isExport ? undefined : parseInt(req.query.limit) || 10;
+    const offset = isExport ? undefined : (page - 1) * limit;
 
     const {
       namaPengguna,
@@ -124,25 +125,30 @@ const getAllSubmissions = async (req, res, next) => {
       ],
     });
 
-    const formatted = submission.flatMap((userSubmission) => {
-      const { submission } = userSubmission;
+    let formatted = [];
 
-      return submission.personalDatas.map((personalData) => ({
-        namaPengguna: personalData.name || "-",
-        jenisPengajuan: submission.submissionType?.title || "-",
-        skemaPengajuan: submission.submissionScheme || "-",
-        progressPengajuan: userSubmission.reviewStatus || "-",
-        peran: personalData.isLeader ? "Ketua" : "Anggota",
-        waktuPengajuan: submission.createdAt,
-      }));
-    });
+    if (!isExport) {
+      formatted = submission.flatMap((userSubmission) => {
+        const { submission } = userSubmission;
+
+        return submission.personalDatas.map((personalData) => ({
+          namaPengguna: personalData.name || "-",
+          jenisPengajuan: submission.submissionType?.title || "-",
+          skemaPengajuan: submission.submissionScheme || "-",
+          progressPengajuan: userSubmission.reviewStatus || "-",
+          peran: personalData.isLeader ? "Ketua" : "Anggota",
+          waktuPengajuan: submission.createdAt,
+        }));
+      });
+    }
 
     res.status(200).json({
       status: "success",
-      currentPage: page,
-      totalPages: Math.ceil(count / limit),
+      currentPage: isExport ? undefined : page,
+      totalPages: isExport ? undefined : Math.ceil(count / limit),
       totalSubmissions: count,
-      submissions: formatted,
+      submissions: isExport ? undefined : formatted,
+      rawSubmissions: isExport ? submission : undefined,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
