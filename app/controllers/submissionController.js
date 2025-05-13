@@ -493,8 +493,8 @@ const updatePersonalDataDesignIndustri = async (req, res, next) => {
 
     await logActivity({
       userId: req.user.id,
-      action: "Update Data Diri dan Paten",
-      description: `${req.user.fullname} mengupdate data diri dan file paten pada submission ID ${submissionId}`,
+      action: "Update Data Diri dan Desain Industri",
+      description: `${req.user.fullname} mengupdate data diri dan file desain industri pada submission ID ${submissionId}`,
       device: req.headers["user-agent"],
       ipAddress: req.ip,
     });
