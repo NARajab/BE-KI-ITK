@@ -30,6 +30,8 @@ router.get("/group/group-id/:id", Period.getGroup);
 
 router.get("/group/:id", Period.getAllGroupByYear);
 
+router.get("/group/not-pagination/:id", Period.getAllGroupByYearwtoPagination);
+
 router.get("/quota", Period.getAllQuotas);
 
 router.get("/quota/:id", Period.getQuotaById);

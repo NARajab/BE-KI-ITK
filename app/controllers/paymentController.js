@@ -1,6 +1,7 @@
 const { Payments } = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
+const sendNotification = require("../helpers/notifications");
 const ApiError = require("../../utils/apiError");
 
 const getAllPayments = async (req, res, next) => {
@@ -105,6 +106,14 @@ const updatePayment = async (req, res, next) => {
         message: "Data pembayaran tidak ditemukan.",
       });
     }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Memperbarui Data Pembayaran",
+      description: `${req.user.fullname} berhasil memperbarui data pembayaran.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
     res.status(200).json({
       status: "success",

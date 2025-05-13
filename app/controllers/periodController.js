@@ -285,19 +285,6 @@ const getAllGroupByYear = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const groups = await Groups.findAll({
-        order: [["id", "ASC"]],
-        where: {
-          periodId: req.params.id,
-        },
-      });
-      return res.status(200).json({
-        status: "success",
-        groups,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: groups } = await Groups.findAndCountAll({
@@ -315,6 +302,27 @@ const getAllGroupByYear = async (req, res, next) => {
       totalPages: Math.ceil(count / limit),
       totalPeriods: count,
       limit: limit,
+      groups,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+const getAllGroupByYearwtoPagination = async (req, res, next) => {
+  try {
+    const groups = await Groups.findAll({
+      order: [["id", "ASC"]],
+      where: {
+        periodId: req.params.id,
+      },
+    });
+    return res.status(200).json({
+      status: "success",
+      groups,
+    });
+
+    res.status(200).json({
+      status: "success",
       groups,
     });
   } catch (err) {
@@ -632,6 +640,7 @@ module.exports = {
   updateQuota,
   getAllPeriod,
   getAllGroupByYear,
+  getAllGroupByYearwtoPagination,
   getGroup,
   getGroupById,
   getAllQuotas,
