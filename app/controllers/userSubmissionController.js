@@ -764,6 +764,8 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
           {
             model: Progresses,
             as: "progress",
+            separate: true,
+            order: [["id", "DESC"]],
             include: [
               {
                 model: RevisionFiles,
@@ -891,6 +893,8 @@ const getSubmissionsByUserId = async (req, res, next) => {
           {
             model: Progresses,
             as: "progress",
+            separate: true,
+            order: [["id", "DESC"]],
             include: [
               {
                 model: RevisionFiles,
@@ -996,7 +1000,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
         )
       );
 
-      return bUpdatedAt - aUpdatedAt; // descending
+      return bUpdatedAt - aUpdatedAt;
     });
 
     res.status(200).json({
