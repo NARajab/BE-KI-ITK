@@ -310,18 +310,22 @@ const getAllGroupByYear = async (req, res, next) => {
 };
 const getAllGroupByYearwtoPagination = async (req, res, next) => {
   try {
+    const currentYear = new Date().getFullYear().toString(); // ubah ke string
+
     const groups = await Groups.findAll({
+      include: [
+        {
+          model: Periods,
+          as: "period",
+          where: {
+            year: currentYear,
+          },
+        },
+      ],
       order: [["id", "ASC"]],
-      where: {
-        periodId: req.params.id,
-      },
-    });
-    return res.status(200).json({
-      status: "success",
-      groups,
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
       groups,
     });
