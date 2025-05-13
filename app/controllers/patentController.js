@@ -96,6 +96,7 @@ const createPatent = async (req, res, next) => {
       html: patentSubmissionMail({
         fullname: req.user.fullname,
         email: req.user.email,
+        type: "create",
       }),
     });
 
@@ -198,6 +199,19 @@ const updatePatent = async (req, res, next) => {
         patent.letterTransferRightsInvention,
       letterPassedReviewStage:
         letterPassedReviewStage?.filename || patent.letterPassedReviewStage,
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "Pembaruan Pengajuan Paten",
+      html: patentSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        type: "update",
+      }),
     });
 
     await logActivity({

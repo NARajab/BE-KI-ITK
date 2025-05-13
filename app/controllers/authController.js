@@ -13,7 +13,6 @@ const {
   censorText,
 } = require("../../utils/profanityFilter");
 
-// Regiister Biasa
 const register = async (req, res, next) => {
   const {
     email,
@@ -137,7 +136,6 @@ const login = async (req, res, next) => {
   }
 };
 
-// Login Google
 const loginGoogle = async (req, res, next) => {
   try {
     const { idToken } = req.body;

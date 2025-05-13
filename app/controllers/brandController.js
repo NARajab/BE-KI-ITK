@@ -138,10 +138,11 @@ const createBrand = async (req, res, next) => {
 
     await SendMail({
       to: adminEmails,
-      subject: "Pengajuan Brand",
+      subject: "Pengajuan Merek Baru",
       html: brandSubmissionMail({
         fullname: req.user.fullname,
         email: req.user.email,
+        type: "create",
       }),
     });
 
@@ -195,7 +196,6 @@ const updateBrand = async (req, res, next) => {
       description,
       documentType,
       information,
-      personalDatas,
     } = req.body || {};
 
     const { id } = req.params;
@@ -248,33 +248,18 @@ const updateBrand = async (req, res, next) => {
         req.files?.letterStatment?.[0]?.filename || brand.letterStatment,
     });
 
-    const submission = await Submissions.findOne({
-      where: { brandId: brand.id },
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendMail({
+      to: adminEmails,
+      subject: "Pembaruan Pengajuan Merek",
+      html: brandSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        type: "update",
+      }),
     });
-    if (!submission)
-      return next(new ApiError("Submission tidak ditemukan", 404));
-
-    if (personalDatas) {
-      await PersonalDatas.destroy({ where: { submissionId: submission.id } });
-
-      const parsedPersonalDatas =
-        typeof personalDatas === "string"
-          ? JSON.parse(personalDatas)
-          : personalDatas;
-
-      const ktpFiles = req.files?.ktp || [];
-
-      const personalDatasWithSubmissionId = parsedPersonalDatas.map(
-        (data, index) => ({
-          ...data,
-          submissionId: submission.id,
-          ktp: ktpFiles[index] ? ktpFiles[index].filename : null,
-          isLeader: index === 0,
-        })
-      );
-
-      await PersonalDatas.bulkCreate(personalDatasWithSubmissionId);
-    }
 
     await logActivity({
       userId: req.user.id,
@@ -288,7 +273,6 @@ const updateBrand = async (req, res, next) => {
       status: "success",
       message: "Brand berhasil diupdate",
       brand,
-      submission,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));

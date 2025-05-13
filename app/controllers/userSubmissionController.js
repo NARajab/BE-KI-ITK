@@ -263,6 +263,12 @@ const updateStatus = async (req, res, next) => {
       }),
     });
 
+    await sendNotification(
+      user.id,
+      "Status Pengajuan",
+      `Status Pengajuan anda telah berubah menjadi ${centralStatus}`
+    );
+
     res.status(200).json({
       status: "success",
       message: "Status berhasil diupdate",
@@ -844,7 +850,7 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
             ],
           },
         ],
-        order: [["id", "ASC"]],
+        order: [["id", "DESC"]],
       });
 
     res.status(200).json({

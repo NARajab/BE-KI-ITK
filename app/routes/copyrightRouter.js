@@ -36,7 +36,6 @@ router.patch(
       { name: "statementLetter", maxCount: 1 },
       { name: "letterTransferCopyright", maxCount: 1 },
       { name: "exampleCreation", maxCount: 1 },
-      { name: "ktp", maxCount: 10 },
     ])(req, res, (err) => {
       if (err) {
         console.error("Multer error:", err.message);

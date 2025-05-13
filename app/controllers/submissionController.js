@@ -3,9 +3,13 @@ const {
   Submissions,
   SubmissionTypes,
   PersonalDatas,
+  Patents,
+  IndustrialDesigns,
 } = require("../models");
 
 const { Op } = require("sequelize");
+const fs = require("fs");
+const path = require("path");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -231,6 +235,279 @@ const updateSubmissionType = async (req, res, next) => {
   }
 };
 
+const updatePersonalData = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { personalDatas } = req.body || {};
+    if (!submissionId || !personalDatas) {
+      return next(
+        new ApiError("submissionId dan personalDatas diperlukan", 400)
+      );
+    }
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const ktpFiles = req.files?.ktpFiles || [];
+
+    for (let i = 0; i < parsedPersonalDatas.length; i++) {
+      const data = parsedPersonalDatas[i];
+      const ktpFile = ktpFiles[i]?.filename;
+
+      if (data.id) {
+        const existingData = await PersonalDatas.findByPk(data.id);
+        if (existingData) {
+          if (ktpFile && existingData.ktp) {
+            const oldFilePath = path.join(
+              __dirname,
+              "../../uploads/image/",
+              existingData.ktp
+            );
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+            }
+          }
+
+          await existingData.update({
+            ...data,
+            ktp: ktpFile || existingData.ktp,
+          });
+        }
+      } else {
+        await PersonalDatas.create({
+          ...data,
+          submissionId,
+          ktp: ktpFile || null,
+          isLeader: i === 0,
+        });
+      }
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Update Data Diri",
+      description: `${req.user.fullname} mengupdate data diri pada submission ID ${submissionId}`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data personal berhasil diupdate / ditambahkan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updatePersonalDataPaten = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { personalDatas } = req.body || {};
+    const ktpFiles = req.files?.ktpFiles || [];
+    const draftPatentApplicationFiles =
+      req.files?.draftPatentApplicationFile || [];
+
+    if (!submissionId || !personalDatas) {
+      return next(
+        new ApiError("submissionId dan personalDatas diperlukan", 400)
+      );
+    }
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const submission = await Submissions.findByPk(submissionId);
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const patentId = submission.patentId;
+
+    for (let i = 0; i < parsedPersonalDatas.length; i++) {
+      const data = parsedPersonalDatas[i];
+      const ktpFile = ktpFiles[i]?.filename;
+
+      if (data.id) {
+        const existingData = await PersonalDatas.findByPk(data.id);
+        if (existingData) {
+          if (ktpFile && existingData.ktp) {
+            const oldFilePath = path.join(
+              __dirname,
+              "../../uploads/image/",
+              existingData.ktp
+            );
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+            }
+          }
+
+          await existingData.update({
+            ...data,
+            ktp: ktpFile || existingData.ktp,
+          });
+        }
+      } else {
+        await PersonalDatas.create({
+          ...data,
+          submissionId,
+          ktp: ktpFile || null,
+          isLeader: i === 0,
+        });
+      }
+    }
+
+    if (draftPatentApplicationFiles.length > 0) {
+      const draftPatentFile = draftPatentApplicationFiles[0]?.filename;
+      const existingPatent = await Patents.findByPk(patentId);
+
+      if (existingPatent) {
+        if (existingPatent.draftPatentApplicationFile) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingPatent.draftPatentApplicationFile
+          );
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+
+        await existingPatent.update({
+          draftPatentApplicationFile:
+            draftPatentFile || existingPatent.draftPatentApplicationFile,
+        });
+      } else {
+        return next(new ApiError("Paten tidak ditemukan", 404));
+      }
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Update Data Diri dan Paten",
+      description: `${req.user.fullname} mengupdate data diri dan file paten pada submission ID ${submissionId}`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data personal dan file paten berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updatePersonalDataDesignIndustri = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { personalDatas } = req.body || {};
+    const ktpFiles = req.files?.ktpFiles || [];
+    const draftDesainIndustriApplicationFiles =
+      req.files?.draftDesainIndustriApplicationFile || [];
+
+    if (!submissionId || !personalDatas) {
+      return next(
+        new ApiError("submissionId dan personalDatas diperlukan", 400)
+      );
+    }
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const submission = await Submissions.findByPk(submissionId);
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const industrialDesignId = submission.industrialDesignId;
+
+    for (let i = 0; i < parsedPersonalDatas.length; i++) {
+      const data = parsedPersonalDatas[i];
+      const ktpFile = ktpFiles[i]?.filename;
+
+      if (data.id) {
+        const existingData = await PersonalDatas.findByPk(data.id);
+        if (existingData) {
+          if (ktpFile && existingData.ktp) {
+            const oldFilePath = path.join(
+              __dirname,
+              "../../uploads/image/",
+              existingData.ktp
+            );
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+            }
+          }
+
+          await existingData.update({
+            ...data,
+            ktp: ktpFile || existingData.ktp,
+          });
+        }
+      } else {
+        await PersonalDatas.create({
+          ...data,
+          submissionId,
+          ktp: ktpFile || null,
+          isLeader: i === 0,
+        });
+      }
+    }
+
+    if (draftDesainIndustriApplicationFiles.length > 0) {
+      const draftDesainIndustriFile =
+        draftDesainIndustriApplicationFiles[0]?.filename;
+      const existingDesainIndustri = await IndustrialDesigns.findByPk(
+        industrialDesignId
+      );
+
+      if (existingDesainIndustri) {
+        if (existingDesainIndustri.draftDesainIndustriApplicationFile) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingDesainIndustri.draftDesainIndustriApplicationFile
+          );
+          if (fs.existsSync(oldFilePath)) {
+            fs.unlinkSync(oldFilePath);
+          }
+        }
+
+        await existingDesainIndustri.update({
+          draftDesainIndustriApplicationFile:
+            draftDesainIndustriFile ||
+            existingDesainIndustri.draftDesainIndustriApplicationFile,
+        });
+      } else {
+        return next(new ApiError("Desain Industri tidak ditemukan", 404));
+      }
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Update Data Diri dan Paten",
+      description: `${req.user.fullname} mengupdate data diri dan file paten pada submission ID ${submissionId}`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data personal dan file paten berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteSubmissionType = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -266,5 +543,8 @@ module.exports = {
   getAllSubmissions,
   createSubmissionType,
   updateSubmissionType,
+  updatePersonalData,
+  updatePersonalDataPaten,
+  updatePersonalDataDesignIndustri,
   deleteSubmissionType,
 };

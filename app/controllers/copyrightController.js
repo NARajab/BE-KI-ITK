@@ -306,11 +306,12 @@ const createCopyright = async (req, res, next) => {
 
     await SendEmail({
       to: adminEmails,
-      subject: "New Copyright Submission",
+      subject: "Pengajuan Hak Cipta Baru",
       html: copyrightSubmissionMail({
         fullname: req.user.fullname,
         email: req.user.email,
         titleInvention,
+        type: "create",
       }),
     });
 
@@ -341,7 +342,6 @@ const updateCopyright = async (req, res, next) => {
       cityFirstAnnounced,
       timeFirstAnnounced,
       briefDescriptionCreation,
-      personalDatas,
     } = req.body;
 
     const { id } = req.params;
@@ -387,52 +387,30 @@ const updateCopyright = async (req, res, next) => {
         exampleCreationFile?.filename || copyright.exampleCreation,
     });
 
-    const parsedPersonalDatas =
-      typeof personalDatas === "string"
-        ? JSON.parse(personalDatas)
-        : personalDatas;
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
 
-    if (parsedPersonalDatas && Array.isArray(parsedPersonalDatas)) {
-      const submission = await Submissions.findOne({
-        where: { copyrightId: id },
-      });
-
-      if (submission) {
-        const oldPersonals = await PersonalDatas.findAll({
-          where: { submissionId: submission.id },
-        });
-
-        oldPersonals.forEach((p) => {
-          if (p.ktp) removeOldFile(p.ktp, "image");
-        });
-
-        await PersonalDatas.destroy({ where: { submissionId: submission.id } });
-
-        const ktpFiles = req.files?.ktp || [];
-
-        const personalDatasWithSubmissionId = parsedPersonalDatas.map(
-          (data, index) => ({
-            ...data,
-            submissionId: submission.id,
-            ktp: ktpFiles[index] ? ktpFiles[index].filename : null,
-            isLeader: index === 0,
-          })
-        );
-
-        await PersonalDatas.bulkCreate(personalDatasWithSubmissionId);
-      }
-    }
+    await SendEmail({
+      to: adminEmails,
+      subject: "Pembaruan Pengajuan Hak Cipta",
+      html: copyrightSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        titleInvention: copyright.titleInvention,
+        type: "update",
+      }),
+    });
 
     await logActivity({
       userId: req.user.id,
-      action: "Melengkapi Data Pengajuan Hak Cipta",
-      description: `${req.user.fullname} berhasil melengkapi data pengajuan hak cipta.`,
+      action: "Memperbarui Data Hak Cipta",
+      description: `${req.user.fullname} berhasil memperbarui data hak cipta.`,
       device: req.headers["user-agent"],
       ipAddress: req.ip,
     });
 
     res.status(200).json({
-      message: "Copyright berhasil diperbaharui",
+      message: "Data Hak Cipta berhasil diperbarui.",
       copyright,
     });
   } catch (err) {

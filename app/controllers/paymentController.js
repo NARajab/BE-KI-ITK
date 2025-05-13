@@ -1,7 +1,9 @@
-const { Payments } = require("../models");
+const { Payments, Users } = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
 const sendNotification = require("../helpers/notifications");
+const SendEmail = require("../../emails/services/sendMail");
+const paymentConfirmationMail = require("../../emails/templates/PaymentConfirmationMail");
 const ApiError = require("../../utils/apiError");
 
 const getAllPayments = async (req, res, next) => {
@@ -77,6 +79,12 @@ const updatePayment = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const payment = await Payments.findByPk(id);
+
+    if (!payment) {
+      return next(new ApiError("Pembayaran tidak ditemukan", 404));
+    }
+
     const proofPayment = req.file;
 
     const updateData = {};
@@ -106,6 +114,19 @@ const updatePayment = async (req, res, next) => {
         message: "Data pembayaran tidak ditemukan.",
       });
     }
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "Konfirmasi Pembayaran",
+      html: paymentConfirmationMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        billCode: payment.billingCode,
+      }),
+    });
 
     await logActivity({
       userId: req.user.id,

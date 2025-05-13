@@ -39,7 +39,6 @@ router.patch(
   authenticat,
   (req, res, next) => {
     uploadFields([
-      { name: "ktp", maxCount: 10 },
       { name: "labelBrand", maxCount: 1 },
       { name: "fileUploade", maxCount: 1 },
       { name: "signature", maxCount: 1 },

@@ -119,10 +119,10 @@ const createDesignIndustri = async (req, res, next) => {
     await SendEmail({
       to: adminEmails,
       subject: "Pengajuan Desain Industri Baru",
-      text: "Pengajuan Desain Industri Baru",
       html: IndustrialDesignSubmissionMail({
         fullname: req.user.fullname,
         email: req.user.email,
+        type: "create",
       }),
     });
 
@@ -399,6 +399,19 @@ const updateIndustrialDesign = async (req, res, next) => {
       moreImages: moreImages?.filename || null,
       letterTransferDesignRights: letterTransferDesignRights?.filename || null,
       designOwnershipLetter: designOwnershipLetter?.filename || null,
+    });
+
+    const admins = await Users.findAll({ where: { role: "admin" } });
+    const adminEmails = admins.map((admin) => admin.email);
+
+    await SendEmail({
+      to: adminEmails,
+      subject: "Pembaruan Pengajuan Desain Industri",
+      html: IndustrialDesignSubmissionMail({
+        fullname: req.user.fullname,
+        email: req.user.email,
+        type: "update",
+      }),
     });
 
     await logActivity({
