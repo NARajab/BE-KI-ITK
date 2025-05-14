@@ -92,14 +92,14 @@ const login = async (req, res, next) => {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
+    if (!user.isVerified) {
+      return res.status(401).json({ message: "Email belum diverifikasi" });
+    }
+
     if (!isPasswordValid) {
       return res
         .status(401)
         .json({ message: "Password yang anda masukkan salah" });
-    }
-
-    if (!user.isVerified) {
-      return res.status(401).json({ message: "Email belum diverifikasi" });
     }
 
     if (user && bcrypt.compareSync(password, user.password)) {
