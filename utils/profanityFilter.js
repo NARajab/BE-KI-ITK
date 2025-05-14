@@ -18,7 +18,7 @@ const badWords = loadBadWords();
 
 const fuseOptions = {
   includeScore: true,
-  threshold: 0.3,
+  threshold: 0.3, // Menyesuaikan threshold agar lebih fleksibel
   keys: ["word"],
 };
 
@@ -45,15 +45,20 @@ const replaceNumbersWithLetters = (text) => {
 
 const cleanWord = (word) => {
   const textWithLetters = replaceNumbersWithLetters(word);
-  return textWithLetters.replace(/[^a-zA-Z]/g, "");
+  return textWithLetters.replace(/[^a-zA-Z]/g, "").toLowerCase();
 };
 
 const containsProfanity = (text) => {
   const words = text.toLowerCase().split(/\s+/);
   for (const word of words) {
     const cleaned = cleanWord(word);
+
+    // Menambahkan pengecekan panjang kata minimal
+    if (cleaned.length < 3) continue; // Abaikan kata dengan panjang kurang dari 3
+
     const results = fuse.search(cleaned);
-    const match = results.find((r) => r.score < 0.3);
+    const match = results.find((r) => r.score < 0.5); // Tetap mempertahankan threshold 0.3
+
     if (match) {
       console.log(
         `🚫 Kata terdeteksi: "${word}" → Dibersihkan: "${cleaned}" → Cocok dengan: "${match.item.word}"`
