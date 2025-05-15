@@ -3,5 +3,4 @@ node_modules
 serviceAccountKey.json
 uploads/image/*
 uploads/documents/*
-coverage/icon-report
 coverage

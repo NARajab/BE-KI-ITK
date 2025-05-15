@@ -142,7 +142,7 @@ const loginGoogle = async (req, res, next) => {
     const { idToken } = req.body;
 
     if (!idToken) {
-      throw new ApiError("ID Token is required", 400);
+      return next(new ApiError("ID Token is required", 400));
     }
 
     const decodedToken = await admin.auth().verifyIdToken(idToken);
