@@ -49,6 +49,8 @@ router.get("/by-user", authenticat, UserSubmission.getSubmissionsByUserId);
 
 router.get("/admin-dashboard", UserSubmission.getAdminDashboard);
 
+router.patch("/active/:id", authenticat, UserSubmission.restoreUserSubmission);
+
 router.delete("/:id", authenticat, UserSubmission.deleteUserSubmission);
 
 module.exports = router;
