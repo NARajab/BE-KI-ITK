@@ -62,6 +62,14 @@ router.get(
 );
 router.get("/sub-type/by-id/:id", Copyright.getByIdSubType);
 
+router.patch("/type/active/:id", authenticate, Copyright.restoreTypeCreation);
+
+router.patch(
+  "/sub-type/active/:id",
+  authenticate,
+  Copyright.restoreSubTypeCreation
+);
+
 router.delete("/type/:id", authenticate, Copyright.deleteTypeCreation);
 
 router.delete("/sub-type/:id", authenticate, Copyright.deleteSubTypeCreation);

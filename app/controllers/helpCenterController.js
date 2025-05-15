@@ -139,6 +139,47 @@ const getHelpCenterById = async (req, res, next) => {
   }
 };
 
+const restoreHelpCenter = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const helpCenter = await HelpCenters.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!helpCenter) {
+      return next(new ApiError("Help Center tidak ditemukan", 404));
+    }
+
+    if (!helpCenter.deletedAt) {
+      return next(
+        new ApiError(
+          "Help Center ini belum dihapus, jadi tidak bisa direstore",
+          400
+        )
+      );
+    }
+
+    await helpCenter.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Pertanyaan di Help Center",
+      description: `${req.user.fullname} berhasil mengembalikan pertanyaan di Help Center.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Help Center berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteHelpCenter = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -156,7 +197,10 @@ const deleteHelpCenter = async (req, res, next) => {
       ipAddress: req.ip,
     });
 
-    res.status(200).json({ message: "Help Center berhasil dihapus" });
+    res.status(200).json({
+      status: "success",
+      message: "Help Center berhasil dihapus",
+    });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }
@@ -167,5 +211,6 @@ module.exports = {
   updateHelpCenter,
   getHelpCenter,
   getHelpCenterById,
+  restoreHelpCenter,
   deleteHelpCenter,
 };

@@ -24,6 +24,13 @@ router.get("/not-pagination", Terms.getAllTermsWTPagination);
 
 router.get("/:id", Terms.getTermsById);
 
+router.patch(
+  "/active/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Terms.restoreTerms
+);
+
 router.delete(
   "/:id",
   authenticat,

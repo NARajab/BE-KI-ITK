@@ -411,11 +411,56 @@ const updateAdditionalDatas = async (req, res, next) => {
   }
 };
 
+const restoreBrandType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Cari termasuk yang sudah soft deleted (paranoid: false)
+    const brandType = await BrandTypes.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!brandType) {
+      return next(new ApiError("Kategori merek tidak ditemukan", 404));
+    }
+
+    if (!brandType.deletedAt) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Kategori merek ini tidak dalam status terhapus",
+      });
+    }
+
+    await brandType.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Kategori Merek",
+      description: `${req.user.fullname} berhasil merestore kategori merek.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Kategori brand berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteBrandType = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await BrandTypes.destroy({ where: { id } });
+    const brandType = await BrandTypes.findByPk(id);
+    if (!brandType) {
+      return next(new ApiError("Kategori merek tidak ditemukan", 404));
+    }
+
+    await brandType.destroy();
 
     await logActivity({
       userId: req.user.id,
@@ -444,5 +489,6 @@ module.exports = {
   getByIdBrandType,
   getAllAdditionalDatas,
   updateAdditionalDatas,
+  restoreBrandType,
   deleteBrandType,
 };

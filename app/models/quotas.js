@@ -24,6 +24,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Quotas",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
     }
   );
   return Quotas;

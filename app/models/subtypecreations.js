@@ -22,6 +22,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "SubTypeCreations",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
     }
   );
   return SubTypeCreations;

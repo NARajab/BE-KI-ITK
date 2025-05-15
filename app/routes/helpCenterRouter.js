@@ -14,6 +14,7 @@ router.post(
 router.get("/", HelpCenter.getHelpCenter);
 router.get("/:id", HelpCenter.getHelpCenterById);
 router.patch("/:id", authenticat, HelpCenter.updateHelpCenter);
+router.patch("/active/:id", authenticat, HelpCenter.restoreHelpCenter);
 router.delete("/:id", authenticat, HelpCenter.deleteHelpCenter);
 
 module.exports = router;

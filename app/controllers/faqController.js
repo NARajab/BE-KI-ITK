@@ -290,6 +290,90 @@ const updateFaq = async (req, res, next) => {
   }
 };
 
+const restoreFaq = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const faq = await Faqs.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!faq) {
+      return next(new ApiError("Faq tidak ditemukan", 404));
+    }
+
+    if (!faq.deletedAt) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Faq ini belum dihapus",
+      });
+    }
+
+    await faq.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Faq",
+      description: `${req.user.fullname} berhasil mengembalikan FAQ.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Faq berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const restoreTypeFaq = async (req, res, next) => {
+  try {
+    const { type } = req.params;
+
+    const faqs = await Faqs.findAll({
+      where: { type },
+      paranoid: false,
+    });
+
+    if (faqs.length === 0) {
+      return next(
+        new ApiError("Faq dengan type tersebut tidak ditemukan", 404)
+      );
+    }
+
+    const deletedFaqs = faqs.filter((faq) => faq.deletedAt !== null);
+
+    if (deletedFaqs.length === 0) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Tidak ada Faq yang perlu direstore untuk type ini",
+      });
+    }
+
+    for (const faq of deletedFaqs) {
+      await faq.restore();
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Kategori FAQ",
+      description: `${req.user.fullname} berhasil mengembalikan FAQ dengan type '${type}'.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `Berhasil mengembalikan semua FAQ dengan type '${type}'`,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteFaq = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -326,7 +410,9 @@ const deleteTypeFaq = async (req, res, next) => {
       return next(new ApiError("Tidak ada Faq dengan type tersebut", 404));
     }
 
-    await Faqs.destroy({ where: { type } });
+    for (const faq of faqs) {
+      await faq.destroy();
+    }
 
     await logActivity({
       userId: req.user.id,
@@ -355,6 +441,8 @@ module.exports = {
   getById,
   updateFaq,
   updateFaqType,
+  restoreFaq,
+  restoreTypeFaq,
   deleteFaq,
   deleteTypeFaq,
 };

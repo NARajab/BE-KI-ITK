@@ -432,6 +432,83 @@ const updateIndustrialDesign = async (req, res, next) => {
   }
 };
 
+const restoreTypeDesignIndustri = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const typeDesign = await TypeDesigns.findByPk(id, { paranoid: false });
+    if (!typeDesign) {
+      return next(
+        new ApiError("Kategori Desain Industri tidak ditemukan", 404)
+      );
+    }
+
+    if (typeDesign.deletedAt) {
+      await typeDesign.restore();
+    }
+
+    const subTypes = await SubTypeDesigns.findAll({
+      where: { typeDesignId: id },
+      paranoid: false,
+    });
+
+    await Promise.all(
+      subTypes.filter((sub) => sub.deletedAt).map((sub) => sub.restore())
+    );
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil merestore kategori desain industri dan subkategorinya.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message:
+        "Kategori Desain Industri dan semua subkategori berhasil direstore",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const restoreSubTypeDesignIndustri = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Cari data termasuk yang sudah dihapus (paranoid: false)
+    const subType = await SubTypeDesigns.findByPk(id, { paranoid: false });
+
+    if (!subType) {
+      return next(
+        new ApiError("Sub Kategori Desain Industri tidak ditemukan", 404)
+      );
+    }
+
+    // Jika sudah dihapus (soft delete), baru restore
+    if (subType.deletedAt) {
+      await subType.restore();
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Sub Kategori Desain Industri",
+      description: `${req.user.fullname} berhasil merestore sub kategori desain industri.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Sub Kategori Desain Industri berhasil direstore",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteTypeDesignIndustri = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -443,13 +520,12 @@ const deleteTypeDesignIndustri = async (req, res, next) => {
       );
     }
 
-    await SubTypeDesigns.destroy({
+    const subTypes = await SubTypeDesigns.findAll({
       where: { typeDesignId: id },
     });
 
-    await TypeDesigns.destroy({
-      where: { id: id },
-    });
+    await Promise.all(subTypes.map((sub) => sub.destroy()));
+    await typeDesign.destroy();
 
     await logActivity({
       userId: req.user.id,
@@ -512,6 +588,8 @@ module.exports = {
   updateTypeDesignIndustri,
   updateSubTypeDesignIndustri,
   updateIndustrialDesign,
+  restoreTypeDesignIndustri,
+  restoreSubTypeDesignIndustri,
   deleteTypeDesignIndustri,
   deleteSubTypeDesignIndustri,
 };

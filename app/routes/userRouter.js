@@ -27,6 +27,13 @@ router.get("/:id", User.getUserById);
 
 router.patch("/:id", authenticate, uploadSingle("image"), User.updateUser);
 
+router.patch(
+  "/active/:id",
+  authenticate,
+  checkRole(["superAdmin", "admin"]),
+  User.restoreUser
+);
+
 router.delete(
   "/:id",
   authenticate,

@@ -424,7 +424,7 @@ const deleteTypeCreation = async (req, res, next) => {
 
     const typeCreation = await TypeCreations.findByPk(id);
     if (!typeCreation) {
-      return res.status(404).json({ message: "Type Creation tidak ditemukan" });
+      return next(new ApiError("Type Creation tidak ditemukan", 404));
     }
 
     await SubTypeCreations.destroy({
@@ -450,15 +450,77 @@ const deleteTypeCreation = async (req, res, next) => {
   }
 };
 
+const restoreTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Cari data yang sudah di-soft delete (include paranoid: false)
+    const typeCreation = await TypeCreations.findByPk(id, { paranoid: false });
+    if (!typeCreation) {
+      return next(new ApiError("Type Creation tidak ditemukan", 404));
+    }
+
+    await typeCreation.restore();
+
+    // Optional: restore semua sub type terkait
+    await SubTypeCreations.restore({
+      where: { typeCreationId: id },
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil mengembalikan kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Type Creation dan Sub Type terkait berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const restoreSubTypeCreation = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const subTypeCreation = await SubTypeCreations.findByPk(id, {
+      paranoid: false,
+    });
+    if (!subTypeCreation) {
+      return next(new ApiError("Sub Type Creation tidak ditemukan", 404));
+    }
+
+    await subTypeCreation.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Sub Kategori Hak Cipta",
+      description: `${req.user.fullname} berhasil mengembalikan sub kategori hak cipta.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Sub Type Creation berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteSubTypeCreation = async (req, res, next) => {
   try {
     const { id } = req.params;
 
     const subTypeCreation = await SubTypeCreations.findByPk(id);
     if (!subTypeCreation) {
-      return res
-        .status(404)
-        .json({ message: "Sub Type Creation tidak ditemukan" });
+      return next(new ApiError("Sub Type Creation tidak ditemukan", 404));
     }
 
     await subTypeCreation.destroy();
@@ -493,6 +555,8 @@ module.exports = {
   getAllSubTypeCreationByTypeCreationWtoPagination,
   getByIdTypeCreation,
   getByIdSubType,
+  restoreTypeCreation,
+  restoreSubTypeCreation,
   deleteTypeCreation,
   deleteSubTypeCreation,
 };
