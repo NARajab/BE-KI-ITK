@@ -113,6 +113,40 @@ const getTermsById = async (req, res, next) => {
   }
 };
 
+const restoreTerms = async (req, res, next) => {
+  try {
+    const terms = await TermsConditions.findOne({
+      where: { id: req.params.id },
+      paranoid: false,
+    });
+
+    if (!terms) {
+      return next(new ApiError("Terms and conditions tidak ditemukan", 404));
+    }
+
+    if (!terms.deletedAt) {
+      return res.status(400).json({ message: "Terms belum dihapus" });
+    }
+
+    await terms.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Syarat dan Ketentuan",
+      description: `${req.user.fullname} berhasil merestore syarat dan ketentuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Terms and conditions berhasil direstore",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteTerms = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -145,5 +179,6 @@ module.exports = {
   getAllTerms,
   getAllTermsWTPagination,
   getTermsById,
+  restoreTerms,
   deleteTerms,
 };

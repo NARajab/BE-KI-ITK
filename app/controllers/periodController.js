@@ -564,6 +564,100 @@ const getAllByThisYear = async (req, res, next) => {
   }
 };
 
+const restoreGroup = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const group = await Groups.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!group) {
+      return next(new ApiError("Gelombang tidak ditemukan.", 404));
+    }
+
+    const quotas = await Quotas.findAll({
+      where: { groupId: id },
+      paranoid: false,
+    });
+
+    for (const quota of quotas) {
+      await quota.restore();
+    }
+
+    await group.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Gelombang",
+      description: `${req.user.fullname} berhasil mengembalikan gelombang.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Gelombang dan quota terkait berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const restorePeriod = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const period = await Periods.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!period) {
+      return next(
+        new ApiError("Periode dengan ID tersebut tidak ditemukan.", 404)
+      );
+    }
+
+    const groups = await Groups.findAll({
+      where: { periodId: id },
+      paranoid: false,
+    });
+
+    for (const group of groups) {
+      const quotas = await Quotas.findAll({
+        where: { groupId: group.id },
+        paranoid: false,
+      });
+      for (const quota of quotas) {
+        await quota.restore();
+      }
+    }
+
+    for (const group of groups) {
+      await group.restore();
+    }
+
+    await period.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Periode",
+      description: `${req.user.fullname} berhasil mengembalikan periode.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Periode dan semua data terkait berhasil dikembalikan.",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -611,13 +705,18 @@ const deletePeriod = async (req, res, next) => {
 
     const groups = await Groups.findAll({ where: { periodId: id } });
 
-    const groupIds = groups.map((group) => group.id);
+    for (const group of groups) {
+      const quotas = await Quotas.findAll({ where: { groupId: group.id } });
+      for (const quota of quotas) {
+        await quota.destroy();
+      }
+    }
 
-    await Quotas.destroy({ where: { groupId: groupIds } });
+    for (const group of groups) {
+      await group.destroy();
+    }
 
-    await Groups.destroy({ where: { periodId: id } });
-
-    await Periods.destroy({ where: { id } });
+    await period.destroy();
 
     await logActivity({
       userId: req.user.id,
@@ -652,6 +751,8 @@ module.exports = {
   getQuotaByIdGroup,
   getAll,
   getAllByThisYear,
+  restorePeriod,
+  restoreGroup,
   deleteGroup,
   deletePeriod,
 };

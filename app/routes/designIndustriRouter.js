@@ -78,6 +78,18 @@ router.patch(
   DesignIndustri.updateIndustrialDesign
 );
 
+router.patch(
+  "/type/active/:id",
+  authenticate,
+  DesignIndustri.restoreTypeDesignIndustri
+);
+
+router.patch(
+  "/sub-type/active/:id",
+  authenticate,
+  DesignIndustri.restoreSubTypeDesignIndustri
+);
+
 router.delete(
   "/type/:id",
   authenticate,

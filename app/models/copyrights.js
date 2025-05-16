@@ -39,6 +39,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Copyrights",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
     }
   );
   return Copyrights;

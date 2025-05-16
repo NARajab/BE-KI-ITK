@@ -29,7 +29,21 @@ router.get("/:id", Faq.getById);
 router.get("/by-type/:type", Faq.getFaqByType);
 
 router.patch(
-  "/type/:id",
+  "/active/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Faq.restoreFaq
+);
+
+router.patch(
+  "/type/active/:type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Faq.restoreTypeFaq
+);
+
+router.patch(
+  "/type",
   authenticat,
   checkRole(["superAdmin", "admin"]),
   Faq.updateFaqType

@@ -32,6 +32,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "Groups",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
     }
   );
   return Groups;

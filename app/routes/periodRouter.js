@@ -58,6 +58,20 @@ router.patch(
   Period.updateQuota
 );
 
+router.patch(
+  "/year/active/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.restorePeriod
+);
+
+router.patch(
+  "/active/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Period.restoreGroup
+);
+
 router.delete(
   "/:id",
   authenticat,

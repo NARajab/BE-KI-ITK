@@ -1194,6 +1194,108 @@ const getAdminDashboard = async (req, res, next) => {
   }
 };
 
+const restoreUserSubmission = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+
+    const userSubmission = await UserSubmissions.findByPk(id, {
+      paranoid: false,
+      include: [
+        {
+          model: Submissions,
+          as: "submission",
+          paranoid: false,
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          paranoid: false,
+        },
+      ],
+      transaction,
+    });
+
+    if (!userSubmission) {
+      await transaction.rollback();
+      return next(new ApiError("UserSubmission tidak ditemukan", 404));
+    }
+
+    const submission = userSubmission.submission;
+    const submissionId = submission.id;
+
+    const { copyrightId, patentId, brandId, industrialDesignId } = submission;
+
+    // Restore user submission
+    await userSubmission.restore({ transaction });
+
+    // Restore submission
+    await Submissions.restore({ where: { id: submissionId }, transaction });
+
+    // Restore progresses
+    await Progresses.restore({
+      where: { userSubmissionId: id },
+      transaction,
+    });
+
+    // Restore personal datas
+    await PersonalDatas.restore({
+      where: { submissionId },
+      transaction,
+    });
+
+    // Restore revision files
+    const progressIds = userSubmission.progress.map((p) => p.id);
+    if (progressIds.length > 0) {
+      await RevisionFiles.restore({
+        where: { progressId: progressIds },
+        transaction,
+      });
+    }
+
+    // Restore termsConditions relationship
+    if (submission.termsConditions?.length > 0) {
+      const termIds = submission.termsConditions.map((t) => t.id);
+      await submission.setTermsConditions(termIds, { transaction });
+    }
+
+    // Restore related hak kekayaan intelektual
+    if (copyrightId) {
+      await Copyrights.restore({ where: { id: copyrightId }, transaction });
+    }
+    if (patentId) {
+      await Patents.restore({ where: { id: patentId }, transaction });
+    }
+    if (brandId) {
+      await Brands.restore({ where: { id: brandId }, transaction });
+    }
+    if (industrialDesignId) {
+      await IndustrialDesigns.restore({
+        where: { id: industrialDesignId },
+        transaction,
+      });
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Pengajuan",
+      description: `UserSubmission ID ${id} dan data terkait berhasil direstore`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      status: "success",
+      message: "UserSubmission dan seluruh data terkait berhasil direstore",
+    });
+  } catch (err) {
+    await transaction.rollback();
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteUserSubmission = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
@@ -1208,6 +1310,7 @@ const deleteUserSubmission = async (req, res, next) => {
           include: ["termsConditions", "personalDatas"],
         },
       ],
+      transaction,
     });
 
     if (!userSubmission) {
@@ -1224,9 +1327,7 @@ const deleteUserSubmission = async (req, res, next) => {
 
     if (progressIds.length > 0) {
       await RevisionFiles.destroy({
-        where: {
-          progressId: progressIds,
-        },
+        where: { progressId: progressIds },
         transaction,
       });
     }
@@ -1275,6 +1376,8 @@ const deleteUserSubmission = async (req, res, next) => {
       userId: req.user.id,
       action: "Menghapus Pengajuan",
       description: `UserSubmission ID ${id}, submission ID ${submissionId}, dan data terkait berhasil dihapus`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
     });
 
     await transaction.commit();
@@ -1302,5 +1405,6 @@ module.exports = {
   getSubmissionsByReviewerId,
   getSubmissionsByUserId,
   getAdminDashboard,
+  restoreUserSubmission,
   deleteUserSubmission,
 };

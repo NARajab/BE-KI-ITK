@@ -9,6 +9,7 @@ router.get("/type/not-pagination", Brand.getAllBrandTypesWtoPagination);
 router.get("/type/:id", Brand.getByIdBrandType);
 router.post("/type", authenticat, Brand.createBrandType);
 router.patch("/type/:id", authenticat, Brand.updateBrandType);
+router.patch("/type/active/:id", authenticat, Brand.restoreBrandType);
 router.delete("/type/:id", authenticat, Brand.deleteBrandType);
 
 router.post(

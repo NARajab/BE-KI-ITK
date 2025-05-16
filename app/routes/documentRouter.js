@@ -51,6 +51,20 @@ router.get("/:id", Document.getById);
 
 router.get("/by-type/:type", Document.getDocByType);
 
+router.patch(
+  "/active/:id",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.restoreDoc
+);
+
+router.patch(
+  "/type/active/:type",
+  authenticat,
+  checkRole(["superAdmin", "admin"]),
+  Document.restoreTypeDoc
+);
+
 router.delete(
   "/:id",
   authenticat,

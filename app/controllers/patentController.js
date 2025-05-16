@@ -288,11 +288,49 @@ const getPatentTypeById = async (req, res, next) => {
   }
 };
 
+const restorePatentType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const patentType = await PatentTypes.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!patentType) {
+      return next(new ApiError("Kategori paten tidak ditemukan", 404));
+    }
+
+    await patentType.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengembalikan Kategori Paten",
+      description: `${req.user.fullname} berhasil mengembalikan kategori paten.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Kategori paten berhasil dikembalikan",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deletePatentType = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    await PatentTypes.destroy({ where: { id } });
+    const patentType = await PatentTypes.findByPk(id);
+
+    if (!patentType) {
+      return next(new ApiError("Kategori paten tidak ditemukan", 404));
+    }
+
+    await patentType.destroy();
 
     await logActivity({
       userId: req.user.id,
@@ -319,5 +357,6 @@ module.exports = {
   getAllPatentTypes,
   getAllPatentTypesWtoPagination,
   getPatentTypeById,
+  restorePatentType,
   deletePatentType,
 };

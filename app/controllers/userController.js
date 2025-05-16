@@ -194,6 +194,39 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+const restoreUser = async (req, res, next) => {
+  try {
+    const user = await Users.findOne({
+      where: {
+        id: req.params.id,
+      },
+      paranoid: false,
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Pengguna tidak ditemukan" });
+    }
+
+    if (!user.deletedAt) {
+      return res.status(400).json({ message: "Pengguna belum dihapus" });
+    }
+
+    await user.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Merestore Pengguna",
+      description: `${req.user.fullname} berhasil merestore pengguna dengan nama ${user.fullname}.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({ message: "Pengguna berhasil dipulihkan" });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   createUser,
   getAllUsers,
@@ -201,4 +234,5 @@ module.exports = {
   getAllUserReviewer,
   updateUser,
   deleteUser,
+  restoreUser,
 };

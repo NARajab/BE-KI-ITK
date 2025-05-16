@@ -56,6 +56,8 @@ router.get("/type/not-pagination", Patent.getAllPatentTypesWtoPagination);
 
 router.get("/type/:id", Patent.getPatentTypeById);
 
+router.patch("/type/active/:id", authenticate, Patent.restorePatentType);
+
 router.delete("/type/:id", authenticate, Patent.deletePatentType);
 
 module.exports = router;

@@ -508,6 +508,44 @@ const updatePersonalDataDesignIndustri = async (req, res, next) => {
   }
 };
 
+const restoreSubmissionType = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const type = await SubmissionTypes.findOne({
+      where: { id },
+      paranoid: false,
+    });
+
+    if (!type) {
+      return next(new ApiError("Jenis pengajuan tidak ditemukan", 404));
+    }
+
+    if (!type.deletedAt) {
+      return res
+        .status(400)
+        .json({ message: "Jenis pengajuan ini belum dihapus" });
+    }
+
+    await type.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Jenis Pengajuan",
+      description: `${req.user.fullname} berhasil merestore jenis pengajuan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Jenis pengajuan berhasil direstore",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteSubmissionType = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -518,7 +556,7 @@ const deleteSubmissionType = async (req, res, next) => {
       return next(new ApiError("Jenis pengajuan tidak ditemukan", 404));
     }
 
-    await SubmissionTypes.destroy({ where: { id } });
+    await type.destroy();
 
     await logActivity({
       userId: req.user.id,
@@ -546,5 +584,6 @@ module.exports = {
   updatePersonalData,
   updatePersonalDataPaten,
   updatePersonalDataDesignIndustri,
+  restoreSubmissionType,
   deleteSubmissionType,
 };

@@ -347,6 +347,78 @@ const getById = async (req, res, next) => {
   }
 };
 
+const restoreDoc = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const doc = await Documents.findByPk(id, { paranoid: false }); // cari meskipun sudah dihapus
+
+    if (!doc) {
+      return next(new ApiError("Document tidak ditemukan", 404));
+    }
+
+    if (!doc.deletedAt) {
+      return next(new ApiError("Document belum dihapus", 400));
+    }
+
+    await doc.restore();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Unduhan",
+      description: `${req.user.fullname} berhasil me-restore satu dokumen.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Document berhasil di-restore",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const restoreTypeDoc = async (req, res, next) => {
+  try {
+    const { type } = req.params;
+
+    const docs = await Documents.findAll({
+      where: { type },
+      paranoid: false, // cari juga yang sudah dihapus
+    });
+
+    const deletedDocs = docs.filter((doc) => doc.deletedAt !== null);
+
+    if (deletedDocs.length === 0) {
+      return next(
+        new ApiError(
+          "Tidak ada dokumen dengan type tersebut yang perlu di-restore",
+          404
+        )
+      );
+    }
+
+    await Promise.all(deletedDocs.map((doc) => doc.restore()));
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Restore Kategori Unduhan",
+      description: `${req.user.fullname} berhasil me-restore kategori unduhan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: `Semua document dengan type '${type}' berhasil di-restore`,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteDoc = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -354,18 +426,6 @@ const deleteDoc = async (req, res, next) => {
 
     if (!doc) {
       return next(new ApiError("Document tidak ditemukan", 404));
-    }
-
-    if (doc.document) {
-      const filePath = path.join(
-        __dirname,
-        "../../uploads/documents",
-        doc.document
-      );
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
     }
 
     await doc.destroy();
@@ -397,19 +457,7 @@ const deleteTypeDoc = async (req, res, next) => {
       return next(new ApiError("Tidak ada document dengan type tersebut", 404));
     }
 
-    if (docs.document) {
-      const filePath = path.join(
-        __dirname,
-        "../../uploads/documents",
-        docs.document
-      );
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    await Documents.destroy({ where: { type } });
+    await Promise.all(docs.map((doc) => doc.destroy()));
 
     await logActivity({
       userId: req.user.id,
@@ -438,6 +486,8 @@ module.exports = {
   getAllDocType,
   getDocByType,
   getById,
+  restoreDoc,
+  restoreTypeDoc,
   deleteDoc,
   deleteTypeDoc,
 };

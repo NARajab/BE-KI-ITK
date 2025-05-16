@@ -58,6 +58,7 @@ router.patch(
 );
 router.post("/type", authenticat, Submission.createSubmissionType);
 router.patch("/type/:id", authenticat, Submission.updateSubmissionType);
+router.patch("/type/active/:id", authenticat, Submission.restoreSubmissionType);
 router.delete("/type/:id", authenticat, Submission.deleteSubmissionType);
 
 module.exports = router;
