@@ -153,6 +153,7 @@ const updateSubmissionProgress = async (req, res, next) => {
     const newProgress = await Progresses.create({
       userSubmissionId: id,
       status: reviewStatus,
+      isStatus: false,
       comment: comments,
       createdBy: req.user.fullname,
     });
@@ -173,6 +174,10 @@ const updateSubmissionProgress = async (req, res, next) => {
             submissionId: userSubmission.submissionId,
           },
         }
+      );
+      await Progresses.update(
+        { isStatus: false },
+        { where: { id: newProgress.id } }
       );
     }
 
@@ -466,6 +471,8 @@ const getUserSubmissionById = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
+          limit: 1,
+          order: [["id", "DESC"]],
           include: [
             {
               model: RevisionFiles,
@@ -480,6 +487,10 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
+            },
+            {
+              model: Payments,
+              as: "payment",
             },
             {
               model: Groups,

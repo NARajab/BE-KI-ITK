@@ -348,7 +348,31 @@ const updateCopyright = async (req, res, next) => {
 
     const copyright = await Copyrights.findByPk(id);
     if (!copyright) {
-      return res.status(404).json({ message: "Copyright tidak ditemukan" });
+      return next(new ApiError("Copyright tidak ditemukan", 404));
+    }
+
+    const submission = await Submissions.findOne({
+      where: { copyrightId: id },
+    });
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { submissionId: submission.id },
+    });
+    if (!userSubmission) {
+      return res
+        .status(404)
+        .json({ message: "UserSubmission tidak ditemukan" });
+    }
+
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: userSubmission.id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return res.status(404).json({ message: "Progress tidak ditemukan" });
     }
 
     const removeOldFile = (oldFileName, folder = "documents") => {
@@ -386,6 +410,13 @@ const updateCopyright = async (req, res, next) => {
       exampleCreation:
         exampleCreationFile?.filename || copyright.exampleCreation,
     });
+
+    await Progresses.update(
+      { isStatus: true },
+      {
+        where: { id: progress.id },
+      }
+    );
 
     const admins = await Users.findAll({ where: { role: "admin" } });
     const adminEmails = admins.map((admin) => admin.email);

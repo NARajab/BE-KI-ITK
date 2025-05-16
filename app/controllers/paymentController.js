@@ -1,10 +1,18 @@
-const { Payments, Users } = require("../models");
+const {
+  Payments,
+  Users,
+  Progresses,
+  Submissions,
+  UserSubmissions,
+} = require("../models");
 
 const logActivity = require("../helpers/activityLogs");
 const sendNotification = require("../helpers/notifications");
 const SendEmail = require("../../emails/services/sendMail");
 const paymentConfirmationMail = require("../../emails/templates/PaymentConfirmationMail");
 const ApiError = require("../../utils/apiError");
+const { where } = require("sequelize");
+const submissions = require("../models/submissions");
 
 const getAllPayments = async (req, res, next) => {
   try {
@@ -81,6 +89,19 @@ const updatePayment = async (req, res, next) => {
 
     const payment = await Payments.findByPk(id);
 
+    const submission = await Submissions.findOne({
+      where: { id: payment.submissionId },
+    });
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { submissionId: submission.id },
+    });
+
+    const progress = await Progresses.findOne({
+      where: { id: userSubmission.progressId },
+      order: [["id", "DESC"]],
+    });
+
     if (!payment) {
       return next(new ApiError("Pembayaran tidak ditemukan", 404));
     }
@@ -114,6 +135,8 @@ const updatePayment = async (req, res, next) => {
         message: "Data pembayaran tidak ditemukan.",
       });
     }
+
+    await Progresses.update({ isStatus: true }, { where: { id: progress.id } });
 
     const admins = await Users.findAll({ where: { role: "admin" } });
     const adminEmails = admins.map((admin) => admin.email);

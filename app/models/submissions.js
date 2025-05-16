@@ -58,6 +58,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "groupId",
         as: "group",
       });
+
+      Submissions.hasOne(models.Payments, {
+        foreignKey: "submissionId",
+        as: "payment",
+      });
     }
   }
   Submissions.init(

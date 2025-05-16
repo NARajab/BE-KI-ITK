@@ -334,6 +334,30 @@ const updateIndustrialDesign = async (req, res, next) => {
       return next(new ApiError("Desain Industri tidak ditemukan", 404));
     }
 
+    const submission = await Submissions.findOne({
+      where: { industrialDesignId: id },
+    });
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { submissionId: submission.id },
+    });
+    if (!userSubmission) {
+      return res
+        .status(404)
+        .json({ message: "UserSubmission tidak ditemukan" });
+    }
+
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: userSubmission.id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return res.status(404).json({ message: "Progress tidak ditemukan" });
+    }
+
     const removeOldFile = (oldFileName, folder = "documents") => {
       if (!oldFileName) return;
       const filePath = path.join(
@@ -400,6 +424,13 @@ const updateIndustrialDesign = async (req, res, next) => {
       letterTransferDesignRights: letterTransferDesignRights?.filename || null,
       designOwnershipLetter: designOwnershipLetter?.filename || null,
     });
+
+    await Progresses.update(
+      { isStatus: true },
+      {
+        where: { id: progress.id },
+      }
+    );
 
     const admins = await Users.findAll({ where: { role: "admin" } });
     const adminEmails = admins.map((admin) => admin.email);

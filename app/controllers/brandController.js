@@ -205,6 +205,30 @@ const updateBrand = async (req, res, next) => {
       return next(new ApiError("Brand tidak ditemukan", 404));
     }
 
+    const submission = await Submissions.findOne({
+      where: { brandId: id },
+    });
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { submissionId: submission.id },
+    });
+    if (!userSubmission) {
+      return res
+        .status(404)
+        .json({ message: "UserSubmission tidak ditemukan" });
+    }
+
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: userSubmission.id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return res.status(404).json({ message: "Progress tidak ditemukan" });
+    }
+
     const fileFieldMap = {
       labelBrand: "uploads/image/",
       signature: "uploads/image/",
@@ -247,6 +271,13 @@ const updateBrand = async (req, res, next) => {
       letterStatment:
         req.files?.letterStatment?.[0]?.filename || brand.letterStatment,
     });
+
+    await Progresses.update(
+      { isStatus: true },
+      {
+        where: { id: progress.id },
+      }
+    );
 
     const admins = await Users.findAll({ where: { role: "admin" } });
     const adminEmails = admins.map((admin) => admin.email);
