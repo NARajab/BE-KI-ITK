@@ -602,6 +602,7 @@ const getByIdSubmissionType = async (req, res, next) => {
           model: Progresses,
           as: "progress",
           separate: true,
+          limit: 1,
           order: [["id", "DESC"]],
           include: [
             {
@@ -620,6 +621,10 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
+            },
+            {
+              model: Payments,
+              as: "payment",
             },
             {
               model: Groups,
