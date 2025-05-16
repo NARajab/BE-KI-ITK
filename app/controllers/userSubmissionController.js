@@ -590,6 +590,8 @@ const getByIdSubmissionType = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
+          separate: true,
+          order: [["id", "DESC"]],
           include: [
             {
               model: RevisionFiles,

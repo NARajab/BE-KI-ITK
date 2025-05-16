@@ -4,6 +4,8 @@ const {
   SubmissionTypes,
   PersonalDatas,
   Patents,
+  Copyrights,
+  Brands,
   IndustrialDesigns,
 } = require("../models");
 
@@ -302,6 +304,275 @@ const updatePersonalData = async (req, res, next) => {
   }
 };
 
+const updatePersonalDataBrand = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { personalDatas } = req.body || {};
+
+    const ktpFiles = req.files?.ktpFiles || [];
+    const labelBrand = req.files?.labelBrand ? req.files.labelBrand[0] : null;
+    const fileUploade = req.files?.fileUploade
+      ? req.files.fileUploade[0]
+      : null;
+    const signature = req.files?.signature ? req.files.signature[0] : null;
+    const InformationLetter = req.files?.InformationLetter
+      ? req.files.InformationLetter[0]
+      : null;
+    const letterStatment = req.files?.letterStatment
+      ? req.files.letterStatment[0]
+      : null;
+
+    if (!submissionId || !personalDatas) {
+      return next(
+        new ApiError("submissionId dan personalDatas diperlukan", 400)
+      );
+    }
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const submission = await Submissions.findByPk(submissionId);
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const brandId = submission.brandId;
+
+    // Update data personal
+    for (let i = 0; i < parsedPersonalDatas.length; i++) {
+      const data = parsedPersonalDatas[i];
+      const ktpFile = ktpFiles[i]?.filename;
+
+      if (data.id) {
+        const existingData = await PersonalDatas.findByPk(data.id);
+        if (existingData) {
+          if (ktpFile && existingData.ktp) {
+            const oldImagePath = path.join(
+              __dirname,
+              "../../uploads/image/",
+              existingData.ktp
+            );
+            if (fs.existsSync(oldImagePath)) {
+              fs.unlinkSync(oldImagePath);
+            }
+          }
+
+          await existingData.update({
+            ...data,
+            ktp: ktpFile || existingData.ktp,
+          });
+        }
+      } else {
+        await PersonalDatas.create({
+          ...data,
+          submissionId,
+          ktp: ktpFile || null,
+          isLeader: i === 0,
+        });
+      }
+    }
+
+    // Update file brand
+    const existingBrand = await Brands.findByPk(brandId);
+    if (!existingBrand) {
+      return next(new ApiError("Brand tidak ditemukan", 404));
+    }
+
+    const fileFieldsToUpdate = {};
+
+    const imageFields = [
+      { field: "labelBrand", file: labelBrand },
+      { field: "signature", file: signature },
+    ];
+
+    const documentFields = [
+      { field: "fileUploade", file: fileUploade },
+      { field: "InformationLetter", file: InformationLetter },
+      { field: "letterStatment", file: letterStatment },
+    ];
+
+    for (const { field, file } of imageFields) {
+      if (file) {
+        if (existingBrand[field]) {
+          const oldImagePath = path.join(
+            __dirname,
+            "../../uploads/image/",
+            existingBrand[field]
+          );
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlinkSync(oldImagePath);
+          }
+        }
+        fileFieldsToUpdate[field] = file.filename;
+      }
+    }
+
+    for (const { field, file } of documentFields) {
+      if (file) {
+        if (existingBrand[field]) {
+          const oldDocPath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingBrand[field]
+          );
+          if (fs.existsSync(oldDocPath)) {
+            fs.unlinkSync(oldDocPath);
+          }
+        }
+        fileFieldsToUpdate[field] = file.filename;
+      }
+    }
+
+    if (Object.keys(fileFieldsToUpdate).length > 0) {
+      await existingBrand.update(fileFieldsToUpdate);
+    }
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Update Data Diri dan Merek",
+      description: `${req.user.fullname} mengupdate data diri dan file merek pada submission ID ${submissionId}`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data personal dan file merek berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const updatePersonalDataCopyright = async (req, res, next) => {
+  try {
+    const { submissionId } = req.params;
+    const { personalDatas } = req.body || {};
+
+    const ktpFiles = req.files?.ktpFiles || [];
+    const statementLetterFile = req.files?.statementLetter
+      ? req.files.statementLetter[0]
+      : null;
+    const letterTransferCopyrightFile = req.files?.letterTransferCopyright
+      ? req.files.letterTransferCopyright[0]
+      : null;
+    const exampleCreationFile = req.files?.exampleCreation
+      ? req.files.exampleCreation[0]
+      : null;
+
+    if (!submissionId || !personalDatas) {
+      return next(
+        new ApiError("submissionId dan personalDatas diperlukan", 400)
+      );
+    }
+
+    const parsedPersonalDatas =
+      typeof personalDatas === "string"
+        ? JSON.parse(personalDatas)
+        : personalDatas;
+
+    const submission = await Submissions.findByPk(submissionId);
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const copyrightId = submission.copyrightId;
+
+    for (let i = 0; i < parsedPersonalDatas.length; i++) {
+      const data = parsedPersonalDatas[i];
+      const ktpFile = ktpFiles[i]?.filename;
+
+      if (data.id) {
+        const existingData = await PersonalDatas.findByPk(data.id);
+        if (existingData) {
+          if (ktpFile && existingData.ktp) {
+            const oldFilePath = path.join(
+              __dirname,
+              "../../uploads/image/",
+              existingData.ktp
+            );
+            if (fs.existsSync(oldFilePath)) {
+              fs.unlinkSync(oldFilePath);
+            }
+          }
+
+          await existingData.update({
+            ...data,
+            ktp: ktpFile || existingData.ktp,
+          });
+        }
+      } else {
+        await PersonalDatas.create({
+          ...data,
+          submissionId,
+          ktp: ktpFile || null,
+          isLeader: i === 0,
+        });
+      }
+    }
+
+    const existingCopyright = await Copyrights.findByPk(copyrightId);
+    if (!existingCopyright) {
+      return next(new ApiError("Data hak cipta tidak ditemukan", 404));
+    }
+
+    const documentFolderPath = path.join(__dirname, "../../uploads/documents/");
+
+    if (statementLetterFile) {
+      if (existingCopyright.statementLetter) {
+        const oldPath = path.join(
+          documentFolderPath,
+          existingCopyright.statementLetter
+        );
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      existingCopyright.statementLetter = statementLetterFile.filename;
+    }
+
+    if (letterTransferCopyrightFile) {
+      if (existingCopyright.letterTransferCopyright) {
+        const oldPath = path.join(
+          documentFolderPath,
+          existingCopyright.letterTransferCopyright
+        );
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      existingCopyright.letterTransferCopyright =
+        letterTransferCopyrightFile.filename;
+    }
+
+    if (exampleCreationFile) {
+      if (existingCopyright.exampleCreation) {
+        const oldPath = path.join(
+          documentFolderPath,
+          existingCopyright.exampleCreation
+        );
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      existingCopyright.exampleCreation = exampleCreationFile.filename;
+    }
+
+    await existingCopyright.save();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Update Data Diri dan Hak Cipta",
+      description: `${req.user.fullname} mengupdate data diri dan file hak cipta pada submission ID ${submissionId}`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "Data personal dan file hak cipta berhasil diupdate",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updatePersonalDataPaten = async (req, res, next) => {
   try {
     const { submissionId } = req.params;
@@ -582,6 +853,8 @@ module.exports = {
   createSubmissionType,
   updateSubmissionType,
   updatePersonalData,
+  updatePersonalDataBrand,
+  updatePersonalDataCopyright,
   updatePersonalDataPaten,
   updatePersonalDataDesignIndustri,
   restoreSubmissionType,
