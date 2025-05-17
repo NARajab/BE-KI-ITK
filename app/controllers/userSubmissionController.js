@@ -57,7 +57,7 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("Submission tidak ditemukan", 404));
     }
 
-    if (submissionScheme === "pendanaan" && Array.isArray(termsConditionId)) {
+    if (submissionScheme === "Pendanaan" && Array.isArray(termsConditionId)) {
       const submissionTermsData = termsConditionId.map((termId) => ({
         submissionId: submission.id,
         termsConditionId: termId,
@@ -71,7 +71,7 @@ const updateSubmissionScheme = async (req, res, next) => {
     submission.submissionScheme = submissionScheme;
     await submission.save();
 
-    if (submissionScheme === "pendanaan") {
+    if (submissionScheme === "Pendanaan") {
       let quotaTitle = null;
 
       if (submission.copyrightId) quotaTitle = "Hak Cipta";
@@ -97,7 +97,7 @@ const updateSubmissionScheme = async (req, res, next) => {
         }
       }
     }
-    if (submissionScheme === "mandiri") {
+    if (submissionScheme === "Mandiri") {
       const existingPayment = await Payments.findOne({
         where: {
           userId: req.user.id,
