@@ -11,7 +11,7 @@ const sendNotification = require("../helpers/notifications");
 const SendEmail = require("../../emails/services/sendMail");
 const paymentConfirmationMail = require("../../emails/templates/PaymentConfirmationMail");
 const ApiError = require("../../utils/apiError");
-const { where } = require("sequelize");
+const { where, or } = require("sequelize");
 const submissions = require("../models/submissions");
 
 const getAllPayments = async (req, res, next) => {
@@ -89,21 +89,30 @@ const updatePayment = async (req, res, next) => {
 
     const payment = await Payments.findByPk(id);
 
+    if (!payment) {
+      return next(new ApiError("Pembayaran tidak ditemukan", 404));
+    }
+
     const submission = await Submissions.findOne({
       where: { id: payment.submissionId },
     });
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
 
     const userSubmission = await UserSubmissions.findOne({
       where: { submissionId: submission.id },
     });
+    if (!userSubmission) {
+      return next(new ApiError("UserSubmission tidak ditemukan", 404));
+    }
 
     const progress = await Progresses.findOne({
-      where: { id: userSubmission.progressId },
+      where: { userSubmissionId: userSubmission.id },
       order: [["id", "DESC"]],
     });
-
-    if (!payment) {
-      return next(new ApiError("Pembayaran tidak ditemukan", 404));
+    if (!progress) {
+      return next(new ApiError("Progress tidak ditemukan", 404));
     }
 
     const proofPayment = req.file;
