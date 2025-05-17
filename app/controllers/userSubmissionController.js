@@ -96,7 +96,8 @@ const updateSubmissionScheme = async (req, res, next) => {
           throw new Error("Kuota tidak tersedia atau sudah habis.");
         }
       }
-
+    }
+    if (submissionScheme === "mandiri") {
       const existingPayment = await Payments.findOne({
         where: {
           userId: req.user.id,
