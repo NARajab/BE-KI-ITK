@@ -663,6 +663,7 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
+              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
             },
             {
               model: IndustrialDesigns,
@@ -942,6 +943,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
                 model: Periods,
                 as: "period",
               },
+              { model: Payments, as: "payment" },
               {
                 model: Groups,
                 as: "group",

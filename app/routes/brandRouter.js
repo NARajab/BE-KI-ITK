@@ -45,6 +45,7 @@ router.patch(
       { name: "signature", maxCount: 1 },
       { name: "InformationLetter", maxCount: 1 },
       { name: "letterStatment", maxCount: 1 },
+      { name: "additionalDataFiles", maxCount: 20 },
     ])(req, res, (err) => {
       if (err) {
         console.error("Multer error:", err.message);
