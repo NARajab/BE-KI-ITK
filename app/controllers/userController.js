@@ -19,6 +19,11 @@ const createUser = async (req, res, next) => {
       role,
     } = req.body;
 
+    const existingUser = await Users.findOne({ where: { email } });
+    if (existingUser) {
+      return next(new ApiError("Email sudah terdaftar", 400));
+    }
+
     const defaultPassword = process.env.PASSWORD_HASH_USER;
 
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);

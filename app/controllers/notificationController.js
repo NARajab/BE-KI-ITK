@@ -23,8 +23,15 @@ const getNotificationByUserId = async (req, res, next) => {
     if (!notification || notification.length === 0) {
       return next(new ApiError("Notifikasi tidak ditemukan", 404));
     }
+    const unreadCount = await Notifications.count({
+      where: {
+        userId: req.user.id,
+        isRead: false,
+      },
+    });
     return res.json({
       status: "success",
+      totalUnread: unreadCount,
       notification,
     });
   } catch (err) {

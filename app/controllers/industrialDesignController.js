@@ -109,7 +109,7 @@ const createDesignIndustri = async (req, res, next) => {
 
     await Progresses.create({
       userSubmissionId: userSubmissions.id,
-      status: "Pending",
+      status: "Menunggu",
       createdBy: req.user.fullname,
     });
 
