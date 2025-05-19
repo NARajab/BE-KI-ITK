@@ -19,6 +19,7 @@ const {
   SubTypeDesigns,
   AdditionalDatas,
   PersonalDatas,
+  BrandTypes,
   Users,
   RevisionFiles,
   SubmissionTypes,
@@ -665,7 +666,13 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
-              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+              include: [
+                { model: AdditionalDatas, as: "additionalDatas" },
+                {
+                  model: BrandTypes,
+                  as: "brandType",
+                },
+              ],
             },
             {
               model: IndustrialDesigns,
@@ -1104,32 +1111,44 @@ const getAdminDashboard = async (req, res, next) => {
 
     const currentYear = new Date().getFullYear();
 
-    // Grafik Pengajuan Berdasarkan Gelombang (per bulan di tahun berjalan)
-    const getMonthlyCount = async (Model) => {
-      const counts = await Promise.all(
-        Array.from({ length: 12 }, (_, i) => {
-          const start = new Date(currentYear, i, 1);
-          const end = new Date(currentYear, i + 1, 1);
-          return Model.count({
-            where: {
-              createdAt: {
-                [Op.gte]: start,
-                [Op.lt]: end,
-              },
-            },
-          });
+    // Grafik Pengajuan Berdasarkan Gelombang (4 gelombang di tahun berjalan)
+    const getCountByGelombang = async () => {
+      const gelombangRanges = [
+        [0, 3], // Gelombang 1: Jan-Mar
+        [3, 6], // Gelombang 2: Apr-Jun
+        [6, 9], // Gelombang 3: Jul-Sep
+        [9, 12], // Gelombang 4: Okt-Des
+      ];
+
+      const gelombangCounts = await Promise.all(
+        gelombangRanges.map(async ([startMonth, endMonth]) => {
+          const start = new Date(currentYear, startMonth, 1);
+          const end = new Date(currentYear, endMonth, 1);
+
+          // Totalkan semua jenis pengajuan untuk gelombang tersebut
+          const [hc, pt, br, di] = await Promise.all([
+            Copyrights.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            Patents.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            Brands.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            IndustrialDesigns.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+          ]);
+
+          return hc + pt + br + di;
         })
       );
-      return counts;
+
+      return gelombangCounts;
     };
 
-    const [hakCiptaMonthly, patenMonthly, merekMonthly, desainIndustriMonthly] =
-      await Promise.all([
-        getMonthlyCount(Copyrights),
-        getMonthlyCount(Patents),
-        getMonthlyCount(Brands),
-        getMonthlyCount(IndustrialDesigns),
-      ]);
+    const totalPerGelombang = await getCountByGelombang();
 
     // Grafik Pengajuan Berdasarkan Tahun (5 tahun terakhir)
     const startYear = currentYear - 4;
@@ -1153,13 +1172,35 @@ const getAdminDashboard = async (req, res, next) => {
       return counts;
     };
 
-    const [hakCiptaYearly, patenYearly, merekYearly, desainIndustriYearly] =
-      await Promise.all([
-        getYearlyCount(Copyrights),
-        getYearlyCount(Patents),
-        getYearlyCount(Brands),
-        getYearlyCount(IndustrialDesigns),
-      ]);
+    const getTotalYearlyCount = async () => {
+      const counts = await Promise.all(
+        Array.from({ length: 5 }, async (_, i) => {
+          const year = startYear + i;
+          const start = new Date(year, 0, 1);
+          const end = new Date(year + 1, 0, 1);
+
+          const [hc, pt, br, di] = await Promise.all([
+            Copyrights.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            Patents.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            Brands.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+            IndustrialDesigns.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+            }),
+          ]);
+
+          return hc + pt + br + di;
+        })
+      );
+      return counts;
+    };
+
+    const totalPerTahun = await getTotalYearlyCount();
 
     res.status(200).json({
       totalPengajuan: {
@@ -1177,26 +1218,8 @@ const getAdminDashboard = async (req, res, next) => {
       pengajuanTerakhir: formattedRecent,
 
       berdasarkanGelombang: {
-        labels: [
-          "Januari",
-          "Februari",
-          "Maret",
-          "April",
-          "Mei",
-          "Juni",
-          "Juli",
-          "Agustus",
-          "September",
-          "Oktober",
-          "November",
-          "Desember",
-        ],
-        data: {
-          hakCipta: hakCiptaMonthly,
-          paten: patenMonthly,
-          merek: merekMonthly,
-          desainIndustri: desainIndustriMonthly,
-        },
+        labels: ["Gelombang 1", "Gelombang 2", "Gelombang 3", "Gelombang 4"],
+        data: totalPerGelombang,
       },
       berdasarkanTahun: {
         labels: Array.from(
@@ -1204,12 +1227,7 @@ const getAdminDashboard = async (req, res, next) => {
           (_, i) => `${currentYear - i}`
         ).reverse(),
 
-        data: {
-          hakCipta: hakCiptaYearly,
-          paten: patenYearly,
-          merek: merekYearly,
-          desainIndustri: desainIndustriYearly,
-        },
+        data: totalPerTahun,
       },
     });
   } catch (error) {

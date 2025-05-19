@@ -129,7 +129,7 @@ const createBrand = async (req, res, next) => {
 
     await Progresses.create({
       userSubmissionId: userSubmission.id,
-      status: "Pending",
+      status: "Menunggu",
       createdBy: req.user.fullname,
     });
 
@@ -288,7 +288,6 @@ const updateBrand = async (req, res, next) => {
     await AdditionalDatas.destroy({ where: { brandId: brand.id } });
 
     const additionalDatas = JSON.parse(req.body.additionalDatas || "[]");
-    console.log(additionalDatas);
     const newAdditionalDatas = [];
 
     for (let i = 0; i < additionalDatas.length; i++) {

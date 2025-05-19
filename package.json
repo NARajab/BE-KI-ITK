@@ -17,7 +17,8 @@
     "db:migrate:undo": "sequelize db:migrate:undo:all",
     "lint": "eslint .",
     "fixlint": "eslint . --fix",
-    "test": "jest --setupFiles dotenv/config --coverage --colors --verbose --detectOpenHandles --forceExit --passWithNoTests"
+    "test": "jest --setupFiles dotenv/config --coverage --colors --verbose --detectOpenHandles --forceExit --passWithNoTests",
+    "test:user": "jest test/User.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",
   "license": "ISC",
@@ -26,6 +27,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
     "firebase-admin": "^13.2.0",
     "fuse.js": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
