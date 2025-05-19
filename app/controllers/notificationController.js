@@ -16,19 +16,25 @@ const getAllNotifications = async (req, res, next) => {
 
 const getNotificationByUserId = async (req, res, next) => {
   try {
+    const limit = parseInt(req.query.limit) || 10;
+
     const notification = await Notifications.findAll({
       where: { userId: req.user.id },
       order: [["createdAt", "DESC"]],
+      limit,
     });
+
     if (!notification || notification.length === 0) {
       return next(new ApiError("Notifikasi tidak ditemukan", 404));
     }
+
     const unreadCount = await Notifications.count({
       where: {
         userId: req.user.id,
         isRead: false,
       },
     });
+
     return res.json({
       status: "success",
       totalUnread: unreadCount,
