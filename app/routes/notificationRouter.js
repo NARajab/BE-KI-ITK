@@ -9,6 +9,6 @@ router.get("/by-user-id", authenticat, Notification.getNotificationByUserId);
 
 router.get("/by-id/:id", Notification.getNotificationById);
 
-router.patch("/:id", Notification.updateNotification);
+router.patch("/", authenticat, Notification.updateNotification);
 
 module.exports = router;
