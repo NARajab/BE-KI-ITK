@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       isStatus: DataTypes.BOOLEAN,
       comment: DataTypes.TEXT,
       createdBy: DataTypes.STRING,
+      certificateFile: DataTypes.STRING,
     },
     {
       sequelize,

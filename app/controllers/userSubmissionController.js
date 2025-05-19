@@ -139,6 +139,7 @@ const updateSubmissionProgress = async (req, res, next) => {
 
     const fileNames = JSON.parse(req.body.fileNames || "[]");
     const files = req.files?.files || [];
+    const certificateFile = req.files?.certificateFile || null;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -157,6 +158,7 @@ const updateSubmissionProgress = async (req, res, next) => {
       isStatus: false,
       comment: comments,
       createdBy: req.user.fullname,
+      certificateFile: certificateFile?.[0]?.filename,
     });
 
     await UserSubmissions.update(

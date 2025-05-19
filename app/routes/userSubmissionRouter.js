@@ -13,7 +13,10 @@ router.patch(
 router.patch(
   "/submission-progress/:id",
   authenticat,
-  uploadFields([{ name: "files", maxCount: 10 }]),
+  uploadFields([
+    { name: "files", maxCount: 10 },
+    { name: "certificateFile", maxCount: 1 },
+  ]),
   UserSubmission.updateSubmissionProgress
 );
 
