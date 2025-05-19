@@ -23,8 +23,10 @@ module.exports = (sequelize, DataTypes) => {
     {
       userSubmissionId: DataTypes.INTEGER,
       status: DataTypes.STRING,
+      isStatus: DataTypes.BOOLEAN,
       comment: DataTypes.TEXT,
       createdBy: DataTypes.STRING,
+      certificateFile: DataTypes.STRING,
     },
     {
       sequelize,

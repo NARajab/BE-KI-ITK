@@ -57,7 +57,7 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("Submission tidak ditemukan", 404));
     }
 
-    if (submissionScheme === "pendanaan" && Array.isArray(termsConditionId)) {
+    if (submissionScheme === "Pendanaan" && Array.isArray(termsConditionId)) {
       const submissionTermsData = termsConditionId.map((termId) => ({
         submissionId: submission.id,
         termsConditionId: termId,
@@ -71,7 +71,7 @@ const updateSubmissionScheme = async (req, res, next) => {
     submission.submissionScheme = submissionScheme;
     await submission.save();
 
-    if (submissionScheme === "pendanaan") {
+    if (submissionScheme === "Pendanaan") {
       let quotaTitle = null;
 
       if (submission.copyrightId) quotaTitle = "Hak Cipta";
@@ -96,7 +96,8 @@ const updateSubmissionScheme = async (req, res, next) => {
           throw new Error("Kuota tidak tersedia atau sudah habis.");
         }
       }
-
+    }
+    if (submissionScheme === "Mandiri") {
       const existingPayment = await Payments.findOne({
         where: {
           userId: req.user.id,
@@ -138,6 +139,7 @@ const updateSubmissionProgress = async (req, res, next) => {
 
     const fileNames = JSON.parse(req.body.fileNames || "[]");
     const files = req.files?.files || [];
+    const certificateFile = req.files?.certificateFile || null;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -153,8 +155,10 @@ const updateSubmissionProgress = async (req, res, next) => {
     const newProgress = await Progresses.create({
       userSubmissionId: id,
       status: reviewStatus,
+      isStatus: certificateFile ? true : false,
       comment: comments,
       createdBy: req.user.fullname,
+      certificateFile: certificateFile?.[0]?.filename,
     });
 
     await UserSubmissions.update(
@@ -173,6 +177,10 @@ const updateSubmissionProgress = async (req, res, next) => {
             submissionId: userSubmission.submissionId,
           },
         }
+      );
+      await Progresses.update(
+        { isStatus: false },
+        { where: { id: newProgress.id } }
       );
     }
 
@@ -466,6 +474,8 @@ const getUserSubmissionById = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
+          limit: 1,
+          order: [["id", "DESC"]],
           include: [
             {
               model: RevisionFiles,
@@ -480,6 +490,10 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
+            },
+            {
+              model: Payments,
+              as: "payment",
             },
             {
               model: Groups,
@@ -590,6 +604,9 @@ const getByIdSubmissionType = async (req, res, next) => {
         {
           model: Progresses,
           as: "progress",
+          separate: true,
+          limit: 1,
+          order: [["id", "DESC"]],
           include: [
             {
               model: RevisionFiles,
@@ -607,6 +624,10 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Periods,
               as: "period",
+            },
+            {
+              model: Payments,
+              as: "payment",
             },
             {
               model: Groups,
@@ -644,6 +665,7 @@ const getByIdSubmissionType = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
+              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
             },
             {
               model: IndustrialDesigns,
@@ -923,6 +945,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
                 model: Periods,
                 as: "period",
               },
+              { model: Payments, as: "payment" },
               {
                 model: Groups,
                 as: "group",

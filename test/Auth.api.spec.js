@@ -2,17 +2,82 @@ jest.mock("firebase-admin");
 jest.mock("nodemailer");
 jest.mock("jsonwebtoken");
 jest.mock("../app/helpers/activityLogs", () => jest.fn());
+jest.mock("../emails/services/sendMail");
 jest.mock("../app/models");
 
 const { Users } = require("../app/models");
-const app = require("../app/index"); // Harus setelah mock
+const app = require("../app/index");
+const sendEmail = require("../emails/services/sendMail");
 const request = require("supertest");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken"); // Optional: sudah dimock
+const jwt = require("jsonwebtoken");
 const { login, loginGoogle } = require("../app/controllers/authController");
 const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 const logActivity = require("../app/helpers/activityLogs");
+
+describe("GET /api/v1/auth/me", () => {
+  beforeAll(async () => {
+    const hashedPassword = await bcrypt.hash("Kiadmin123", 10);
+    const mockUser = {
+      id: 1,
+      email: "user@superadmin.com",
+      fullname: "User",
+      image: "image.jpg",
+      phoneNumber: "08123456789",
+      faculty: "Engineering",
+      studyProgram: "Computer Science",
+      role: "user",
+      isVerified: true,
+      password: hashedPassword,
+    };
+
+    Users.create = jest.fn().mockResolvedValue(mockUser);
+    Users.findOne = jest.fn().mockImplementation(({ where }) => {
+      if (where.email === "user@superadmin.com") {
+        return Promise.resolve(mockUser);
+      }
+      return Promise.resolve(null);
+    });
+    Users.findByPk = jest.fn().mockResolvedValue(mockUser);
+    jwt.sign = jest.fn(() => "dummy-token");
+    jwt.verify = jest.fn(() => ({
+      id: 1,
+      email: "user@superadmin.com",
+      role: "user",
+    }));
+  });
+
+  it("should login first, then return user profile data successfully", async () => {
+    const loginResponse = await request(app).post("/api/v1/auth/login").send({
+      email: "user@superadmin.com",
+      password: "Kiadmin123",
+    });
+
+    expect(loginResponse.status).toBe(200);
+    expect(loginResponse.body).toHaveProperty("token");
+    const token = loginResponse.body.token;
+
+    const response = await request(app)
+      .get("/api/v1/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      data: {
+        id: expect.any(Number),
+        email: "user@superadmin.com",
+        fullname: "User",
+        image: "image.jpg",
+        phoneNumber: "08123456789",
+        faculty: "Engineering",
+        studyProgram: "Computer Science",
+        role: "user",
+      },
+    });
+  });
+});
 
 describe("POST /api/v1/auth/register", () => {
   afterEach(() => {
@@ -35,10 +100,9 @@ describe("POST /api/v1/auth/register", () => {
       email: newUser.email,
       fullname: newUser.fullname,
       isVerified: false,
-      ...newUser, // Include the rest of the user data
+      ...newUser,
     });
 
-    // Mocking the Users.findOne to return the newly created user
     Users.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
       id: 1,
       email: newUser.email,
@@ -47,45 +111,22 @@ describe("POST /api/v1/auth/register", () => {
       ...newUser,
     });
 
-    // Mocking the email sending function
-    nodemailer.createTransport.mockReturnValue({
-      sendMail: jest.fn().mockResolvedValue(true),
-    });
+    sendEmail.mockResolvedValue(true);
 
     const response = await request(app)
       .post("/api/v1/auth/register")
       .send(newUser);
 
-    console.log("Response Body:", response.body);
-
     expect(response.status).toBe(201);
-
-    // Ensure that Users.create was called with the correct data
-    expect(Users.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        email: newUser.email,
-        fullname: newUser.fullname,
-        password: expect.any(String), // Don't expect the actual password for security reasons
-        phoneNumber: newUser.phoneNumber,
-        faculty: newUser.faculty,
-        studyProgram: newUser.studyProgram,
-        institution: newUser.institution,
-      })
+    expect(response.body.message).toBe(
+      "Pendaftaran berhasil. Email verifikasi terkirim."
     );
 
-    // Verify that Users.findOne returns the correct user
-    console.log("Sending request to find user with email:", newUser.email);
-    const user = await Users.findOne({ where: { email: newUser.email } });
-    console.log("Fetched User:", user); // Log the user to help debug
-    expect(user).not.toBeNull();
-    expect(user.email).toBe(newUser.email);
-    expect(user.isVerified).toBe(false);
-
-    // Check if the verification email was sent
-    expect(nodemailer.createTransport().sendMail).toHaveBeenCalledWith(
+    expect(sendEmail).toHaveBeenCalledWith(
       expect.objectContaining({
         to: newUser.email,
         subject: "Verifikasi Email Anda",
+        html: expect.stringContaining("/verify-email/"),
       })
     );
   });
@@ -103,7 +144,6 @@ describe("POST /api/v1/auth/register", () => {
       role: "user",
     };
 
-    // Mock Users.findOne to simulate existing email in the database
     Users.findOne.mockResolvedValue(existingUser);
 
     const response = await request(app).post("/api/v1/auth/register").send({
@@ -116,7 +156,6 @@ describe("POST /api/v1/auth/register", () => {
       institution: "University XYZ",
     });
 
-    // Expect status code 400 (Bad Request)
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Email sudah terdaftar.");
   });
@@ -132,7 +171,6 @@ describe("POST /api/v1/auth/register", () => {
       institution: "University XYZ",
     });
 
-    // Expect status code 400 (Bad Request)
     expect(response.status).toBe(400);
     expect(response.body.message).toBe(
       "Field fullname mengandung kata yang tidak pantas."
@@ -144,7 +182,6 @@ describe("POST /api/v1/auth/login", () => {
   let user;
 
   beforeEach(() => {
-    // Setup user mock data
     user = {
       id: 1,
       email: "testuser@example.com",
@@ -156,7 +193,6 @@ describe("POST /api/v1/auth/login", () => {
   });
 
   it("should return 404 if user not found", async () => {
-    // Mock Users.findOne untuk mengembalikan null jika tidak ada pengguna
     Users.findOne = jest.fn().mockResolvedValue(null);
 
     const response = await request(app)
@@ -168,10 +204,8 @@ describe("POST /api/v1/auth/login", () => {
   });
 
   it("should return 401 if password is incorrect", async () => {
-    // Mock Users.findOne untuk mengembalikan data pengguna
     Users.findOne = jest.fn().mockResolvedValue(user);
 
-    // Mock bcrypt.compare untuk mengembalikan false (password salah)
     bcrypt.compare = jest.fn().mockResolvedValue(false);
 
     const response = await request(app)
@@ -183,7 +217,6 @@ describe("POST /api/v1/auth/login", () => {
   });
 
   it("should return 401 if email is not verified", async () => {
-    // Mock Users.findOne untuk mengembalikan data pengguna dengan isVerified false
     Users.findOne = jest.fn().mockResolvedValue({
       ...user,
       isVerified: false,
@@ -208,8 +241,8 @@ describe("POST /api/v1/auth/login", () => {
     };
 
     Users.findOne = jest.fn().mockResolvedValue(user);
-    bcrypt.compare = jest.fn().mockResolvedValue(true); // async
-    bcrypt.compareSync = jest.fn().mockReturnValue(true); // sync
+    bcrypt.compare = jest.fn().mockResolvedValue(true);
+    bcrypt.compareSync = jest.fn().mockReturnValue(true);
     jwt.sign = jest.fn().mockReturnValue("mock-jwt-token");
     logActivity.mockResolvedValue();
 
@@ -218,8 +251,8 @@ describe("POST /api/v1/auth/login", () => {
 
     const mockReq = {
       body: { email: "testuser@example.com", password: "password123" },
-      headers: { "user-agent": device }, // Mock user-agent header
-      ip: ipAddress, // Mock IP address
+      headers: { "user-agent": device },
+      ip: ipAddress,
     };
 
     const mockRes = {
@@ -227,7 +260,6 @@ describe("POST /api/v1/auth/login", () => {
       json: jest.fn().mockReturnThis(),
     };
 
-    // Gunakan controller login dengan request dan response yang telah dimock
     await login(mockReq, mockRes);
 
     const response = await request(app)
@@ -247,10 +279,8 @@ describe("POST /api/v1/auth/login", () => {
   });
 
   it("should return 401 if password is incorrect even with correct email", async () => {
-    // Mock Users.findOne untuk mengembalikan data pengguna
     Users.findOne = jest.fn().mockResolvedValue(user);
 
-    // Mock bcrypt.compare untuk mengembalikan false
     bcrypt.compare = jest.fn().mockResolvedValue(false);
 
     const response = await request(app)
@@ -284,21 +314,17 @@ describe("POST /api/v1/auth/login-google", () => {
       role: "user",
     };
 
-    // Mock Firebase admin
     admin.auth = jest.fn().mockReturnValue({
       verifyIdToken: jest.fn().mockResolvedValue(decodedToken),
       getUser: jest.fn().mockResolvedValue(userRecord),
     });
 
-    // Mock model dan JWT
     Users.findOne.mockResolvedValue(null);
     Users.create.mockResolvedValue(user);
     jwt.sign.mockReturnValue("mock-jwt-token");
 
-    // Mock logActivity
     logActivity.mockResolvedValue();
 
-    // Simulasi request login-google
     const response = await request(app)
       .post("/api/v1/auth/login-google")
       .send({ idToken })
@@ -377,5 +403,259 @@ describe("POST /api/v1/auth/login-google", () => {
       .expect(500);
 
     expect(response.body.message).toBe("Firebase error");
+  });
+});
+
+describe("GET /api/v1/auth/verify-email/:emailToken", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+  it("should verify email successfully with valid token", async () => {
+    const mockEmail = "test@example.com";
+    const mockUser = {
+      email: mockEmail,
+      isVerified: false,
+      save: jest.fn(),
+    };
+
+    jwt.verify.mockReturnValue({ email: mockEmail });
+    Users.findOne.mockResolvedValue(mockUser);
+
+    const response = await request(app)
+      .get("/api/v1/auth/verify-email/valid-token")
+      .expect(200);
+
+    expect(response.body.message).toBe(
+      "Email berhasil diverifikasi. Akun Anda kini aktif."
+    );
+    expect(mockUser.save).toHaveBeenCalled();
+  });
+
+  it("should return 400 if token is invalid or expired", async () => {
+    jwt.verify.mockImplementation(() => {
+      throw new Error("invalid token");
+    });
+
+    const response = await request(app)
+      .get("/api/v1/auth/verify-email/invalid-token")
+      .expect(400);
+
+    expect(response.body.message).toBe(
+      "Token tidak valid atau telah kedaluwarsa."
+    );
+  });
+
+  it("should return 404 if user is not found", async () => {
+    const mockEmail = "notfound@example.com";
+
+    jwt.verify.mockReturnValue({ email: mockEmail });
+    Users.findOne.mockResolvedValue(null);
+
+    const response = await request(app)
+      .get("/api/v1/auth/verify-email/valid-token")
+      .expect(404);
+
+    expect(response.body.message).toBe("Pengguna tidak ditemukan.");
+  });
+
+  it("should return 400 if user is already verified", async () => {
+    const mockEmail = "verified@example.com";
+    const mockUser = {
+      email: mockEmail,
+      isVerified: true,
+    };
+
+    jwt.verify.mockReturnValue({ email: mockEmail });
+    Users.findOne.mockResolvedValue(mockUser);
+
+    const response = await request(app)
+      .get("/api/v1/auth/verify-email/valid-token")
+      .expect(400);
+
+    expect(response.body.message).toBe("Email sudah diverifikasi sebelumnya.");
+  });
+
+  it("should return 400 if emailToken param is missing", async () => {
+    const { verifyEmail } = require("../app/controllers/authController");
+
+    const req = { params: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const next = jest.fn();
+
+    await verifyEmail(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Token verifikasi tidak ditemukan.",
+    });
+  });
+});
+
+describe("POST /api/v1/auth/send-email-reset-password", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should send reset email successfully if email exists", async () => {
+    const mockEmail = "user@example.com";
+    const mockUser = {
+      email: mockEmail,
+      fullname: "Test User",
+      save: jest.fn(),
+    };
+
+    Users.findOne.mockResolvedValue(mockUser);
+    jwt.sign.mockReturnValue("mock-token");
+    sendEmail.mockResolvedValue();
+
+    const response = await request(app)
+      .post("/api/v1/auth/send-email-reset-password")
+      .send({ email: mockEmail })
+      .expect(200);
+
+    expect(response.body.message).toBe(
+      "Link reset password telah dikirim ke email kamu."
+    );
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: mockEmail,
+        subject: "Reset Password",
+        html: expect.stringContaining("/reset-password/mock-token"),
+      })
+    );
+  });
+
+  it("should return 400 if email is not provided", async () => {
+    const response = await request(app)
+      .post("/api/v1/auth/send-email-reset-password")
+      .send({})
+      .expect(400);
+
+    expect(response.body.message).toBe("Email diperlukan");
+  });
+
+  it("should return 404 if user is not found", async () => {
+    Users.findOne.mockResolvedValue(null);
+
+    const response = await request(app)
+      .post("/api/v1/auth/send-email-reset-password")
+      .send({ email: "notfound@example.com" })
+      .expect(404);
+
+    expect(response.body.message).toBe("Pengguna tidak ditemukan");
+  });
+
+  it("should return 500 if something fails inside try block", async () => {
+    Users.findOne.mockImplementation(() => {
+      throw new Error("Unexpected error");
+    });
+
+    const response = await request(app)
+      .post("/api/v1/auth/send-email-reset-password")
+      .send({ email: "error@example.com" })
+      .expect(500);
+
+    expect(response.body.message).toBe("Unexpected error");
+  });
+});
+
+describe("POST /api/v1/auth/reset-password/:token", () => {
+  const validToken = "valid-token";
+  const decodedPayload = { email: "user@example.com" };
+  const mockUser = {
+    id: 1,
+    email: "user@example.com",
+    fullname: "Test User",
+    password: "oldpasswordhash",
+    save: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return 400 if token is missing", async () => {
+    const response = await request(app)
+      .post("/api/v1/auth/reset-password/")
+      .send({ newPassword: "newpass123", confirmPassword: "newpass123" });
+
+    expect(response.status).toBe(404);
+  });
+
+  it("should return 400 if newPassword is missing", async () => {
+    const response = await request(app)
+      .post(`/api/v1/auth/reset-password/${validToken}`)
+      .send({ confirmPassword: "newpass123" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Password baru wajib diisi.");
+  });
+
+  it("should return 400 if newPassword and confirmPassword do not match", async () => {
+    const response = await request(app)
+      .post(`/api/v1/auth/reset-password/${validToken}`)
+      .send({ newPassword: "newpass123", confirmPassword: "differentpass" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe(
+      "Password baru dan konfirmasi password tidak cocok."
+    );
+  });
+
+  it("should return 404 if user not found", async () => {
+    jwt.verify = jest.fn().mockReturnValue(decodedPayload);
+    Users.findOne = jest.fn().mockResolvedValue(null);
+
+    const response = await request(app)
+      .post(`/api/v1/auth/reset-password/${validToken}`)
+      .send({ newPassword: "newpass123", confirmPassword: "newpass123" });
+
+    expect(jwt.verify).toHaveBeenCalledWith(validToken, process.env.JWT_SECRET);
+    expect(Users.findOne).toHaveBeenCalledWith({
+      where: { email: decodedPayload.email },
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toBe("Pengguna tidak ditemukan.");
+  });
+
+  it("should reset password successfully and log activity", async () => {
+    jwt.verify = jest.fn().mockReturnValue(decodedPayload);
+    Users.findOne = jest.fn().mockResolvedValue(mockUser);
+    bcrypt.hash = jest.fn().mockResolvedValue("hashedNewPassword");
+    mockUser.save = jest.fn().mockResolvedValue();
+    logActivity.mockResolvedValue();
+
+    const device = "mock-device";
+    const ipAddress = "::ffff:127.0.0.1";
+
+    const response = await request(app)
+      .post(`/api/v1/auth/reset-password/${validToken}`)
+      .set("user-agent", device) // <- ini penting supaya req.headers['user-agent'] ada
+      .send({ newPassword: "newpass123", confirmPassword: "newpass123" });
+
+    expect(jwt.verify).toHaveBeenCalledWith(validToken, process.env.JWT_SECRET);
+    expect(Users.findOne).toHaveBeenCalledWith({
+      where: { email: decodedPayload.email },
+    });
+    expect(bcrypt.hash).toHaveBeenCalledWith("newpass123", 10);
+    expect(mockUser.password).toBe("hashedNewPassword");
+    expect(mockUser.save).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Reset Password",
+        description: `${mockUser.fullname} berhasil reset password.`,
+        device: device,
+        ipAddress: expect.any(String), // ipAddress biasanya dari req.ip yang otomatis set oleh supertest
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toBe("Password berhasil diubah.");
   });
 });

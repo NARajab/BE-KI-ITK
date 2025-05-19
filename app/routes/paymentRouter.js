@@ -5,16 +5,15 @@ const authenticat = require("../middlewares/authenticat");
 const { uploadSingle } = require("../middlewares/multer");
 
 router.get("/", Payment.getAllPayments);
-
-router.get("/by-user-id", authenticat, Payment.getPaymentByUserId);
-
-router.get("/by-id/:id", Payment.getPaymentById);
-
 router.patch(
-  "/:id",
+  "/payment-proof/:id",
   authenticat,
   uploadSingle("proofPayment"),
   Payment.updatePayment
 );
+
+router.get("/by-user-id", authenticat, Payment.getPaymentByUserId);
+
+router.get("/by-id/:id", Payment.getPaymentById);
 
 module.exports = router;

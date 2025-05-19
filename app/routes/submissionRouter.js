@@ -23,6 +23,46 @@ router.patch(
   Submission.updatePersonalData
 );
 router.patch(
+  "/personal-data-copyright/:submissionId",
+  authenticat,
+  (req, res, next) => {
+    uploadFields([
+      { name: "ktpFiles", maxCount: 20 },
+      { name: "statementLetterFile", maxCount: 1 },
+      { name: "letterTransferCopyrightFile", maxCount: 1 },
+      { name: "exampleCreationFile", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        console.error("Multer error:", err.message);
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
+  Submission.updatePersonalDataCopyright
+);
+router.patch(
+  "/personal-data-brand/:submissionId",
+  authenticat,
+  (req, res, next) => {
+    uploadFields([
+      { name: "ktpFiles", maxCount: 20 },
+      { name: "labelBrand", maxCount: 1 },
+      { name: "fileUploade", maxCount: 1 },
+      { name: "signature", maxCount: 1 },
+      { name: "InformationLetter", maxCount: 1 },
+      { name: "letterStatment", maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        console.error("Multer error:", err.message);
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
+  Submission.updatePersonalDataBrand
+);
+router.patch(
   "/personal-data-patent/:submissionId",
   authenticat,
   (req, res, next) => {

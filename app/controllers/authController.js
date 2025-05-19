@@ -91,7 +91,6 @@ const login = async (req, res, next) => {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!user.isVerified) {
       return res.status(401).json({ message: "Email belum diverifikasi" });
     }
@@ -233,7 +232,7 @@ const verifyEmail = async (req, res, next) => {
       message: "Email berhasil diverifikasi. Akun Anda kini aktif.",
     });
   } catch (err) {
-    console.error(err);
+    // console.error(err);
     return res
       .status(400)
       .json({ message: "Token tidak valid atau telah kedaluwarsa." });

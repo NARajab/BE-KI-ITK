@@ -205,6 +205,30 @@ const updateBrand = async (req, res, next) => {
       return next(new ApiError("Brand tidak ditemukan", 404));
     }
 
+    const submission = await Submissions.findOne({
+      where: { brandId: id },
+    });
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
+    const userSubmission = await UserSubmissions.findOne({
+      where: { submissionId: submission.id },
+    });
+    if (!userSubmission) {
+      return res
+        .status(404)
+        .json({ message: "UserSubmission tidak ditemukan" });
+    }
+
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: userSubmission.id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return res.status(404).json({ message: "Progress tidak ditemukan" });
+    }
+
     const fileFieldMap = {
       labelBrand: "uploads/image/",
       signature: "uploads/image/",
@@ -247,6 +271,60 @@ const updateBrand = async (req, res, next) => {
       letterStatment:
         req.files?.letterStatment?.[0]?.filename || brand.letterStatment,
     });
+
+    const oldAdditionalDatas = await AdditionalDatas.findAll({
+      where: { brandId: brand.id },
+    });
+
+    for (const data of oldAdditionalDatas) {
+      const folderPath =
+        data.fileType === "image" ? "uploads/image/" : "uploads/documents/";
+      const oldFilePath = path.join(__dirname, "../../", folderPath, data.file);
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
+
+    await AdditionalDatas.destroy({ where: { brandId: brand.id } });
+
+    const additionalDatas = JSON.parse(req.body.additionalDatas || "[]");
+    console.log(additionalDatas);
+    const newAdditionalDatas = [];
+
+    for (let i = 0; i < additionalDatas.length; i++) {
+      const data = additionalDatas[i];
+      const file = req.files?.additionalDataFiles?.[i];
+
+      if (file) {
+        newAdditionalDatas.push({
+          brandId: brand.id,
+          description: data.description,
+          fileName: file.originalname,
+          size: file.size,
+          file: file.filename,
+          fileType: file.mimetype.startsWith("image/") ? "image" : "documents",
+        });
+      }
+    }
+    console.log("Parsed additionalDatas:", additionalDatas);
+    console.log("Uploaded files:", req.files?.additionalDataFiles);
+
+    if (
+      additionalDatas.length !== (req.files?.additionalDataFiles?.length || 0)
+    ) {
+      console.warn("Jumlah data dan file tidak cocok");
+    }
+
+    if (newAdditionalDatas.length > 0) {
+      await AdditionalDatas.bulkCreate(newAdditionalDatas);
+    }
+
+    await Progresses.update(
+      { isStatus: true },
+      {
+        where: { id: progress.id },
+      }
+    );
 
     const admins = await Users.findAll({ where: { role: "admin" } });
     const adminEmails = admins.map((admin) => admin.email);
