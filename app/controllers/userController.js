@@ -65,16 +65,6 @@ const getAllUsers = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const users = await Users.findAll();
-      return res.status(200).json({
-        status: "success",
-        totalUsers: users.length,
-        limit: users.length,
-        users,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: users } = await Users.findAndCountAll({
