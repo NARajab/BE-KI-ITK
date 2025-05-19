@@ -155,7 +155,7 @@ const updateSubmissionProgress = async (req, res, next) => {
     const newProgress = await Progresses.create({
       userSubmissionId: id,
       status: reviewStatus,
-      isStatus: false,
+      isStatus: certificateFile ? true : false,
       comment: comments,
       createdBy: req.user.fullname,
       certificateFile: certificateFile?.[0]?.filename,
