@@ -25,7 +25,9 @@ const storage = multer.diskStorage({
       ext === ".pdf" ||
       ext === ".zip" ||
       ext === ".doc" ||
-      ext === ".docx"
+      ext === ".docx" ||
+      ext === ".mp3" ||
+      ext === ".mp4"
     ) {
       cb(null, documentPath);
     } else {
@@ -48,6 +50,8 @@ const fileFilter = (req, file, cb) => {
   const allowedPdfTypes = /pdf/;
   const allowedZipTypes = /zip/;
   const allowedDocTypes = /doc|docx/;
+  const allowedAudioTypes = /mp3/;
+  const allowedVideoTypes = /mp4/;
 
   const ext = path.extname(file.originalname).toLowerCase();
   const mime = file.mimetype;
@@ -68,9 +72,17 @@ const fileFilter = (req, file, cb) => {
     return cb(null, true);
   }
 
+  if (allowedAudioTypes.test(ext) && allowedAudioTypes.test(mime)) {
+    return cb(null, true);
+  }
+
+  if (allowedVideoTypes.test(ext) && allowedVideoTypes.test(mime)) {
+    return cb(null, true);
+  }
+
   return cb(
     new Error(
-      "Hanya file gambar (jpeg/jpg/png), PDF, Word (doc/docx), dan ZIP yang diperbolehkan"
+      "Hanya file gambar (jpeg/jpg/png), PDF, Word (doc/docx), ZIP, MP3, dan MP4 yang diperbolehkan"
     )
   );
 };
