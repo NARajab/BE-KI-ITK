@@ -5,17 +5,6 @@ const getActivityLogs = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const activityLogs = await ActivityLogs.findAll({
-        order: [["createdAt", "DESC"]],
-        include: ["user"],
-      });
-      return res.status(200).json({
-        status: "success",
-        activityLogs,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: activityLogs } = await ActivityLogs.findAndCountAll({
