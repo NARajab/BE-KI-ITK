@@ -86,51 +86,42 @@ const login = async (req, res, next) => {
   try {
     const user = await Users.findOne({ where: { email } });
 
-    if (!user) {
-      return res.status(404).json({ message: "Pengguna tidak ditemukan" });
-    }
+    const isPasswordValid = user
+      ? await bcrypt.compare(password, user.password)
+      : false;
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!user || !isPasswordValid) {
+      return next(
+        new ApiError("Email dan password yang anda masukkan salah", 401)
+      );
+    }
 
     if (!user.isVerified) {
-      return res.status(401).json({ message: "Email belum diverifikasi" });
+      return next(new ApiError("Email belum diverifikasi", 401));
     }
+    const payload = {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+    };
 
-    if (!isPasswordValid) {
-      return res
-        .status(401)
-        .json({ message: "Password yang anda masukkan salah" });
-    }
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "6h",
+    });
 
-    if (user && bcrypt.compareSync(password, user.password)) {
-      const payload = {
-        id: user.id,
-        role: user.role,
-        email: user.email,
-      };
+    await logActivity({
+      userId: user.id,
+      action: "Login",
+      description: `${user.fullname} berhasil login.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
 
-      const token = jwt.sign(payload, process.env.JWT_SECRET, {
-        expiresIn: "6h",
-      });
-
-      await logActivity({
-        userId: user.id,
-        action: "Login",
-        description: `${user.fullname} berhasil login.`,
-        device: req.headers["user-agent"],
-        ipAddress: req.ip,
-      });
-
-      console.log(token);
-
-      return res.status(200).json({
-        message: "Login berhasil",
-        role: user.role,
-        token,
-      });
-    } else {
-      return next(new ApiError("Password salah", 401));
-    }
+    return res.status(200).json({
+      message: "Login berhasil",
+      role: user.role,
+      token,
+    });
   } catch (err) {
     next(new ApiError(err.message, 500));
   }

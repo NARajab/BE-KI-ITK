@@ -264,7 +264,7 @@ const updatePersonalData = async (req, res, next) => {
           if (ktpFile && existingData.ktp) {
             const oldFilePath = path.join(
               __dirname,
-              "../../uploads/image/",
+              "../../uploads/documents/",
               existingData.ktp
             );
             if (fs.existsSync(oldFilePath)) {
