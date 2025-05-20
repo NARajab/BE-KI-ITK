@@ -18,7 +18,9 @@
     "lint": "eslint .",
     "fixlint": "eslint . --fix",
     "test": "jest --setupFiles dotenv/config --coverage --colors --verbose --detectOpenHandles --forceExit --passWithNoTests",
-    "test:user": "jest test/User.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
+    "test:user": "jest test/User.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:activity-log": "jest test/ActivityLog.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",
   "license": "ISC",

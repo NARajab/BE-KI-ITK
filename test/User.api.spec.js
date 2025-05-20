@@ -8,16 +8,18 @@ jest.mock("../app/models", () => ({
     findAndCountAll: jest.fn(),
   },
 }));
-jest.mock("nodemailer");
 jest.mock("jsonwebtoken");
 jest.mock("../app/helpers/activityLogs", () => jest.fn());
 jest.mock("../emails/services/sendMail");
-jest.mock("fs", () => ({
-  unlink: jest.fn((path, cb) => cb(null)),
-  existsSync: jest.fn(() => true), // atau false sesuai kebutuhan test
-  mkdirSync: jest.fn(),
-}));
-
+jest.mock("fs", () => {
+  const fsActual = jest.requireActual("fs");
+  return {
+    ...fsActual,
+    unlink: jest.fn((path, cb) => cb(null)),
+    existsSync: jest.fn(() => true),
+    mkdirSync: jest.fn(),
+  };
+});
 jest.mock("../utils/profanityFilter", () => ({
   containsProfanity: jest.fn(),
 }));
@@ -132,7 +134,6 @@ describe("GET /api/v1/user", () => {
   const mockToken = "dummy-token";
 
   beforeAll(() => {
-    // Mock jwt.verify supaya middleware authenticate bisa berjalan
     jwt.verify = jest.fn(() => ({
       id: 1,
       fullname: "Admin User",
@@ -195,14 +196,11 @@ describe("GET /api/v1/user", () => {
   });
 
   it("should call next with ApiError on failure", async () => {
-    // Simulate error thrown by findAndCountAll
     const errorMessage = "Database failure";
     Users.findAndCountAll.mockRejectedValue(new Error(errorMessage));
 
-    // Untuk testing middleware error, kita bisa spy next function
     const next = jest.fn();
 
-    // langsung panggil fungsi handler dengan dummy req, res, next
     const req = { query: {} };
     const res = {
       status: jest.fn(() => res),
@@ -265,10 +263,8 @@ describe("GET /api/v1/user/:id", () => {
     const errorMessage = "Database error";
     Users.findByPk.mockRejectedValue(new Error(errorMessage));
 
-    // Mock next function
     const next = jest.fn();
 
-    // Because your route uses next(err), we can call the controller function directly to test this
     const getUserById =
       require("../app/controllers/userController").getUserById;
 
@@ -313,10 +309,8 @@ describe("GET /api/v1/user/reviewer", () => {
     const errorMessage = "Database failure";
     Users.findAll.mockRejectedValue(new Error(errorMessage));
 
-    // Mock next function
     const next = jest.fn();
 
-    // Import controller function directly (pastikan path sesuai)
     const getAllUserReviewer =
       require("../app/controllers/userController").getAllUserReviewer;
 
@@ -339,23 +333,34 @@ describe("PATCH /api/v1/user/:id", () => {
   const mockToken = "dummy-token";
   beforeAll(() => {
     jwt.sign.mockReturnValue(mockToken);
-    jwt.verify = jest.fn(() => ({
-      id: 1,
-      fullname: "Admin User",
-      email: "admin@example.com",
-      role: "admin",
-    }));
+    jwt.verify = jest.fn((token) => {
+      return {
+        id: 99,
+        fullname: "Admin User",
+        email: "admin@example.com",
+        role: "admin",
+      };
+    });
   });
   beforeEach(() => {
     Users.findByPk.mockReset();
     containsProfanity.mockReset();
     logActivity.mockReset();
     fs.unlink.mockClear();
-    Users.findByPk.mockResolvedValue({
-      id: 1,
-      fullname: "Admin User",
-      email: "admin@example.com",
-      role: "admin",
+
+    Users.findByPk.mockImplementation((id) => {
+      console.log("findByPk called with id:", id);
+      if (id === 99 || id === "99") {
+        return Promise.resolve({
+          id: 99,
+          fullname: "Admin User",
+          email: "admin@example.com",
+          role: "admin",
+        });
+      } else if (id === 2 || id === "2") {
+        return Promise.resolve(mockUser);
+      }
+      return Promise.resolve(null);
     });
   });
 
@@ -367,19 +372,6 @@ describe("PATCH /api/v1/user/:id", () => {
   };
 
   it("should update user successfully", async () => {
-    Users.findByPk.mockImplementation((id) => {
-      console.log("findByPk called with id:", id);
-      if (id === "2") return Promise.resolve(mockUser);
-      if (id === "1")
-        return Promise.resolve({
-          id: 1,
-          fullname: "Admin User",
-          email: "admin@example.com",
-          role: "admin",
-        });
-      return Promise.resolve(null);
-    });
-
     containsProfanity.mockReturnValue(false);
 
     const response = await request(app)
@@ -392,8 +384,6 @@ describe("PATCH /api/v1/user/:id", () => {
         studyProgram: "New Program",
         institution: "New Institution",
       });
-
-    console.log(response.body);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty(
@@ -412,10 +402,100 @@ describe("PATCH /api/v1/user/:id", () => {
     );
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: undefined, // kalau mau, kamu bisa mock req.user supaya userId ada
+        userId: 99,
         action: "Mengubah Data Pengguna",
         description: expect.stringContaining("berhasil memperbaharui"),
       })
     );
+  });
+  it("should return 404 if user not found", async () => {
+    Users.findByPk.mockResolvedValue(null);
+
+    const response = await request(app)
+      .patch("/api/v1/user/999")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("message", "Pengguna tidak ditemukan");
+  });
+  it("should return 400 if fullname contains profanity", async () => {
+    containsProfanity.mockImplementation((text) => text.includes("badword"));
+
+    const response = await request(app)
+      .patch("/api/v1/user/2")
+      .set("Authorization", `Bearer ${mockToken}`)
+      .send({
+        fullname: "badword name", // Memicu filter kata tidak pantas
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty(
+      "message",
+      expect.stringContaining("fullname")
+    );
+  });
+  it("should update user and replace old image if file uploaded", async () => {
+    containsProfanity.mockReturnValue(false);
+    mockUser.image = "old-image.jpg";
+    mockUser.update = jest.fn().mockResolvedValue(mockUser);
+    fs.unlink.mockImplementation((path, cb) => cb(null));
+
+    console.log("Starting PATCH test with file upload");
+
+    const response = await request(app)
+      .patch("/api/v1/user/2")
+      .set("Authorization", `Bearer ${mockToken}`)
+      .set("user-agent", "jest-test-agent")
+      .attach("image", Buffer.from("fake image content"), "new-image.jpg")
+      .field("fullname", "Updated Name");
+
+    console.log("Response status:", response.status);
+    console.log("Response body:", response.body);
+    console.log("fs.unlink calls:", fs.unlink.mock.calls);
+    console.log("mockUser.update calls:", mockUser.update.mock.calls);
+
+    expect(response.status).toBe(200);
+    expect(fs.unlink).toHaveBeenCalledWith(
+      expect.stringContaining("old-image.jpg"),
+      expect.any(Function)
+    );
+    expect(mockUser.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        image: expect.any(String),
+      })
+    );
+  });
+  it("should log error if fs.unlink fails but continue", async () => {
+    containsProfanity.mockReturnValue(false);
+    mockUser.image = "old-image.jpg";
+    const unlinkError = new Error("unlink failed");
+
+    fs.unlink.mockImplementation((path, cb) => cb(unlinkError));
+    jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const response = await request(app)
+      .patch("/api/v1/user/2")
+      .set("Authorization", `Bearer ${mockToken}`)
+      .attach("image", Buffer.from("image"), "image.jpg");
+
+    expect(response.status).toBe(200);
+    expect(console.error).toHaveBeenCalledWith(
+      "Gagal menghapus gambar lama:",
+      "unlink failed"
+    );
+
+    console.error.mockRestore();
+  });
+  it("should return 500 if an error is thrown", async () => {
+    Users.findByPk.mockImplementation(() => {
+      throw new Error("Database down");
+    });
+
+    const response = await request(app)
+      .patch("/api/v1/user/2")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message", "Database down");
   });
 });

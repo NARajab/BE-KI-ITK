@@ -247,6 +247,9 @@ const createCopyright = async (req, res, next) => {
       ? req.files.exampleCreation[0]
       : null;
 
+    const exampleCreation =
+      exampleCreationFile?.filename || req.body.exampleCreation || null;
+
     const copyright = await Copyrights.create({
       titleInvention,
       typeCreationId,
@@ -261,9 +264,7 @@ const createCopyright = async (req, res, next) => {
       letterTransferCopyright: letterTransferCopyrightFile
         ? letterTransferCopyrightFile.filename
         : null,
-      exampleCreation: exampleCreationFile
-        ? exampleCreationFile.filename
-        : null,
+      exampleCreation,
     });
 
     const parsedPersonalDatas =

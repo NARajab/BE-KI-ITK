@@ -11,9 +11,8 @@ const sendEmail = require("../emails/services/sendMail");
 const request = require("supertest");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { login, loginGoogle } = require("../app/controllers/authController");
+const { loginGoogle } = require("../app/controllers/authController");
 const admin = require("firebase-admin");
-const nodemailer = require("nodemailer");
 const logActivity = require("../app/helpers/activityLogs");
 
 describe("GET /api/v1/auth/me", () => {
@@ -185,110 +184,79 @@ describe("POST /api/v1/auth/login", () => {
     user = {
       id: 1,
       email: "testuser@example.com",
-      password: "$2a$10$V3W.e5H71/hfs0c3NRpaOCOATfGzQYFJhOXxk19id81FuIqZC3OLu", // Hash untuk 'password123'
+      password: "$2a$10$V3W.e5H71/hfs0c3NRpaOCOATfGzQYFJhOXxk19id81FuIqZC3OLu", // Hash for 'password123'
       role: "user",
       isVerified: true,
       fullname: "Test User",
     };
+
+    Users.findOne = jest.fn();
+    bcrypt.compare = jest.fn();
+    jwt.sign = jest.fn();
+    logActivity.mockResolvedValue();
   });
 
-  it("should return 404 if user not found", async () => {
-    Users.findOne = jest.fn().mockResolvedValue(null);
+  it("should return 401 if user not found", async () => {
+    Users.findOne.mockResolvedValue(null);
 
     const response = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "testuser@example.com", password: "password123" });
+      .send({ email: "notfound@example.com", password: "password123" });
 
-    expect(response.status).toBe(404);
-    expect(response.body.message).toBe("Pengguna tidak ditemukan");
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe(
+      "Email dan password yang anda masukkan salah"
+    );
   });
 
   it("should return 401 if password is incorrect", async () => {
-    Users.findOne = jest.fn().mockResolvedValue(user);
-
-    bcrypt.compare = jest.fn().mockResolvedValue(false);
+    Users.findOne.mockResolvedValue(user);
+    bcrypt.compare.mockResolvedValue(false);
 
     const response = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "testuser@example.com", password: "wrongpassword" });
+      .send({ email: user.email, password: "wrongpassword" });
 
     expect(response.status).toBe(401);
-    expect(response.body.message).toBe("Password yang anda masukkan salah");
+    expect(response.body.message).toBe(
+      "Email dan password yang anda masukkan salah"
+    );
   });
 
   it("should return 401 if email is not verified", async () => {
-    Users.findOne = jest.fn().mockResolvedValue({
-      ...user,
-      isVerified: false,
-    });
+    Users.findOne.mockResolvedValue({ ...user, isVerified: false });
+    bcrypt.compare.mockResolvedValue(true);
 
     const response = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "testuser@example.com", password: "password123" });
+      .send({ email: user.email, password: "password123" });
 
     expect(response.status).toBe(401);
     expect(response.body.message).toBe("Email belum diverifikasi");
   });
 
   it("should return 200 and a token if login is successful", async () => {
-    const user = {
-      id: 1,
-      email: "testuser@example.com",
-      password: "$2a$10$V3W.e5H71/hfs0c3NRpaOCOATfGzQYFJhOXxk19id81FuIqZC3OLu", // Hash untuk 'password123'
-      isVerified: true,
-      fullname: "Test User",
-      role: "user",
-    };
-
-    Users.findOne = jest.fn().mockResolvedValue(user);
-    bcrypt.compare = jest.fn().mockResolvedValue(true);
-    bcrypt.compareSync = jest.fn().mockReturnValue(true);
-    jwt.sign = jest.fn().mockReturnValue("mock-jwt-token");
-    logActivity.mockResolvedValue();
-
-    const device = "mock-device";
-    const ipAddress = "::ffff:127.0.0.1";
-
-    const mockReq = {
-      body: { email: "testuser@example.com", password: "password123" },
-      headers: { "user-agent": device },
-      ip: ipAddress,
-    };
-
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
-    await login(mockReq, mockRes);
+    Users.findOne.mockResolvedValue(user);
+    bcrypt.compare.mockResolvedValue(true);
+    jwt.sign.mockReturnValue("mock-jwt-token");
 
     const response = await request(app)
       .post("/api/v1/auth/login")
-      .send({ email: "testuser@example.com", password: "password123" });
+      .set("User-Agent", "jest-agent")
+      .send({ email: user.email, password: "password123" });
 
     expect(response.status).toBe(200);
     expect(response.body.message).toBe("Login berhasil");
     expect(response.body.token).toBe("mock-jwt-token");
+    expect(response.body.role).toBe("user");
+
     expect(logActivity).toHaveBeenCalledWith({
       userId: user.id,
       action: "Login",
       description: `${user.fullname} berhasil login.`,
-      device: device,
-      ipAddress: ipAddress,
+      device: "jest-agent",
+      ipAddress: expect.any(String),
     });
-  });
-
-  it("should return 401 if password is incorrect even with correct email", async () => {
-    Users.findOne = jest.fn().mockResolvedValue(user);
-
-    bcrypt.compare = jest.fn().mockResolvedValue(false);
-
-    const response = await request(app)
-      .post("/api/v1/auth/login")
-      .send({ email: "testuser@example.com", password: "wrongpassword" });
-
-    expect(response.status).toBe(401);
-    expect(response.body.message).toBe("Password yang anda masukkan salah");
   });
 });
 
