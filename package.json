@@ -22,6 +22,7 @@
     "test:activity-log": "jest test/ActivityLog.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:document": "jest test/Document.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:faq": "jest test/Faq.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:help": "jest test/HelpCenter.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",

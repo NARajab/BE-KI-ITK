@@ -38,9 +38,15 @@ jest.mock("../app/helpers/activityLogs", () => jest.fn());
 
 const request = require("supertest");
 const app = require("../app/index");
-const fs = require("fs");
 const { Faqs, Users } = require("../app/models");
 const { Op } = require("sequelize");
+const {
+  getFaqByType,
+  getById,
+  updateFaq,
+  restoreFaq,
+  restoreTypeFaq,
+} = require("../app/controllers/faqController");
 const logActivity = require("../app/helpers/activityLogs");
 
 describe("POST /api/v1/faq", () => {
@@ -463,5 +469,567 @@ describe("GET /api/v1/faq/by-type", () => {
 
     expect(response.statusCode).toBe(500);
     expect(response.body.message).toBe("DB failure");
+  });
+});
+
+describe("GET /api/v1/faq/by-type/:type", () => {
+  beforeEach(() => {
+    Faqs.findAndCountAll.mockClear();
+  });
+
+  it("should return paginated FAQs filtered by type with question NOT null", async () => {
+    const faqType = "technical";
+
+    // Mock FAQ data (where question != null)
+    const mockFaqs = [
+      {
+        id: 1,
+        type: faqType,
+        question: "What is API?",
+        answer: "Application Programming Interface",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 2,
+        type: faqType,
+        question: "How to test?",
+        answer: "Use Jest or Mocha",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    // Mock total count
+    const mockCount = 2;
+
+    Faqs.findAndCountAll.mockResolvedValue({
+      count: mockCount,
+      rows: mockFaqs,
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/faq/by-type/${faqType}`)
+      .query({ page: 1, limit: 10 });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.currentPage).toBe(1);
+    expect(response.body.limit).toBe(10);
+    expect(response.body.totalPages).toBe(Math.ceil(mockCount / 10));
+    expect(response.body.totalFaqs).toBe(mockCount);
+    expect(response.body.faqs).toHaveLength(mockFaqs.length);
+
+    response.body.faqs.forEach((faq, index) => {
+      expect(faq).toMatchObject({
+        id: mockFaqs[index].id,
+        type: faqType,
+        question: expect.any(String),
+        answer: expect.any(String),
+      });
+    });
+
+    expect(Faqs.findAndCountAll).toHaveBeenCalledWith({
+      limit: 10,
+      offset: 0,
+      order: [["id", "ASC"]],
+      where: {
+        type: faqType,
+        question: {
+          [Op.ne]: null,
+        },
+      },
+    });
+  });
+
+  it("should handle errors and call next with ApiError", async () => {
+    const faqType = "general";
+
+    const errorMessage = "Database failure";
+    Faqs.findAndCountAll.mockRejectedValue(new Error(errorMessage));
+
+    // Mock next function
+    const next = jest.fn();
+
+    // Call the controller function directly (optional)
+    const req = {
+      params: { type: faqType },
+      query: { page: "1", limit: "10" },
+    };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    await getFaqByType(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: errorMessage,
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("GET /api/v1/faq/:id", () => {
+  beforeEach(() => {
+    Faqs.findByPk.mockClear();
+  });
+
+  it("should return a FAQ by id when found", async () => {
+    const mockFaq = {
+      id: 1,
+      type: "general",
+      question: "Apa itu API?",
+      answer: "Application Programming Interface",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    Faqs.findByPk.mockResolvedValue(mockFaq);
+
+    const response = await request(app).get(`/api/v1/faq/1`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.faq).toMatchObject({
+      id: 1,
+      type: "general",
+      question: "Apa itu API?",
+      answer: "Application Programming Interface",
+    });
+
+    expect(Faqs.findByPk).toHaveBeenCalledWith("1");
+  });
+
+  it("should return 404 and call next with ApiError if FAQ not found", async () => {
+    const faqId = 9999;
+
+    Faqs.findByPk.mockResolvedValue(null);
+
+    const req = { params: { id: faqId } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+
+    await getById(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Faq tidak ditemukan",
+        statusCode: 404,
+      })
+    );
+  });
+
+  it("should handle error and call next with ApiError", async () => {
+    const errorMessage = "Database error";
+
+    Faqs.findByPk.mockRejectedValue(new Error(errorMessage));
+
+    const req = { params: { id: 1 } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+    const next = jest.fn();
+
+    await getById(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: errorMessage,
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("PATCH /api/v1/faq/:id", () => {
+  beforeEach(() => {
+    Faqs.findByPk.mockClear();
+    logActivity.mockClear();
+  });
+
+  it("should update FAQ and return success message", async () => {
+    const mockFaqInstance = {
+      update: jest.fn().mockResolvedValue(true),
+      id: 1,
+      question: "Old question",
+      answer: "Old answer",
+    };
+
+    Faqs.findByPk.mockResolvedValue(mockFaqInstance);
+
+    const updatedData = {
+      question: "New question?",
+      answer: "New answer.",
+    };
+
+    const user = {
+      id: 123,
+      fullname: "John Doe",
+    };
+
+    const response = await request(app)
+      .patch("/api/v1/faq/1")
+      .set("user-agent", "jest-test-agent")
+      .send(updatedData)
+      .set("Accept", "application/json")
+      .set("X-User-Id", user.id)
+      .set("X-User-Fullname", user.fullname);
+
+    expect(Faqs.findByPk).toHaveBeenCalledWith("1");
+    expect(mockFaqInstance.update).toHaveBeenCalledWith(updatedData);
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: expect.any(Number),
+        action: "Mengubah Faq",
+        description: expect.stringContaining("berhasil memperbaharui FAQ"),
+        device: "jest-test-agent",
+        ipAddress: expect.any(String),
+      })
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Faq berhasil diperbarui");
+    expect(response.body.faq).toBeDefined();
+  });
+
+  it("should call next with ApiError 404 if FAQ not found", async () => {
+    Faqs.findByPk.mockResolvedValue(null);
+
+    const req = {
+      params: { id: "999" },
+      body: { question: "Q", answer: "A" },
+      user: { id: 123, fullname: "John Doe" },
+      headers: { "user-agent": "jest-test-agent" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await updateFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Faq tidak ditemukan",
+        statusCode: 404,
+      })
+    );
+  });
+
+  it("should call next with ApiError 500 on DB error", async () => {
+    const error = new Error("DB error");
+    Faqs.findByPk.mockRejectedValue(error);
+
+    const req = {
+      params: { id: "1" },
+      body: { question: "Q", answer: "A" },
+      user: { id: 123, fullname: "John Doe" },
+      headers: { "user-agent": "jest-test-agent" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await updateFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "DB error",
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("PATCH /api/v1/faq/active/:id", () => {
+  beforeEach(() => {
+    Faqs.findOne.mockClear();
+  });
+
+  it("should restore a deleted FAQ successfully", async () => {
+    const mockFaq = {
+      id: 1,
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(true),
+    };
+
+    Faqs.findOne.mockResolvedValue(mockFaq);
+
+    const response = await request(app)
+      .patch(`/api/v1/faq/active/1`)
+      .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Faq berhasil dikembalikan");
+    expect(Faqs.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+    expect(mockFaq.restore).toHaveBeenCalled();
+  });
+
+  it("should return 404 if FAQ not found", async () => {
+    Faqs.findOne.mockResolvedValue(null);
+
+    const req = {
+      params: { id: "9999" },
+      headers: {},
+      user: { id: 1, fullname: "Admin User" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await restoreFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Faq tidak ditemukan",
+        statusCode: 404,
+      })
+    );
+  });
+
+  it("should return 400 if FAQ is not deleted", async () => {
+    const mockFaq = {
+      id: 1,
+      deletedAt: null,
+    };
+
+    Faqs.findOne.mockResolvedValue(mockFaq);
+
+    const response = await request(app).patch(`/api/v1/faq/active/1`);
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.status).toBe("fail");
+    expect(response.body.message).toBe("Faq ini belum dihapus");
+  });
+
+  it("should call next with ApiError on unexpected error", async () => {
+    const errorMessage = "Database error";
+
+    Faqs.findOne.mockRejectedValue(new Error(errorMessage));
+
+    const req = {
+      params: { id: "1" },
+      headers: {},
+      user: { id: 1, fullname: "Admin User" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await restoreFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: errorMessage,
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("PATCH /api/v1/faq/type/active/:type", () => {
+  beforeEach(() => {
+    Faqs.findAll.mockClear();
+  });
+
+  it("should restore all deleted FAQs of a given type", async () => {
+    const mockDeletedFaq1 = {
+      id: 1,
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(true),
+    };
+    const mockDeletedFaq2 = {
+      id: 2,
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(true),
+    };
+    const mockActiveFaq = {
+      id: 3,
+      deletedAt: null,
+      restore: jest.fn(),
+    };
+
+    // Mock findAll returning mixed deleted and active faqs
+    Faqs.findAll.mockResolvedValue([
+      mockDeletedFaq1,
+      mockDeletedFaq2,
+      mockActiveFaq,
+    ]);
+
+    const response = await request(app)
+      .patch("/api/v1/faq/type/active/general")
+      .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe(
+      "Berhasil mengembalikan semua FAQ dengan type 'general'"
+    );
+    expect(Faqs.findAll).toHaveBeenCalledWith({
+      where: { type: "general" },
+      paranoid: false,
+    });
+
+    expect(mockDeletedFaq1.restore).toHaveBeenCalled();
+    expect(mockDeletedFaq2.restore).toHaveBeenCalled();
+    expect(mockActiveFaq.restore).not.toHaveBeenCalled();
+  });
+
+  it("should return 404 if no FAQs found for the type", async () => {
+    Faqs.findAll.mockResolvedValue([]);
+
+    const req = {
+      params: { type: "unknown" },
+      headers: {},
+      user: { id: 1, fullname: "Admin User" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await restoreTypeFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Faq dengan type tersebut tidak ditemukan",
+        statusCode: 404,
+      })
+    );
+  });
+
+  it("should return 400 if no deleted FAQs to restore", async () => {
+    const mockFaq1 = { id: 1, deletedAt: null, restore: jest.fn() };
+    const mockFaq2 = { id: 2, deletedAt: null, restore: jest.fn() };
+
+    Faqs.findAll.mockResolvedValue([mockFaq1, mockFaq2]);
+
+    const response = await request(app).patch(
+      "/api/v1/faq/type/active/general"
+    );
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.status).toBe("fail");
+    expect(response.body.message).toBe(
+      "Tidak ada Faq yang perlu direstore untuk type ini"
+    );
+  });
+
+  it("should call next with ApiError on unexpected error", async () => {
+    const errorMessage = "Database error";
+
+    Faqs.findAll.mockRejectedValue(new Error(errorMessage));
+
+    const req = {
+      params: { type: "general" },
+      headers: {},
+      user: { id: 1, fullname: "Admin User" },
+      ip: "127.0.0.1",
+    };
+    const res = {};
+    const next = jest.fn();
+
+    await restoreTypeFaq(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: errorMessage,
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("DELETE /api/v1/faq/:id", () => {
+  beforeEach(() => {
+    Faqs.findByPk.mockClear();
+  });
+
+  it("should delete a FAQ and return success message", async () => {
+    const mockFaq = {
+      id: 1,
+      destroy: jest.fn().mockResolvedValue(true),
+    };
+
+    Faqs.findByPk.mockResolvedValue(mockFaq);
+
+    const response = await request(app)
+      .delete("/api/v1/faq/1")
+      .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Faq berhasil dihapus");
+
+    expect(Faqs.findByPk).toHaveBeenCalledWith("1");
+    expect(mockFaq.destroy).toHaveBeenCalled();
+  });
+
+  it("should return 404 if FAQ is not found", async () => {
+    Faqs.findByPk.mockResolvedValue(null);
+
+    const response = await request(app).delete("/api/v1/faq/999");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Faq tidak ditemukan");
+  });
+
+  it("should return 500 on unexpected error", async () => {
+    Faqs.findByPk.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).delete("/api/v1/faq/1");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("Database error");
+  });
+});
+
+describe("DELETE /api/v1/faq/type/:type", () => {
+  beforeEach(() => {
+    Faqs.findAll.mockClear();
+  });
+
+  it("should delete all FAQs with the specified type and return success", async () => {
+    const mockFaqs = [
+      { id: 1, destroy: jest.fn().mockResolvedValue(true) },
+      { id: 2, destroy: jest.fn().mockResolvedValue(true) },
+    ];
+
+    Faqs.findAll.mockResolvedValue(mockFaqs);
+
+    const response = await request(app)
+      .delete("/api/v1/faq/type/general")
+      .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe(
+      "Semua Faq dengan type 'general' berhasil dihapus"
+    );
+
+    expect(Faqs.findAll).toHaveBeenCalledWith({ where: { type: "general" } });
+    mockFaqs.forEach((faq) => expect(faq.destroy).toHaveBeenCalled());
+  });
+
+  it("should return 404 if no FAQs found for the given type", async () => {
+    Faqs.findAll.mockResolvedValue([]);
+
+    const response = await request(app).delete("/api/v1/faq/type/unknown");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Tidak ada Faq dengan type tersebut");
+  });
+
+  it("should return 500 on internal error", async () => {
+    Faqs.findAll.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).delete("/api/v1/faq/type/general");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("Database error");
   });
 });

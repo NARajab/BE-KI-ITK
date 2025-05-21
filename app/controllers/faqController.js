@@ -148,12 +148,11 @@ const getAllFaqWoutPagination = async (req, res, next) => {
 
 const getAllTypeFaq = async (req, res, next) => {
   try {
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
-
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { count, rows: faqs } = await Faqs.findAndCountAll({
+    const { count, rows } = await Faqs.findAndCountAll({
       limit,
       offset,
       attributes: ["id", "type", "createdAt", "updatedAt"],
@@ -165,7 +164,7 @@ const getAllTypeFaq = async (req, res, next) => {
       },
     });
 
-    const typeCountsRaw = await Faqs.findAll({
+    const counts = await Faqs.findAll({
       attributes: [
         "type",
         [
@@ -176,23 +175,29 @@ const getAllTypeFaq = async (req, res, next) => {
       group: ["type"],
     });
 
-    const typeCountMap = {};
-    typeCountsRaw.forEach((item) => {
-      typeCountMap[item.type] = parseInt(item.dataValues.totalTypeDigunakan);
+    const countsMap = {};
+    counts.forEach((item) => {
+      countsMap[item.type] = parseInt(item.dataValues.totalTypeDigunakan);
     });
 
-    const faqsWithTotal = faqs.map((faq) => ({
-      ...faq.dataValues,
-      totalTypeDigunakan: (typeCountMap[faq.type] || 0) - 1,
-    }));
+    const faqsWithCount = rows.map((faq) => {
+      const totalCount = countsMap[faq.dataValues.type] || 0;
+      return {
+        id: faq.dataValues.id,
+        type: faq.dataValues.type,
+        createdAt: faq.dataValues.createdAt,
+        updatedAt: faq.dataValues.updatedAt,
+        totalTypeDigunakan: totalCount > 0 ? totalCount - 1 : 0,
+      };
+    });
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
       currentPage: page,
       totalPages: Math.ceil(count / limit),
       totalFaqs: count,
       limit,
-      faqs: faqsWithTotal,
+      faqs: faqsWithCount,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
