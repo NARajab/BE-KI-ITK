@@ -1,4 +1,5 @@
 const { ActivityLogs } = require("../models");
+const ApiError = require("../../utils/apiError");
 
 const getActivityLogs = async (req, res, next) => {
   try {
