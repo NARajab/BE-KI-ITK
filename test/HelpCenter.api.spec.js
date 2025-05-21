@@ -39,12 +39,13 @@ jest.mock("../app/middlewares/authenticat", () => {
 jest.mock("../app/helpers/activityLogs", () => jest.fn());
 
 jest.mock("../emails/services/sendMail", () => jest.fn());
+jest.mock("../app/helpers/notifications", () => jest.fn());
 jest.mock("../emails/templates/helpCenterMailUser", () =>
   jest.fn(() => "<p>Email content</p>")
 );
 
 const sendEmail = require("../emails/services/sendMail");
-const helpCenterMailUser = require("../emails/templates/helpCenterMailUser");
+const sendNotification = require("../app/helpers/notifications");
 const request = require("supertest");
 const app = require("../app/index");
 const { HelpCenters, Users } = require("../app/models");
@@ -188,7 +189,7 @@ describe("PATCH /api/v1/help-center/:id", () => {
       })
     );
 
-    expect(SendEmail).toHaveBeenCalledWith({
+    expect(sendEmail).toHaveBeenCalledWith({
       to: mockUser.email,
       subject: "Pertanyaan di Pusat Bantuan",
       html: expect.any(String),
@@ -222,5 +223,295 @@ describe("PATCH /api/v1/help-center/:id", () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.body.message).toBe("ID pengguna tidak valid");
+  });
+});
+
+describe("GET /api/v1/help-center", () => {
+  const mockHelpCenters = [
+    {
+      id: 1,
+      email: "user1@example.com",
+      phoneNumber: "08123456789",
+      problem: "Masalah login",
+      message: "Tidak bisa login",
+      answer: null,
+      status: false,
+    },
+    {
+      id: 2,
+      email: "user2@example.com",
+      phoneNumber: "08123456780",
+      problem: "Error aplikasi",
+      message: "Aplikasi sering error",
+      answer: "Silakan update aplikasi",
+      status: true,
+    },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return paginated help center data with default pagination", async () => {
+    HelpCenters.findAndCountAll.mockResolvedValue({
+      count: mockHelpCenters.length,
+      rows: mockHelpCenters,
+    });
+
+    const response = await request(app).get("/api/v1/help-center").query({});
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Help Center berhasil ditemukan");
+    expect(response.body.currentPage).toBe(1);
+    expect(response.body.limit).toBe(10);
+    expect(response.body.totalPages).toBe(
+      Math.ceil(mockHelpCenters.length / 10)
+    );
+    expect(response.body.helpCenter).toEqual(mockHelpCenters);
+
+    expect(HelpCenters.findAndCountAll).toHaveBeenCalledWith({
+      limit: 10,
+      offset: 0,
+      order: [["id", "ASC"]],
+    });
+  });
+
+  it("should return paginated help center data with specified page and limit", async () => {
+    HelpCenters.findAndCountAll.mockResolvedValue({
+      count: 50,
+      rows: mockHelpCenters,
+    });
+
+    const response = await request(app)
+      .get("/api/v1/help-center")
+      .query({ page: 3, limit: 5 });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.currentPage).toBe(3);
+    expect(response.body.limit).toBe(5);
+    expect(response.body.totalPages).toBe(Math.ceil(50 / 5));
+    expect(response.body.helpCenter).toEqual(mockHelpCenters);
+
+    expect(HelpCenters.findAndCountAll).toHaveBeenCalledWith({
+      limit: 5,
+      offset: 10, // (3 - 1) * 5
+      order: [["id", "ASC"]],
+    });
+  });
+
+  it("should handle errors and return 500", async () => {
+    HelpCenters.findAndCountAll.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).get("/api/v1/help-center");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("Database error");
+  });
+});
+
+describe("GET /api/v1/help-center/:id", () => {
+  const mockHelpCenter = {
+    id: 1,
+    email: "user@example.com",
+    phoneNumber: "08123456789",
+    problem: "Login Error",
+    message: "I can't login to my account",
+    answer: null,
+    status: false,
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return help center data when found", async () => {
+    HelpCenters.findByPk.mockResolvedValue(mockHelpCenter);
+
+    const response = await request(app).get("/api/v1/help-center/1");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Help Center berhasil ditemukan");
+    expect(response.body.helpCenter).toEqual(mockHelpCenter);
+
+    expect(HelpCenters.findByPk).toHaveBeenCalledWith("1");
+  });
+
+  it("should return 404 if help center not found", async () => {
+    HelpCenters.findByPk.mockResolvedValue(null);
+
+    const response = await request(app).get("/api/v1/help-center/999");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.status).toBe("Failed");
+    expect(response.body.message).toBe("Help Center tidak ditemukan");
+  });
+
+  it("should return 500 on server error", async () => {
+    HelpCenters.findByPk.mockRejectedValue(new Error("Database failure"));
+
+    const response = await request(app).get("/api/v1/help-center/1");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("Database failure");
+  });
+});
+
+describe("PATCH /api/v1/help-center/active/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Admin User",
+  };
+
+  const mockHelpCenterDeleted = {
+    id: 1,
+    deletedAt: new Date(),
+    restore: jest.fn().mockResolvedValue(),
+  };
+
+  const mockHelpCenterNotDeleted = {
+    id: 2,
+    deletedAt: null,
+    restore: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should restore a deleted Help Center entry", async () => {
+    // Mock req.user injected by auth middleware
+    // Mock HelpCenters.findOne returns deleted entry
+    HelpCenters.findOne.mockResolvedValue(mockHelpCenterDeleted);
+
+    // Mock logActivity to resolve immediately
+    logActivity.mockResolvedValue();
+
+    // Simulate request with user-agent and ip
+    const response = await request(app)
+      .patch("/api/v1/help-center/active/1")
+      .set("User-Agent", "jest-test")
+      .set("X-Forwarded-For", "127.0.0.1") // or .set("X-Real-IP", "127.0.0.1")
+      .send();
+
+    expect(HelpCenters.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+
+    expect(mockHelpCenterDeleted.restore).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Mengembalikan Pertanyaan di Help Center",
+        description: expect.stringContaining("berhasil mengembalikan"),
+        device: "jest-test",
+        ipAddress: expect.any(String),
+      })
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Help Center berhasil dikembalikan");
+  });
+
+  it("should return 404 if Help Center not found", async () => {
+    HelpCenters.findOne.mockResolvedValue(null);
+
+    const response = await request(app).patch("/api/v1/help-center/active/999");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.status).toBe("Failed");
+    expect(response.body.message).toBe("Help Center tidak ditemukan");
+  });
+
+  it("should return 400 if Help Center is not deleted", async () => {
+    HelpCenters.findOne.mockResolvedValue(mockHelpCenterNotDeleted);
+
+    const response = await request(app).patch("/api/v1/help-center/active/2");
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.status).toBe("Failed");
+    expect(response.body.message).toBe(
+      "Help Center ini belum dihapus, jadi tidak bisa direstore"
+    );
+  });
+
+  it("should return 500 on server error", async () => {
+    HelpCenters.findOne.mockRejectedValue(new Error("Database failure"));
+
+    const response = await request(app).patch("/api/v1/help-center/active/1");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("Database failure");
+  });
+});
+
+describe("DELETE /api/v1/help-center/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Admin User",
+  };
+
+  const mockHelpCenter = {
+    id: 1,
+    destroy: jest.fn().mockResolvedValue(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should delete a Help Center entry successfully", async () => {
+    HelpCenters.findByPk.mockResolvedValue(mockHelpCenter);
+    logActivity.mockResolvedValue();
+
+    const response = await request(app)
+      .delete("/api/v1/help-center/1")
+      .set("User-Agent", "jest-test")
+      .set("X-Forwarded-For", "127.0.0.1") // optional for IP
+      .send();
+
+    expect(HelpCenters.findByPk).toHaveBeenCalledWith("1");
+    expect(mockHelpCenter.destroy).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Menghapus Pertanyaan di Help Center",
+        description: expect.stringContaining("berhasil menghapus"),
+        device: "jest-test",
+        ipAddress: expect.any(String),
+      })
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Help Center berhasil dihapus");
+  });
+
+  it("should return 404 if Help Center not found", async () => {
+    HelpCenters.findByPk.mockResolvedValue(null);
+
+    const response = await request(app).delete("/api/v1/help-center/999");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.status).toBe("Failed");
+    expect(response.body.message).toBe("Help Center tidak ditemukan");
+  });
+
+  it("should return 500 on server error", async () => {
+    HelpCenters.findByPk.mockRejectedValue(new Error("Database failure"));
+
+    const response = await request(app).delete("/api/v1/help-center/1");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("Database failure");
   });
 });
