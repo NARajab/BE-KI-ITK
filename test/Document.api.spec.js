@@ -7,6 +7,8 @@ jest.mock("../app/models", () => ({
     findAll: jest.fn(),
     findAndCountAll: jest.fn(),
     count: jest.fn(),
+    destroy: jest.fn(),
+    restore: jest.fn(),
   },
   Users: {
     findByPk: jest.fn(),
@@ -584,5 +586,378 @@ describe("GET /api/v1/document/by-type", () => {
 
     expect(response.statusCode).toBe(500);
     expect(response.body.status).toBe("Error");
+  });
+});
+
+describe("GET /api/v1/document/by-type/:type", () => {
+  it("should return a paginated list of documents filtered by type", async () => {
+    const mockDocs = [
+      {
+        id: 1,
+        type: "Surat Pernyataan",
+        title: "Dokumen A",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+
+    Documents.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: mockDocs,
+    });
+
+    const response = await request(app).get(
+      "/api/v1/document/by-type/Surat Pernyataan"
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.docs).toBeInstanceOf(Array);
+    expect(response.body.docs[0]).toHaveProperty("type", "Surat Pernyataan");
+    expect(response.body.totalDocs).toBe(1);
+  });
+
+  it("should handle errors gracefully", async () => {
+    Documents.findAndCountAll.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).get(
+      "/api/v1/document/by-type/Surat Pernyataan"
+    );
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("Database error");
+  });
+});
+
+describe("GET /api/v1/document/:id", () => {
+  it("should return a document by id", async () => {
+    const mockDoc = {
+      id: 1,
+      type: "Surat Pernyataan",
+      title: "Dokumen A",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    Documents.findByPk = jest.fn().mockResolvedValue(mockDoc);
+
+    const response = await request(app).get("/api/v1/document/1");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.doc).toHaveProperty("id", 1);
+    expect(response.body.doc).toHaveProperty("type", "Surat Pernyataan");
+  });
+
+  it("should return 404 if document not found", async () => {
+    Documents.findByPk = jest.fn().mockResolvedValue(null);
+
+    const response = await request(app).get("/api/v1/document/999");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Document tidak ditemukan");
+  });
+
+  it("should handle server errors gracefully", async () => {
+    Documents.findByPk = jest.fn().mockRejectedValue(new Error("DB Error"));
+
+    const response = await request(app).get("/api/v1/document/1");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
+    expect(response.body.message).toBe("DB Error");
+  });
+});
+
+describe("PATCH /api/v1/document/active/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "John Doe",
+  };
+
+  const mockDoc = {
+    id: 123,
+    deletedAt: new Date(),
+    restore: jest.fn().mockResolvedValue(),
+  };
+
+  beforeEach(() => {
+    Documents.findByPk = jest.fn();
+    logActivity.mockResolvedValue();
+  });
+
+  it("should restore a deleted document", async () => {
+    Documents.findByPk.mockResolvedValue(mockDoc);
+
+    const response = await request(app)
+      .patch("/api/v1/document/active/123")
+      .set("Authorization", "Bearer valid-token")
+      .set("User-Agent", "Jest Test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe("Document berhasil di-restore");
+    expect(mockDoc.restore).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Restore Unduhan",
+        description: expect.stringContaining("berhasil me-restore"),
+      })
+    );
+  });
+
+  it("should return 404 if document not found", async () => {
+    Documents.findByPk.mockResolvedValue(null);
+
+    const response = await request(app)
+      .patch("/api/v1/document/active/999")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Document tidak ditemukan");
+  });
+
+  it("should return 400 if document is not deleted", async () => {
+    const notDeletedDoc = { ...mockDoc, deletedAt: null };
+    Documents.findByPk.mockResolvedValue(notDeletedDoc);
+
+    const response = await request(app)
+      .patch("/api/v1/document/active/123")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.message).toBe("Document belum dihapus");
+  });
+
+  it("should handle server error", async () => {
+    Documents.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app)
+      .patch("/api/v1/document/active/123")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("DB error");
+  });
+});
+
+describe("PATCH /api/v1/document/type/active/:type", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "John Doe",
+  };
+
+  // Dokumen contoh yang sudah dihapus
+  const mockDeletedDocs = [
+    {
+      id: 1,
+      type: "Surat Pernyataan",
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(),
+    },
+    {
+      id: 2,
+      type: "Surat Pernyataan",
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(),
+    },
+  ];
+
+  // Dokumen contoh yang tidak dihapus (deletedAt = null)
+  const mockNotDeletedDocs = [
+    {
+      id: 3,
+      type: "Surat Pernyataan",
+      deletedAt: null,
+      restore: jest.fn(),
+    },
+  ];
+
+  beforeEach(() => {
+    Documents.findAll = jest.fn();
+    logActivity.mockResolvedValue();
+  });
+
+  it("should restore all deleted documents of a given type", async () => {
+    Documents.findAll.mockResolvedValue(mockDeletedDocs);
+
+    const response = await request(app)
+      .patch("/api/v1/document/type/active/Surat Pernyataan")
+      .set("Authorization", "Bearer valid-token")
+      .set("User-Agent", "Jest Test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe(
+      "Semua document dengan type 'Surat Pernyataan' berhasil di-restore"
+    );
+    // cek restore dipanggil untuk semua dokumen yang dihapus
+    mockDeletedDocs.forEach((doc) => {
+      expect(doc.restore).toHaveBeenCalled();
+    });
+    // cek logActivity terpanggil
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Restore Kategori Unduhan",
+        description: expect.stringContaining(
+          "berhasil me-restore kategori unduhan"
+        ),
+      })
+    );
+  });
+
+  it("should return 404 if no deleted documents found for the given type", async () => {
+    // Semua dokumen tidak dihapus, jadi tidak ada yang harus di-restore
+    Documents.findAll.mockResolvedValue(mockNotDeletedDocs);
+
+    const response = await request(app)
+      .patch("/api/v1/document/type/active/Surat Pernyataan")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe(
+      "Tidak ada dokumen dengan type tersebut yang perlu di-restore"
+    );
+  });
+
+  it("should handle server error", async () => {
+    Documents.findAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app)
+      .patch("/api/v1/document/type/active/Surat Pernyataan")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("DB error");
+  });
+});
+
+describe("DELETE /api/v1/document/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "John Doe",
+  };
+
+  const mockDoc = {
+    id: 123,
+    destroy: jest.fn().mockResolvedValue(),
+  };
+
+  beforeEach(() => {
+    Documents.findByPk = jest.fn();
+    logActivity.mockResolvedValue();
+  });
+
+  it("should delete the document and log activity", async () => {
+    Documents.findByPk.mockResolvedValue(mockDoc);
+
+    const response = await request(app)
+      .delete("/api/v1/document/123")
+      .set("Authorization", "Bearer valid-token")
+      .set("User-Agent", "Jest Test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe("Document berhasil dihapus");
+    expect(mockDoc.destroy).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Menghapus Unduhan",
+        description: expect.stringContaining("berhasil menghapus unduhan"),
+      })
+    );
+  });
+
+  it("should return 404 if document not found", async () => {
+    Documents.findByPk.mockResolvedValue(null);
+
+    const response = await request(app)
+      .delete("/api/v1/document/999")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Document tidak ditemukan");
+  });
+
+  it("should handle server error", async () => {
+    Documents.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app)
+      .delete("/api/v1/document/123")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("DB error");
+  });
+});
+
+describe("DELETE /api/v1/document/type/:type", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "John Doe",
+  };
+
+  const mockDocs = [
+    { id: 1, destroy: jest.fn().mockResolvedValue() },
+    { id: 2, destroy: jest.fn().mockResolvedValue() },
+  ];
+
+  beforeEach(() => {
+    Documents.findAll = jest.fn();
+    logActivity.mockResolvedValue();
+  });
+
+  it("should delete all documents with the specified type and log activity", async () => {
+    Documents.findAll.mockResolvedValue(mockDocs);
+
+    const response = await request(app)
+      .delete("/api/v1/document/type/surat-pernyataan")
+      .set("Authorization", "Bearer valid-token")
+      .set("User-Agent", "Jest Test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.message).toBe(
+      "Semua document dengan type 'surat-pernyataan' berhasil dihapus"
+    );
+
+    // Pastikan setiap dokumen dipanggil destroy
+    mockDocs.forEach((doc) => {
+      expect(doc.destroy).toHaveBeenCalled();
+    });
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Menghapus Kategori Unduhan",
+        description: expect.stringContaining(
+          "berhasil menghapus kategori unduhan"
+        ),
+      })
+    );
+  });
+
+  it("should return 404 if no documents found with the type", async () => {
+    Documents.findAll.mockResolvedValue([]);
+
+    const response = await request(app)
+      .delete("/api/v1/document/type/nonexistent-type")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe(
+      "Tidak ada document dengan type tersebut"
+    );
+  });
+
+  it("should handle server error", async () => {
+    Documents.findAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app)
+      .delete("/api/v1/document/type/surat-pernyataan")
+      .set("Authorization", "Bearer valid-token");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.message).toBe("DB error");
   });
 });

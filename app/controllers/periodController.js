@@ -339,17 +339,6 @@ const getAllPeriod = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const periods = await Periods.findAll({
-        order: [["year", "DESC"]],
-      });
-
-      return res.status(200).json({
-        status: "success",
-        periods,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: periods } = await Periods.findAndCountAll({
@@ -432,15 +421,6 @@ const getAllQuotas = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
-
-    if (limit <= 0) {
-      const quotas = await Quotas.findAll();
-
-      return res.status(200).json({
-        status: "success",
-        quotas,
-      });
-    }
 
     const offset = (page - 1) * limit;
 

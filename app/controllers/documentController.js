@@ -267,20 +267,6 @@ const getDocByType = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const docs = await Documents.findAll({
-        where: {
-          type: req.params.type,
-          title: {
-            [Op.ne]: null,
-          },
-        },
-      });
-      res.status(200).json({
-        status: "success",
-        docs,
-      });
-    }
     const offset = (page - 1) * limit;
 
     const { count, rows: docs } = await Documents.findAndCountAll({
