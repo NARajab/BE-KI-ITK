@@ -13,6 +13,10 @@ const createHelpCenter = async (req, res, next) => {
 
     const document = req.file || null;
 
+    const user = await Users.findOne({ where: { email } });
+    const userId = user ? user.id : null;
+    const fullname = user ? user.fullname : email;
+
     const newHelpCenter = await HelpCenters.create({
       email,
       phoneNumber,
@@ -23,9 +27,9 @@ const createHelpCenter = async (req, res, next) => {
     });
 
     await logActivity({
-      userId: req.user.id,
+      userId,
       action: "Mengajukan Pertanyaan di Help Center",
-      description: `${req.user.fullname} berhasil mengajukan pertanyaan di Help Center.`,
+      description: `${fullname} berhasil mengajukan pertanyaan di Help Center.`,
       device: req.headers["user-agent"],
       ipAddress: req.ip,
     });
@@ -36,7 +40,7 @@ const createHelpCenter = async (req, res, next) => {
     await SendEmail({
       to: adminEmails,
       subject: "Pertanyaan di Pusat Bantuan",
-      html: helpCenterMailUser({ fullname: req.user.fullname, email }),
+      html: helpCenterMailUser({ fullname, email }),
     });
 
     res.status(200).json({
