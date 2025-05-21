@@ -203,22 +203,6 @@ const getFaqByType = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    if (limit <= 0) {
-      const faqs = await Faqs.findAll({
-        order: [["id", "ASC"]],
-        where: {
-          type: req.params.type,
-          question: {
-            [Op.ne]: null,
-          },
-        },
-      });
-      res.status(200).json({
-        status: "success",
-        faqs,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: faqs } = await Faqs.findAndCountAll({
