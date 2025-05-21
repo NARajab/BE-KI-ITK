@@ -228,31 +228,6 @@ const getAllDocType = async (req, res, next) => {
       },
     };
 
-    if (limit <= 0) {
-      const docs = await Documents.findAll({
-        attributes: ["id", "type", "createdAt", "updatedAt"],
-        where: whereCondition,
-      });
-
-      const enrichedDocs = await Promise.all(
-        docs.map(async (doc) => {
-          const count = await Documents.count({
-            where: { type: doc.type },
-          });
-          return {
-            ...doc.toJSON(),
-            totalTypeDigunakan: count - 1,
-          };
-        })
-      );
-
-      return res.status(200).json({
-        status: "success",
-        totalDocs: docs.length,
-        docs: enrichedDocs,
-      });
-    }
-
     const offset = (page - 1) * limit;
 
     const { count, rows: docs } = await Documents.findAndCountAll({

@@ -138,6 +138,8 @@ const getAllSubmissions = async (req, res, next) => {
         const { submission } = userSubmission;
 
         return submission.personalDatas.map((personalData) => ({
+          userSubmissionId: userSubmission.id,
+          submissionId: submission.id,
           namaPengguna: personalData.name || "-",
           jenisPengajuan: submission.submissionType?.title || "-",
           skemaPengajuan: submission.submissionScheme || "-",
