@@ -254,32 +254,44 @@ const updatePersonalData = async (req, res, next) => {
 
     const ktpFiles = req.files?.ktpFiles || [];
 
+    const submission = await Submissions.findByPk(submissionId);
+    if (!submission) {
+      return next(new ApiError("Submission tidak ditemukan", 404));
+    }
+
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
 
+      let existingData = null;
       if (data.id) {
-        const existingData = await PersonalDatas.findByPk(data.id);
-        if (existingData) {
-          if (ktpFile && existingData.ktp) {
-            const oldFilePath = path.join(
-              __dirname,
-              "../../uploads/documents/",
-              existingData.ktp
-            );
-            if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
-            }
-          }
+        existingData = await PersonalDatas.findOne({
+          where: {
+            id: data.id,
+            submissionId: submission.id,
+          },
+        });
+      }
 
-          await existingData.update({
-            ...data,
-            ktp: ktpFile || existingData.ktp,
-          });
+      if (existingData) {
+        if (ktpFile && existingData.ktp) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingData.ktp
+          );
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
-      } else {
-        await PersonalDatas.create({
+
+        await existingData.update({
           ...data,
+          ktp: ktpFile || existingData.ktp,
+        });
+      } else {
+        const newData = { ...data };
+        delete newData.id;
+        await PersonalDatas.create({
+          ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
