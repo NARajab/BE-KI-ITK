@@ -8,7 +8,7 @@ const { uploadSingle } = require("../middlewares/multer");
 router.post(
   "/",
   uploadSingle("document"),
-  helpCenterLimiter,
+  // helpCenterLimiter,
   HelpCenter.createHelpCenter
 );
 

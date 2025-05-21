@@ -12,6 +12,7 @@ jest.mock("../app/models", () => ({
   },
   Users: {
     findByPk: jest.fn(),
+    findOne: jest.fn(),
     findAll: jest.fn(),
   },
 }));
@@ -51,20 +52,23 @@ const { Op } = require("sequelize");
 const logActivity = require("../app/helpers/activityLogs");
 
 describe("POST /api/v1/help-center", () => {
-  beforeEach(() => {
-    HelpCenters.create.mockClear();
-    Users.findAll.mockClear();
-    logActivity.mockClear();
-    sendEmail.mockClear();
-  });
-
   it("should create a new HelpCenter entry and notify admins", async () => {
-    const mockHelpCenter = {
-      id: 1,
+    const mockRequestData = {
       email: "user@example.com",
       phoneNumber: "08123456789",
       problem: "Login Error",
       message: "I can't login to my account",
+    };
+
+    const mockUser = {
+      id: 123,
+      fullname: "John Doe",
+      email: mockRequestData.email,
+    };
+
+    const mockHelpCenter = {
+      ...mockRequestData,
+      id: 1,
       document: null,
       status: false,
     };
@@ -74,60 +78,149 @@ describe("POST /api/v1/help-center", () => {
       { email: "admin2@example.com" },
     ];
 
-    HelpCenters.create.mockResolvedValue(mockHelpCenter);
+    Users.findOne.mockResolvedValue(mockUser);
     Users.findAll.mockResolvedValue(mockAdmins);
+    HelpCenters.create.mockResolvedValue(mockHelpCenter);
 
     const response = await request(app)
       .post("/api/v1/help-center")
-      .send({
-        email: mockHelpCenter.email,
-        phoneNumber: mockHelpCenter.phoneNumber,
-        problem: mockHelpCenter.problem,
-        message: mockHelpCenter.message,
-      })
+      .send(mockRequestData)
       .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.message).toBe("Help Center berhasil ditambahkan");
+    expect(HelpCenters.create).toHaveBeenCalledWith({
+      ...mockRequestData,
+      document: null,
+      status: false,
+    });
+
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: mockUser.id,
+      action: "Mengajukan Pertanyaan di Help Center",
+      description: `${mockUser.fullname} berhasil mengajukan pertanyaan di Help Center.`,
+      device: "jest-test",
+      ipAddress: expect.any(String),
+    });
+
+    expect(sendEmail).toHaveBeenCalledWith({
+      to: ["admin1@example.com", "admin2@example.com"],
+      subject: "Pertanyaan di Pusat Bantuan",
+      html: "<p>Email content</p>",
+    });
+  });
+
+  it("should still log and send email even if user is not found", async () => {
+    const mockRequestData = {
+      email: "user@example.com",
+      phoneNumber: "08123456789",
+      problem: "Login Error",
+      message: "I can't login to my account",
+    };
+    Users.findOne.mockResolvedValue(null); // no user found
+    Users.findAll.mockResolvedValue([{ email: "admin@example.com" }]);
+    HelpCenters.create.mockResolvedValue({ id: 1, ...mockRequestData });
+
+    const response = await request(app)
+      .post("/api/v1/help-center")
+      .send(mockRequestData)
+      .set("User-Agent", "jest-test");
+
+    expect(response.statusCode).toBe(200);
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: null,
+      action: "Mengajukan Pertanyaan di Help Center",
+      description: `${mockRequestData.email} berhasil mengajukan pertanyaan di Help Center.`,
+      device: "jest-test",
+      ipAddress: expect.any(String),
+    });
+  });
+});
+
+describe("PATCH /api/v1/help-center/:id", () => {
+  const mockHelpCenter = {
+    id: 1,
+    email: "user@example.com",
+    phoneNumber: "08123456789",
+    problem: "Login Error",
+    message: "I can't login",
+    answer: null,
+    status: false,
+    update: jest.fn().mockResolvedValue(true),
+  };
+
+  const mockUser = {
+    id: 10,
+    fullname: "Test User",
+    email: "user@example.com",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should update HelpCenter with answer and notify the user", async () => {
+    HelpCenters.findByPk.mockResolvedValue(mockHelpCenter);
+    Users.findOne.mockResolvedValue(mockUser);
+
+    const response = await request(app)
+      .patch("/api/v1/help-center/1")
+      .send({ answer: "Silakan coba reset password Anda." })
+      .set("User-Agent", "jest-agent");
 
     console.log("Response body:", response.body);
 
     expect(response.statusCode).toBe(200);
     expect(response.body.status).toBe("success");
-    expect(response.body.message).toBe("Help Center berhasil ditambahkan");
+    expect(response.body.message).toBe("Help Center berhasil diperbarui");
 
-    expect(HelpCenters.create).toHaveBeenCalledWith({
-      email: mockHelpCenter.email,
-      phoneNumber: mockHelpCenter.phoneNumber,
-      problem: mockHelpCenter.problem,
-      message: mockHelpCenter.message,
-      document: null,
-      status: false,
+    expect(mockHelpCenter.update).toHaveBeenCalledWith({
+      answer: "Silakan coba reset password Anda.",
+      status: true,
     });
 
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: 1,
-        action: "Mengajukan Pertanyaan di Help Center",
-        description: expect.stringContaining("berhasil mengajukan"),
+        userId: 1, // req.user.id dari middleware mock
+        action: "Menjawab Pertanyaan di Help Center",
+        description: expect.stringContaining("berhasil menjawab"),
       })
     );
 
-    expect(sendEmail).toHaveBeenCalledWith({
-      to: ["admin1@example.com", "admin2@example.com"],
+    expect(SendEmail).toHaveBeenCalledWith({
+      to: mockUser.email,
       subject: "Pertanyaan di Pusat Bantuan",
       html: expect.any(String),
     });
+
+    expect(sendNotification).toHaveBeenCalledWith(
+      mockUser.id,
+      "Pertanyaan di Pusat Bantuan",
+      "Pertanyaan di Pusat Bantuan telah dijawab"
+    );
   });
 
-  it("should return 500 on internal error", async () => {
-    HelpCenters.create.mockRejectedValue(new Error("DB error"));
+  it("should return 404 if HelpCenter not found", async () => {
+    HelpCenters.findByPk.mockResolvedValue(null);
 
-    const response = await request(app).post("/api/v1/help-center").send({
-      email: "user@example.com",
-      phoneNumber: "08123456789",
-      problem: "Login Error",
-      message: "I can't login",
-    });
+    const response = await request(app)
+      .patch("/api/v1/help-center/999")
+      .send({ answer: "Some answer" });
 
-    expect(response.statusCode).toBe(500);
-    expect(response.body.message).toBe("DB error");
+    expect(response.statusCode).toBe(404);
+    expect(response.body.message).toBe("Help Center tidak ditemukan");
+  });
+
+  it("should return 400 if user ID is invalid", async () => {
+    HelpCenters.findByPk.mockResolvedValue(mockHelpCenter);
+    Users.findOne.mockResolvedValue({ id: NaN, email: "invalid@example.com" });
+
+    const response = await request(app)
+      .patch("/api/v1/help-center/1")
+      .send({ answer: "Some answer" });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.body.message).toBe("ID pengguna tidak valid");
   });
 });
