@@ -64,34 +64,39 @@ const getAllSubmissions = async (req, res, next) => {
       progressPengajuan,
       peran,
       instansi,
-      waktuPengajuan,
+      startDate,
+      endDate,
     } = req.query;
 
     const submissionWhere = {};
     const userSubmissionWhere = {};
 
-    if (skemaPengajuan) {
-      submissionWhere.submissionScheme = { [Op.iLike]: `%${skemaPengajuan}%` };
+    // Filter skema (Pendanaan/Mandiri)
+    if (skemaPengajuan && ["Pendanaan", "Mandiri"].includes(skemaPengajuan)) {
+      submissionWhere.submissionScheme = skemaPengajuan;
     }
 
+    // Filter progress pengajuan
     if (progressPengajuan) {
       userSubmissionWhere.reviewStatus = {
         [Op.iLike]: `%${progressPengajuan}%`,
       };
     }
 
-    if (waktuPengajuan) {
-      const tanggal = new Date(waktuPengajuan);
-      const nextTanggal = new Date(tanggal);
-      nextTanggal.setDate(nextTanggal.getDate() + 1);
+    // Filter tanggal dari createdAt di UserSubmissions
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setDate(end.getDate() + 1); // untuk mencakup tanggal akhir
 
-      submissionWhere.createdAt = {
-        [Op.gte]: tanggal,
-        [Op.lt]: nextTanggal,
+      userSubmissionWhere.createdAt = {
+        [Op.gte]: start,
+        [Op.lt]: end,
       };
     }
 
     const { count, rows: submission } = await UserSubmissions.findAndCountAll({
+      where: userSubmissionWhere,
       limit,
       offset,
       order: [["id", "ASC"]],
@@ -138,12 +143,14 @@ const getAllSubmissions = async (req, res, next) => {
         const { submission } = userSubmission;
 
         return submission.personalDatas.map((personalData) => ({
+          id: userSubmission.id,
+          submissionId: submission.id,
           namaPengguna: personalData.name || "-",
           jenisPengajuan: submission.submissionType?.title || "-",
           skemaPengajuan: submission.submissionScheme || "-",
           progressPengajuan: userSubmission.reviewStatus || "-",
           peran: personalData.isLeader ? "Ketua" : "Anggota",
-          waktuPengajuan: submission.createdAt,
+          waktuPengajuan: userSubmission.createdAt,
         }));
       });
     }
@@ -153,6 +160,7 @@ const getAllSubmissions = async (req, res, next) => {
       currentPage: isExport ? undefined : page,
       totalPages: isExport ? undefined : Math.ceil(count / limit),
       totalSubmissions: count,
+      limit: isExport ? undefined : limit,
       submissions: isExport ? undefined : formatted,
       rawSubmissions: isExport ? submission : undefined,
     });

@@ -6,6 +6,7 @@ jest.mock("../app/models", () => ({
     findOne: jest.fn(),
     findAll: jest.fn(),
     findAndCountAll: jest.fn(),
+    count: jest.fn(),
   },
   Users: {
     findByPk: jest.fn(),
@@ -539,5 +540,49 @@ describe("GET /api/v1/document/not-pagination", () => {
         statusCode: 500,
       })
     );
+  });
+});
+
+describe("GET /api/v1/document/by-type", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return a list of document types with pagination and totalTypeDigunakan", async () => {
+    const mockDocs = [
+      {
+        id: 1,
+        type: "Surat Pernyataan",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        toJSON: function () {
+          return this;
+        },
+      },
+    ];
+
+    Documents.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: mockDocs,
+    });
+
+    Documents.count.mockResolvedValue(2);
+
+    const response = await request(app).get("/api/v1/document/by-type");
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.status).toBe("success");
+    expect(response.body.docs).toBeInstanceOf(Array);
+    expect(response.body.docs[0]).toHaveProperty("type");
+    expect(response.body.docs[0]).toHaveProperty("totalTypeDigunakan", 1);
+  });
+
+  it("should handle errors and return status 500", async () => {
+    Documents.findAndCountAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get("/api/v1/document/by-type");
+
+    expect(response.statusCode).toBe(500);
+    expect(response.body.status).toBe("Error");
   });
 });
