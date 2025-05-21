@@ -10,7 +10,7 @@ const checkRole = (roles) => async (req, res, next) => {
     }
     next();
   } catch (err) {
-    next(new ApiError(err.message, 500));
+    next(err);
   }
 };
 

@@ -345,28 +345,35 @@ const updatePersonalDataBrand = async (req, res, next) => {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
 
+      let existingData = null;
       if (data.id) {
-        const existingData = await PersonalDatas.findByPk(data.id);
-        if (existingData) {
-          if (ktpFile && existingData.ktp) {
-            const oldImagePath = path.join(
-              __dirname,
-              "../../uploads/image/",
-              existingData.ktp
-            );
-            if (fs.existsSync(oldImagePath)) {
-              fs.unlinkSync(oldImagePath);
-            }
-          }
+        existingData = await PersonalDatas.findOne({
+          where: {
+            id: data.id,
+            submissionId: submission.id,
+          },
+        });
+      }
 
-          await existingData.update({
-            ...data,
-            ktp: ktpFile || existingData.ktp,
-          });
+      if (existingData) {
+        if (ktpFile && existingData.ktp) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingData.ktp
+          );
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
-      } else {
-        await PersonalDatas.create({
+
+        await existingData.update({
           ...data,
+          ktp: ktpFile || existingData.ktp,
+        });
+      } else {
+        const newData = { ...data };
+        delete newData.id;
+        await PersonalDatas.create({
+          ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
@@ -449,7 +456,17 @@ const updatePersonalDataBrand = async (req, res, next) => {
 const updatePersonalDataCopyright = async (req, res, next) => {
   try {
     const { submissionId } = req.params;
-    const { personalDatas } = req.body || {};
+    const body = req.body || {};
+    const {
+      titleInvention,
+      typeCreationId,
+      subTypeCreationId,
+      countryFirstAnnounced,
+      cityFirstAnnounced,
+      timeFirstAnnounced,
+      briefDescriptionCreation,
+      personalDatas,
+    } = body;
 
     const ktpFiles = req.files?.ktpFiles || [];
     const statementLetterFile = req.files?.statementLetter
@@ -461,6 +478,8 @@ const updatePersonalDataCopyright = async (req, res, next) => {
     const exampleCreationFile = req.files?.exampleCreation
       ? req.files.exampleCreation[0]
       : null;
+    // const exampleCreation =
+    //   exampleCreationFile?.filename || req.body.exampleCreation || null;
 
     if (!submissionId || !personalDatas) {
       return next(
@@ -484,28 +503,35 @@ const updatePersonalDataCopyright = async (req, res, next) => {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
 
+      let existingData = null;
       if (data.id) {
-        const existingData = await PersonalDatas.findByPk(data.id);
-        if (existingData) {
-          if (ktpFile && existingData.ktp) {
-            const oldFilePath = path.join(
-              __dirname,
-              "../../uploads/image/",
-              existingData.ktp
-            );
-            if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
-            }
-          }
+        existingData = await PersonalDatas.findOne({
+          where: {
+            id: data.id,
+            submissionId: submission.id,
+          },
+        });
+      }
 
-          await existingData.update({
-            ...data,
-            ktp: ktpFile || existingData.ktp,
-          });
+      if (existingData) {
+        if (ktpFile && existingData.ktp) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingData.ktp
+          );
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
-      } else {
-        await PersonalDatas.create({
+
+        await existingData.update({
           ...data,
+          ktp: ktpFile || existingData.ktp,
+        });
+      } else {
+        const newData = { ...data };
+        delete newData.id;
+        await PersonalDatas.create({
+          ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
@@ -519,6 +545,9 @@ const updatePersonalDataCopyright = async (req, res, next) => {
     }
 
     const documentFolderPath = path.join(__dirname, "../../uploads/documents/");
+
+    const exampleCreation =
+      exampleCreationFile?.filename || req.body.exampleCreation || null;
 
     if (statementLetterFile) {
       if (existingCopyright.statementLetter) {
@@ -543,18 +572,32 @@ const updatePersonalDataCopyright = async (req, res, next) => {
         letterTransferCopyrightFile.filename;
     }
 
-    if (exampleCreationFile) {
-      if (existingCopyright.exampleCreation) {
-        const oldPath = path.join(
-          documentFolderPath,
-          existingCopyright.exampleCreation
-        );
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      existingCopyright.exampleCreation = exampleCreationFile.filename;
+    if (exampleCreationFile && existingCopyright.exampleCreation) {
+      const oldPath = path.join(
+        documentFolderPath,
+        existingCopyright.exampleCreation
+      );
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
     }
 
-    await existingCopyright.save();
+    existingCopyright.exampleCreation = exampleCreation;
+
+    await existingCopyright.update({
+      titleInvention,
+      typeCreationId,
+      subTypeCreationId,
+      countryFirstAnnounced,
+      cityFirstAnnounced,
+      timeFirstAnnounced,
+      briefDescriptionCreation,
+      statementLetter:
+        statementLetterFile?.filename || existingCopyright.statementLetter,
+      letterTransferCopyright:
+        letterTransferCopyrightFile?.filename ||
+        existingCopyright.letterTransferCopyright,
+      exampleCreation:
+        exampleCreationFile?.filename || req.body.exampleCreation || null,
+    });
 
     await logActivity({
       userId: req.user.id,
@@ -603,28 +646,35 @@ const updatePersonalDataPaten = async (req, res, next) => {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
 
+      let existingData = null;
       if (data.id) {
-        const existingData = await PersonalDatas.findByPk(data.id);
-        if (existingData) {
-          if (ktpFile && existingData.ktp) {
-            const oldFilePath = path.join(
-              __dirname,
-              "../../uploads/image/",
-              existingData.ktp
-            );
-            if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
-            }
-          }
+        existingData = await PersonalDatas.findOne({
+          where: {
+            id: data.id,
+            submissionId: submission.id,
+          },
+        });
+      }
 
-          await existingData.update({
-            ...data,
-            ktp: ktpFile || existingData.ktp,
-          });
+      if (existingData) {
+        if (ktpFile && existingData.ktp) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingData.ktp
+          );
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
-      } else {
-        await PersonalDatas.create({
+
+        await existingData.update({
           ...data,
+          ktp: ktpFile || existingData.ktp,
+        });
+      } else {
+        const newData = { ...data };
+        delete newData.id;
+        await PersonalDatas.create({
+          ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
@@ -704,28 +754,35 @@ const updatePersonalDataDesignIndustri = async (req, res, next) => {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
 
+      let existingData = null;
       if (data.id) {
-        const existingData = await PersonalDatas.findByPk(data.id);
-        if (existingData) {
-          if (ktpFile && existingData.ktp) {
-            const oldFilePath = path.join(
-              __dirname,
-              "../../uploads/image/",
-              existingData.ktp
-            );
-            if (fs.existsSync(oldFilePath)) {
-              fs.unlinkSync(oldFilePath);
-            }
-          }
+        existingData = await PersonalDatas.findOne({
+          where: {
+            id: data.id,
+            submissionId: submission.id,
+          },
+        });
+      }
 
-          await existingData.update({
-            ...data,
-            ktp: ktpFile || existingData.ktp,
-          });
+      if (existingData) {
+        if (ktpFile && existingData.ktp) {
+          const oldFilePath = path.join(
+            __dirname,
+            "../../uploads/documents/",
+            existingData.ktp
+          );
+          if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
         }
-      } else {
-        await PersonalDatas.create({
+
+        await existingData.update({
           ...data,
+          ktp: ktpFile || existingData.ktp,
+        });
+      } else {
+        const newData = { ...data };
+        delete newData.id;
+        await PersonalDatas.create({
+          ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,

@@ -25,8 +25,8 @@ const createDocumentType = async (req, res, next) => {
       status: "success",
       message: "Dokumen berhasil ditambahkan",
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(new ApiError(err.message, 500));
   }
 };
 

@@ -6,6 +6,7 @@ jest.mock("../app/models", () => ({
     destroy: jest.fn(),
     findByPk: jest.fn(),
     findAndCountAll: jest.fn(),
+    restore: jest.fn(),
   },
 }));
 jest.mock("jsonwebtoken");
@@ -497,5 +498,210 @@ describe("PATCH /api/v1/user/:id", () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toHaveProperty("message", "Database down");
+  });
+});
+
+describe("DELETE /api/v1/user/:id", () => {
+  const mockToken = "dummy-token";
+
+  beforeAll(() => {
+    jwt.verify.mockReturnValue({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    });
+  });
+
+  beforeEach(() => {
+    Users.findByPk.mockResolvedValue({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    });
+
+    logActivity.mockReset();
+  });
+
+  it("should delete the user successfully", async () => {
+    const mockUserToDelete = {
+      id: 2,
+      fullname: "User to Delete",
+      destroy: jest.fn().mockResolvedValue(),
+    };
+
+    Users.findByPk.mockImplementation((id) => {
+      if (id === "2") return Promise.resolve(mockUserToDelete);
+      if (id === 1)
+        return Promise.resolve({
+          id: 1,
+          fullname: "Admin User",
+          email: "admin@example.com",
+          role: "admin",
+        });
+      return null;
+    });
+
+    const response = await request(app)
+      .delete("/api/v1/user/2")
+      .set("Authorization", `Bearer ${mockToken}`)
+      .set("User-Agent", "jest-test-agent");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty(
+      "message",
+      "Penggunas berhasil dihapus"
+    );
+    expect(Users.findByPk).toHaveBeenCalledWith("2");
+    expect(mockUserToDelete.destroy).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        action: "Menghapus Pengguna",
+        description: expect.stringContaining("berhasil menghapus pengguna"),
+        device: expect.any(String),
+        ipAddress: expect.any(String),
+      })
+    );
+  });
+
+  it("should return 404 if user not found", async () => {
+    Users.findByPk.mockImplementation((id) => {
+      if (id === 1)
+        return Promise.resolve({
+          id: 1,
+          fullname: "Admin User",
+          email: "admin@example.com",
+          role: "admin",
+        });
+      return null;
+    });
+
+    const response = await request(app)
+      .delete("/api/v1/user/999")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    console.log("Response body:", response.body);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("message", "Pengguna tidak ditemukan");
+    expect(Users.findByPk).toHaveBeenCalledWith("999");
+  });
+
+  it("should handle server error", async () => {
+    Users.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app)
+      .delete("/api/v1/user/3")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message", "DB error");
+  });
+});
+
+describe("PATCH /api/v1/user/active/:id", () => {
+  const mockToken = "dummy-token";
+
+  beforeAll(() => {
+    jwt.sign.mockReturnValue(mockToken);
+    jwt.verify = jest.fn(() => ({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    }));
+  });
+
+  beforeEach(() => {
+    Users.findOne.mockReset();
+    logActivity.mockReset();
+  });
+
+  it("should restore a soft-deleted user successfully", async () => {
+    Users.findByPk.mockResolvedValue({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    });
+
+    const mockUserToRestore = {
+      id: 2,
+      fullname: "Deleted User",
+      deletedAt: new Date(),
+      restore: jest.fn().mockResolvedValue(),
+    };
+
+    Users.findOne.mockResolvedValue(mockUserToRestore);
+
+    const response = await request(app)
+      .patch("/api/v1/user/active/2")
+      .set("Authorization", `Bearer ${mockToken}`)
+      .set("User-Agent", "jest-agent");
+
+    console.log("Restore response:", response.body);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty(
+      "message",
+      "Pengguna berhasil dipulihkan"
+    );
+    expect(Users.findOne).toHaveBeenCalledWith({
+      where: { id: "2" },
+      paranoid: false,
+    });
+    expect(mockUserToRestore.restore).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        action: "Merestore Pengguna",
+        description: expect.stringContaining("berhasil merestore pengguna"),
+        device: "jest-agent",
+        ipAddress: expect.any(String),
+      })
+    );
+  });
+
+  it("should return 404 if user is not found", async () => {
+    Users.findByPk.mockResolvedValue({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    });
+    Users.findOne.mockResolvedValue(null);
+
+    const response = await request(app)
+      .patch("/api/v1/user/active/999")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    expect(response.status).toBe(404);
+    expect(response.body).toHaveProperty("message", "Pengguna tidak ditemukan");
+  });
+
+  it("should return 400 if user is not soft deleted", async () => {
+    Users.findByPk.mockResolvedValue({
+      id: 1,
+      fullname: "Admin User",
+      email: "admin@example.com",
+      role: "admin",
+    });
+    const mockUser = {
+      id: 2,
+      fullname: "User",
+      deletedAt: null,
+    };
+
+    Users.findOne.mockResolvedValue(mockUser);
+
+    const response = await request(app)
+      .patch("/api/v1/user/active/2")
+      .set("Authorization", `Bearer ${mockToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toHaveProperty("message", "Pengguna belum dihapus");
   });
 });

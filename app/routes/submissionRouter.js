@@ -28,9 +28,9 @@ router.patch(
   (req, res, next) => {
     uploadFields([
       { name: "ktpFiles", maxCount: 20 },
-      { name: "statementLetterFile", maxCount: 1 },
-      { name: "letterTransferCopyrightFile", maxCount: 1 },
-      { name: "exampleCreationFile", maxCount: 1 },
+      { name: "statementLetter", maxCount: 1 },
+      { name: "letterTransferCopyright", maxCount: 1 },
+      { name: "exampleCreation", maxCount: 1 },
     ])(req, res, (err) => {
       if (err) {
         console.error("Multer error:", err.message);
