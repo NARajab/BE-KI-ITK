@@ -555,11 +555,20 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: PersonalDatas,
               as: "personalDatas",
+              order: [["id", "ASC"]],
             },
           ],
         },
       ],
-      order: [["id", "ASC"]],
+      order: [
+        ["id", "ASC"],
+        [
+          { model: Submissions, as: "submission" },
+          { model: PersonalDatas, as: "personalDatas" },
+          "id",
+          "ASC",
+        ],
+      ],
     });
     if (!userSubmission)
       return next(new ApiError("UserSubmission tidak ditemukan", 404));
