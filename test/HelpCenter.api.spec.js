@@ -170,8 +170,6 @@ describe("PATCH /api/v1/help-center/:id", () => {
       .send({ answer: "Silakan coba reset password Anda." })
       .set("User-Agent", "jest-agent");
 
-    console.log("Response body:", response.body);
-
     expect(response.statusCode).toBe(200);
     expect(response.body.status).toBe("success");
     expect(response.body.message).toBe("Help Center berhasil diperbarui");
@@ -183,7 +181,7 @@ describe("PATCH /api/v1/help-center/:id", () => {
 
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: 1, // req.user.id dari middleware mock
+        userId: 1,
         action: "Menjawab Pertanyaan di Help Center",
         description: expect.stringContaining("berhasil menjawab"),
       })

@@ -14,7 +14,9 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
-app.use(morgan("dev"));
+if (process.env.NODE_ENV !== "test") {
+  app.use(morgan("dev"));
+}
 app.use(router);
 
 app.all("/{*any}", (req, res, next) => {
