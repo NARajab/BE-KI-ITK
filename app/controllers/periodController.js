@@ -71,35 +71,26 @@ const updatePeriod = async (req, res, next) => {
   try {
     const { oldYear, newYear } = req.body;
 
-    const period = await Periods.findAll({
-      where: {
-        year: oldYear,
-      },
+    const period = await Periods.findOne({
+      where: { year: oldYear },
     });
 
-    if (period.length === 0) {
+    if (!period) {
       return next(new ApiError("Periode tidak ditemukan.", 404));
     }
 
-    const updateData = await Periods.update(
-      { year: newYear },
-      {
-        where: { year: oldYear },
-      }
-    );
+    const duplicate = await Periods.findOne({
+      where: {
+        year: newYear,
+        id: { [Op.ne]: period.id },
+      },
+    });
 
-    if (updateData.year) {
-      const duplicate = await Periods.findOne({
-        where: {
-          year: updateData.year,
-          id: { [Op.ne]: id },
-        },
-      });
-
-      if (duplicate) {
-        return next(new ApiError("Periode dengan tahun ini sudah ada.", 400));
-      }
+    if (duplicate) {
+      return next(new ApiError("Periode dengan tahun ini sudah ada.", 400));
     }
+
+    await Periods.update({ year: newYear }, { where: { year: oldYear } });
 
     await logActivity({
       userId: req.user.id,
