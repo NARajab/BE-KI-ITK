@@ -58,6 +58,14 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("Submission tidak ditemukan", 404));
     }
 
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return next(new ApiError("Progress tidak ditemukan", 404));
+    }
+
     if (submissionScheme === "Pendanaan" && Array.isArray(termsConditionId)) {
       const submissionTermsData = termsConditionId.map((termId) => ({
         submissionId: submission.id,
@@ -99,6 +107,9 @@ const updateSubmissionScheme = async (req, res, next) => {
       }
     }
     if (submissionScheme === "Mandiri") {
+      await SubmissionTerms.destroy({
+        where: { submissionId: submission.id },
+      });
       const existingPayment = await Payments.findOne({
         where: {
           userId: req.user.id,
@@ -114,6 +125,8 @@ const updateSubmissionScheme = async (req, res, next) => {
         });
       }
     }
+
+    await Progresses.update({ isStatus: true }, { where: { id: progress.id } });
 
     await logActivity({
       userId: req.user.id,

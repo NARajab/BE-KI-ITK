@@ -62,23 +62,20 @@ const getAllSubmissions = async (req, res, next) => {
     const submissionWhere = {};
     const userSubmissionWhere = {};
 
-    // Filter skema (Pendanaan/Mandiri)
     if (skemaPengajuan && ["Pendanaan", "Mandiri"].includes(skemaPengajuan)) {
       submissionWhere.submissionScheme = skemaPengajuan;
     }
 
-    // Filter progress pengajuan
     if (progressPengajuan) {
       userSubmissionWhere.reviewStatus = {
         [Op.iLike]: `%${progressPengajuan}%`,
       };
     }
 
-    // Filter tanggal dari createdAt di UserSubmissions
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
-      end.setDate(end.getDate() + 1); // untuk mencakup tanggal akhir
+      end.setDate(end.getDate() + 1);
 
       userSubmissionWhere.createdAt = {
         [Op.gte]: start,
@@ -914,6 +911,27 @@ const deleteSubmissionType = async (req, res, next) => {
   }
 };
 
+const deletePersonalData = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const data = await PersonalDatas.findByPk(id);
+
+    if (!data) {
+      return next(new ApiError("Data diri tidak ditemukan", 404));
+    }
+
+    await data.destroy();
+
+    res.status(200).json({
+      status: "success",
+      message: "Data diri berhasil dihapus",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 module.exports = {
   getSubmissionType,
   getSubmissionTypeById,
@@ -927,4 +945,5 @@ module.exports = {
   updatePersonalDataDesignIndustri,
   restoreSubmissionType,
   deleteSubmissionType,
+  deletePersonalData,
 };
