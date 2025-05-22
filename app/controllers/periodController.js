@@ -196,8 +196,8 @@ const updateGroup = async (req, res, next) => {
     if (startDate && endDate) {
       const sameDate = await Groups.findOne({
         where: {
-          startDate: new Date(startDate).toISOString(),
-          endDate: new Date(endDate).toISOString(),
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
           id: { [Op.ne]: id },
         },
       });

@@ -332,10 +332,18 @@ describe("PATCH /api/v1/period/group/:id", () => {
   const mockGroupId = "1";
   const mockUser = { id: 1, fullname: "Admin User" };
   const mockHeaders = { "user-agent": "jest-agent" };
-  const mockIp = "::1";
+  const mockIp = "::ffff:127.0.0.1";
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // Middleware mock user
+  beforeAll(() => {
+    app.use((req, res, next) => {
+      req.user = mockUser;
+      next();
+    });
   });
 
   it("should return 404 if group not found", async () => {
@@ -363,10 +371,11 @@ describe("PATCH /api/v1/period/group/:id", () => {
       group: "Gelombang A",
       update: jest.fn(),
     };
+
     const duplicateGroup = { id: 2, group: "Gelombang B" };
 
     Groups.findByPk.mockResolvedValue(existingGroup);
-    Groups.findOne.mockResolvedValueOnce(duplicateGroup); // duplicate check for group name
+    Groups.findOne.mockResolvedValueOnce(duplicateGroup); // group name duplicate
 
     const response = await request(app)
       .patch(`/api/v1/period/group/${mockGroupId}`)
@@ -381,7 +390,6 @@ describe("PATCH /api/v1/period/group/:id", () => {
   });
 
   it("should return 400 if startDate and endDate already used by another group", async () => {
-    const mockGroupId = "1";
     const existingGroup = {
       id: mockGroupId,
       group: "Gelombang A",
@@ -390,15 +398,16 @@ describe("PATCH /api/v1/period/group/:id", () => {
 
     Groups.findByPk.mockResolvedValue(existingGroup);
 
-    Groups.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
+    // Only one call to findOne (for date check)
+    Groups.findOne.mockResolvedValueOnce({
       id: 2,
-      startDate: new Date("2025-01-01").toISOString(),
-      endDate: new Date("2025-01-31").toISOString(),
+      startDate: new Date("2025-01-01"),
+      endDate: new Date("2025-01-31"),
     });
 
     const response = await request(app)
       .patch(`/api/v1/period/group/${mockGroupId}`)
-      .set("User-Agent", "jest-agent")
+      .set(mockHeaders)
       .send({
         startDate: "2025-01-01",
         endDate: "2025-01-31",
@@ -417,9 +426,12 @@ describe("PATCH /api/v1/period/group/:id", () => {
       group: "Gelombang A",
       update: jest.fn().mockResolvedValue(true),
     };
+
     Groups.findByPk.mockResolvedValue(existingGroup);
-    Groups.findOne.mockResolvedValueOnce(null); // no duplicate group name
-    Groups.findOne.mockResolvedValueOnce(null); // no duplicate date range
+
+    Groups.findOne
+      .mockResolvedValueOnce(null) // no group name conflict
+      .mockResolvedValueOnce(null); // no date conflict
 
     const updatePayload = {
       group: "Gelombang Baru",
@@ -441,11 +453,11 @@ describe("PATCH /api/v1/period/group/:id", () => {
 
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: undefined, // pastikan mock req.user di middleware kalau diperlukan
+        userId: mockUser.id,
         action: "Mengubah Periode",
-        description: expect.stringContaining("berhasil memperbaharui periode"),
+        description: `${mockUser.fullname} berhasil memperbaharui periode.`,
         device: mockHeaders["user-agent"],
-        ipAddress: expect.any(String),
+        ipAddress: mockIp,
       })
     );
 
@@ -458,6 +470,31 @@ describe("PATCH /api/v1/period/group/:id", () => {
     expect(response.body).toHaveProperty("group");
   });
 
+  it("should update only endDate if only that field is provided", async () => {
+    const existingGroup = {
+      id: mockGroupId,
+      group: "Gelombang A",
+      update: jest.fn().mockResolvedValue(true),
+    };
+
+    Groups.findByPk.mockResolvedValue(existingGroup);
+    Groups.findOne.mockResolvedValue(null);
+
+    const response = await request(app)
+      .patch(`/api/v1/period/group/${mockGroupId}`)
+      .set(mockHeaders)
+      .send({
+        endDate: "2025-01-31",
+      });
+
+    expect(existingGroup.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endDate: new Date("2025-01-31"),
+      })
+    );
+    expect(response.status).toBe(200);
+  });
+
   it("should return 500 if an error occurs", async () => {
     Groups.findByPk.mockRejectedValue(new Error("DB failure"));
 
@@ -468,5 +505,931 @@ describe("PATCH /api/v1/period/group/:id", () => {
 
     expect(response.status).toBe(500);
     expect(response.body).toHaveProperty("message", "DB failure");
+  });
+});
+
+describe("PATCH /api/v1/period/quota/:id - updateQuota", () => {
+  const mockQuotaId = 1;
+  const mockUser = {
+    id: 123,
+    fullname: "John Doe",
+  };
+
+  const mockHeaders = {
+    "user-agent": "jest-agent",
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return 404 if quota not found", async () => {
+    Quotas.findByPk.mockResolvedValue(null);
+
+    const response = await request(app)
+      .patch(`/api/v1/period/quota/${mockQuotaId}`)
+      .set(mockHeaders)
+      .send({
+        quota: 100,
+        remainingQuota: 50,
+      })
+      .set("Authorization", "Bearer mocktoken")
+      .expect(404);
+
+    expect(response.body).toHaveProperty("message", "Quota tidak ditemukan.");
+  });
+
+  it("should update quota successfully and log activity", async () => {
+    const fakeQuotaInstance = {
+      id: mockQuotaId,
+      quota: 100,
+      remainingQuota: 50,
+      update: jest.fn().mockResolvedValue(true),
+    };
+
+    Quotas.findByPk.mockResolvedValue(fakeQuotaInstance);
+
+    const agent = request.agent(app);
+
+    const response = await agent
+      .patch(`/api/v1/period/quota/${mockQuotaId}`)
+      .set(mockHeaders)
+      .send({
+        quota: 100,
+        remainingQuota: 50,
+      });
+
+    expect(Quotas.findByPk).toHaveBeenCalledWith(String(mockQuotaId));
+    expect(fakeQuotaInstance.update).toHaveBeenCalledWith({
+      quota: 100,
+      remainingQuota: 50,
+    });
+
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: expect.any(Number),
+        action: "Mengubah Kuota",
+        description: expect.stringContaining("berhasil memperbaharui kuota"),
+        device: "jest-agent",
+        ipAddress: expect.any(String),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: "success",
+        message: "Kuota berhasil diperbarui",
+        kuota: expect.objectContaining({
+          id: mockQuotaId,
+          quota: 100,
+          remainingQuota: 50,
+        }),
+      })
+    );
+  });
+
+  it("should call next with ApiError on unexpected error", async () => {
+    const errorMessage = "DB error";
+    Quotas.findByPk.mockRejectedValue(new Error(errorMessage));
+
+    // To test next called with error, we mock next
+    const next = jest.fn();
+
+    const req = {
+      params: { id: mockQuotaId },
+      body: { quota: 10, remainingQuota: 5 },
+      user: mockUser,
+      headers: { "user-agent": "jest-agent" },
+      ip: "127.0.0.1",
+    };
+
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+
+    const updateQuota =
+      require("../app/controllers/periodController").updateQuota;
+
+    await updateQuota(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: errorMessage,
+        statusCode: 500,
+      })
+    );
+  });
+});
+
+describe("GET /api/v1/period/group/:id", () => {
+  const mockPeriodId = "1";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return groups with pagination data", async () => {
+    const mockGroups = [
+      { id: 1, group: "Gelombang A", periodId: mockPeriodId },
+      { id: 2, group: "Gelombang B", periodId: mockPeriodId },
+    ];
+
+    Groups.findAndCountAll.mockResolvedValue({
+      count: 2,
+      rows: mockGroups,
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/period/group/${mockPeriodId}`)
+      .query({ page: 1, limit: 10 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: "success",
+        currentPage: 1,
+        totalPages: 1,
+        totalPeriods: 2,
+        limit: 10,
+        groups: expect.any(Array),
+      })
+    );
+
+    expect(Groups.findAndCountAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 10,
+        offset: 0,
+        order: [["id", "ASC"]],
+        where: { periodId: mockPeriodId },
+      })
+    );
+  });
+
+  it("should use default page and limit if query params are invalid", async () => {
+    const mockGroups = [
+      { id: 3, group: "Gelombang C", periodId: mockPeriodId },
+    ];
+
+    Groups.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: mockGroups,
+    });
+
+    const response = await request(app)
+      .get(`/api/v1/period/group/${mockPeriodId}`)
+      .query({ page: "abc", limit: "xyz" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.currentPage).toBe(1);
+    expect(response.body.limit).toBe(10);
+  });
+
+  it("should handle internal server error", async () => {
+    Groups.findAndCountAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get(
+      `/api/v1/period/group/${mockPeriodId}`
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message");
+  });
+});
+
+describe("GET /api/v1/period/group/not-pagination", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return groups for current year without pagination", async () => {
+    const currentYear = new Date().getFullYear().toString();
+
+    const mockGroups = [
+      {
+        id: 1,
+        group: "Gelombang A",
+        period: { id: 10, year: currentYear },
+      },
+      {
+        id: 2,
+        group: "Gelombang B",
+        period: { id: 11, year: currentYear },
+      },
+    ];
+
+    Groups.findAll.mockResolvedValue(mockGroups);
+
+    const response = await request(app).get(
+      "/api/v1/period/group/not-pagination"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        status: "success",
+        groups: expect.arrayContaining([
+          expect.objectContaining({
+            id: expect.any(Number),
+            group: expect.any(String),
+            period: expect.objectContaining({
+              year: currentYear,
+            }),
+          }),
+        ]),
+      })
+    );
+
+    expect(Groups.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: [
+          {
+            model: Periods,
+            as: "period",
+            where: { year: currentYear },
+          },
+        ],
+        order: [["id", "ASC"]],
+      })
+    );
+  });
+
+  it("should handle internal server error", async () => {
+    Groups.findAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get(
+      "/api/v1/period/group/not-pagination"
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message");
+  });
+});
+
+describe("GET /api/v1/period", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return paginated list of periods", async () => {
+    const mockPeriods = [
+      { id: 1, year: 2025 },
+      { id: 2, year: 2024 },
+    ];
+    const count = 2;
+
+    Periods.findAndCountAll.mockResolvedValue({
+      count,
+      rows: mockPeriods,
+    });
+
+    const response = await request(app).get("/api/v1/period?page=1&limit=10");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      status: "success",
+      currentPage: 1,
+      totalPages: 1,
+      totalPeriods: 2,
+      limit: 10,
+      periods: expect.arrayContaining([
+        expect.objectContaining({
+          id: expect.any(Number),
+          year: expect.any(Number),
+        }),
+      ]),
+    });
+
+    expect(Periods.findAndCountAll).toHaveBeenCalledWith({
+      limit: 10,
+      offset: 0,
+      order: [["year", "DESC"]],
+    });
+  });
+
+  it("should use default pagination if page and limit are not provided", async () => {
+    const mockPeriods = [{ id: 3, year: 2023 }];
+    Periods.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: mockPeriods,
+    });
+
+    const response = await request(app).get("/api/v1/period");
+
+    expect(response.status).toBe(200);
+    expect(response.body.currentPage).toBe(1);
+    expect(response.body.limit).toBe(10);
+  });
+
+  it("should handle errors and return 500", async () => {
+    Periods.findAndCountAll.mockRejectedValue(new Error("DB failure"));
+
+    const response = await request(app).get("/api/v1/period");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toHaveProperty("message");
+  });
+});
+
+describe("GET /api/v1/period/group/group-id/:id", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return group data if found", async () => {
+    const mockGroup = { id: 1, name: "Gelombang 1" };
+    Groups.findOne.mockResolvedValue(mockGroup);
+
+    const response = await request(app).get("/api/v1/period/group/group-id/1");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      group: mockGroup,
+    });
+
+    expect(Groups.findOne).toHaveBeenCalledWith({ where: { id: "1" } });
+  });
+
+  it("should return 404 if group not found", async () => {
+    Groups.findOne.mockResolvedValue(null);
+
+    const response = await request(app).get(
+      "/api/v1/period/group/group-id/999"
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      status: "Failed",
+      message: "Gelombang tidak ditemukan.",
+    });
+
+    expect(Groups.findOne).toHaveBeenCalledWith({ where: { id: "999" } });
+  });
+
+  it("should handle server errors", async () => {
+    Groups.findOne.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).get("/api/v1/period/group/group-id/1");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "Database error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/group/by-id/:id", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return group and paginated quotas if group exists", async () => {
+    const mockGroup = { id: 1, name: "Gelombang 1" };
+    const mockQuotas = [
+      { id: 1, groupId: 1, kuota: 50 },
+      { id: 2, groupId: 1, kuota: 60 },
+    ];
+
+    Groups.findOne.mockResolvedValue(mockGroup);
+    Quotas.count.mockResolvedValue(2);
+    Quotas.findAll.mockResolvedValue(mockQuotas);
+
+    const response = await request(app).get(
+      "/api/v1/period/group/by-id/1?page=1&limit=10"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      group: mockGroup,
+      quota: mockQuotas,
+      currentPage: 1,
+      totalPages: 1,
+      totalQuota: 2,
+      limit: 10,
+    });
+
+    expect(Groups.findOne).toHaveBeenCalledWith({ where: { id: "1" } });
+    expect(Quotas.count).toHaveBeenCalledWith({ where: { groupId: "1" } });
+    expect(Quotas.findAll).toHaveBeenCalledWith({
+      where: { groupId: "1" },
+      limit: 10,
+      offset: 0,
+      order: [["id", "ASC"]],
+    });
+  });
+
+  it("should return 404 if group not found", async () => {
+    Groups.findOne.mockResolvedValue(null);
+
+    const response = await request(app).get("/api/v1/period/group/by-id/999");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      status: "Failed",
+      message: "Gelombang tidak ditemukan.",
+    });
+
+    expect(Groups.findOne).toHaveBeenCalledWith({ where: { id: "999" } });
+  });
+
+  it("should handle server errors", async () => {
+    Groups.findOne.mockRejectedValue(new Error("DB Error"));
+
+    const response = await request(app).get("/api/v1/period/group/by-id/1");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "DB Error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/quota", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return paginated list of quotas", async () => {
+    const mockQuotas = [
+      { id: 1, kuota: 50, groupId: 1 },
+      { id: 2, kuota: 40, groupId: 2 },
+    ];
+    const count = 2;
+
+    Quotas.findAndCountAll.mockResolvedValue({
+      count,
+      rows: mockQuotas,
+    });
+
+    const response = await request(app).get(
+      "/api/v1/period/quota?page=1&limit=10"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      currentPage: 1,
+      totalPages: 1,
+      totalPeriods: 2,
+      limit: 10,
+      quotas: mockQuotas,
+    });
+
+    expect(Quotas.findAndCountAll).toHaveBeenCalledWith({
+      limit: 10,
+      offset: 0,
+      order: [["id", "ASC"]],
+    });
+  });
+
+  it("should handle internal server errors", async () => {
+    Quotas.findAndCountAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get("/api/v1/period/quota");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "DB error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/quota/:id", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return a quota by id", async () => {
+    const mockQuota = { id: 1, kuota: 50, groupId: 1 };
+
+    Quotas.findByPk.mockResolvedValue(mockQuota);
+
+    const response = await request(app).get("/api/v1/period/quota/1");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      message: "Data quota berhasil diambil",
+      quotas: mockQuota,
+    });
+
+    expect(Quotas.findByPk).toHaveBeenCalledWith("1"); // params are strings
+  });
+
+  it("should return 404 if quota not found", async () => {
+    Quotas.findByPk.mockResolvedValue(null);
+
+    const response = await request(app).get("/api/v1/period/quota/999");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      status: "Failed",
+      message: "Quota tidak ditemukan.",
+    });
+  });
+
+  it("should handle internal server error", async () => {
+    Quotas.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get("/api/v1/period/quota/1");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "DB error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/quota/by-groupid/:id", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return quotas by groupId", async () => {
+    const mockQuotas = [
+      { id: 1, kuota: 50, groupId: 1 },
+      { id: 2, kuota: 30, groupId: 1 },
+    ];
+
+    Quotas.findAll.mockResolvedValue(mockQuotas);
+
+    const response = await request(app).get(
+      "/api/v1/period/quota/by-groupid/1"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      message: "Data quota berhasil diambil",
+      quotas: mockQuotas,
+    });
+
+    expect(Quotas.findAll).toHaveBeenCalledWith({
+      where: { groupId: "1" }, // karena req.params.id adalah string
+    });
+  });
+
+  it("should return 404 if no quotas found", async () => {
+    Quotas.findAll.mockResolvedValue([]);
+
+    const response = await request(app).get(
+      "/api/v1/period/quota/by-groupid/999"
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body).toMatchObject({
+      status: "Failed",
+      message: "Quota tidak ditemukan.",
+    });
+  });
+
+  it("should handle internal server error", async () => {
+    Quotas.findAll.mockRejectedValue(new Error("DB error"));
+
+    const response = await request(app).get(
+      "/api/v1/period/quota/by-groupid/1"
+    );
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "DB error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/all", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return all periods with nested groups and quotas", async () => {
+    const mockPeriods = [
+      {
+        id: 1,
+        year: 2024,
+        group: [
+          {
+            id: 1,
+            name: "Group A",
+            quota: [
+              { id: 1, kuota: 30 },
+              { id: 2, kuota: 20 },
+            ],
+          },
+        ],
+      },
+      {
+        id: 2,
+        year: 2025,
+        group: [],
+      },
+    ];
+
+    Periods.findAll.mockResolvedValue(mockPeriods);
+
+    const response = await request(app).get("/api/v1/period/all");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      periods: mockPeriods,
+    });
+
+    expect(Periods.findAll).toHaveBeenCalledWith({
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: expect.anything(),
+          as: "group",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [
+            {
+              model: expect.anything(),
+              as: "quota",
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("should handle internal server error", async () => {
+    Periods.findAll.mockRejectedValue(new Error("Database Error"));
+
+    const response = await request(app).get("/api/v1/period/all");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "Database Error",
+    });
+  });
+});
+
+describe("GET /api/v1/period/this-year", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return all periods for the current year with groups and quotas", async () => {
+    const currentYear = new Date().getFullYear().toString();
+
+    const mockPeriods = [
+      {
+        id: 1,
+        year: currentYear,
+        group: [
+          {
+            id: 1,
+            name: "Group A",
+            quota: [
+              { id: 1, kuota: 50 },
+              { id: 2, kuota: 30 },
+            ],
+          },
+        ],
+      },
+    ];
+
+    Periods.findAll.mockResolvedValue(mockPeriods);
+
+    const response = await request(app).get("/api/v1/period/this-year");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: "success",
+      periods: mockPeriods,
+    });
+
+    expect(Periods.findAll).toHaveBeenCalledWith({
+      where: { year: currentYear },
+      order: [["id", "ASC"]],
+      include: [
+        {
+          model: expect.anything(),
+          as: "group",
+          separate: true,
+          order: [["id", "ASC"]],
+          include: [
+            {
+              model: expect.anything(),
+              as: "quota",
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it("should handle internal server error", async () => {
+    Periods.findAll.mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app).get("/api/v1/period/this-year");
+
+    expect(response.status).toBe(500);
+    expect(response.body).toMatchObject({
+      status: "Error",
+      message: "Database error",
+    });
+  });
+});
+
+describe("PATCH /api/v1/period/active/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Admin User",
+  };
+
+  const mockHeaders = {
+    "user-agent": "Mozilla/5.0",
+  };
+
+  const mockRequest = (id = "1") =>
+    request(app)
+      .patch(`/api/v1/period/active/${id}`)
+      .set("User-Agent", mockHeaders["user-agent"])
+      .set("Authorization", "Bearer fake-token") // jika middleware auth digunakan
+      .set("X-Forwarded-For", "127.0.0.1");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should restore a group and its related quotas", async () => {
+    const mockGroup = {
+      id: 1,
+      restore: jest.fn(),
+    };
+
+    const mockQuotas = [
+      { id: 1, restore: jest.fn() },
+      { id: 2, restore: jest.fn() },
+    ];
+
+    Groups.findOne.mockResolvedValue(mockGroup);
+    Quotas.findAll.mockResolvedValue(mockQuotas);
+
+    // Middleware mock user (jika pakai auth)
+    app.use((req, res, next) => {
+      req.user = mockUser;
+      next();
+    });
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      status: "success",
+      message: "Gelombang dan quota terkait berhasil dikembalikan",
+    });
+
+    expect(Groups.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+
+    expect(Quotas.findAll).toHaveBeenCalledWith({
+      where: { groupId: "1" },
+      paranoid: false,
+    });
+
+    expect(mockGroup.restore).toHaveBeenCalled();
+    expect(mockQuotas[0].restore).toHaveBeenCalled();
+    expect(mockQuotas[1].restore).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: mockUser.id,
+      action: "Mengembalikan Gelombang",
+      description: `${mockUser.fullname} berhasil mengembalikan gelombang.`,
+      device: mockHeaders["user-agent"],
+      ipAddress: "::ffff:127.0.0.1",
+    });
+  });
+
+  it("should return 404 if group not found", async () => {
+    Groups.findOne.mockResolvedValue(null);
+
+    const res = await mockRequest("99");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({
+      status: "Failed",
+      message: "Gelombang tidak ditemukan.",
+    });
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    Groups.findOne.mockRejectedValue(new Error("Unexpected error"));
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toMatchObject({
+      status: "Error",
+      message: "Unexpected error",
+    });
+  });
+});
+
+describe("PATCH /api/v1/period/active/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Test User",
+  };
+
+  const mockHeaders = {
+    "user-agent": "Mozilla/5.0",
+  };
+
+  const mockRequest = (id = "1") =>
+    request(app)
+      .patch(`/api/v1/period/active/${id}`)
+      .set("User-Agent", mockHeaders["user-agent"])
+      .set("Authorization", "Bearer fake-token") // jika pakai JWT
+      .set("X-Forwarded-For", "127.0.0.1");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should restore period, its groups, and related quotas", async () => {
+    const mockPeriod = { id: 1, restore: jest.fn() };
+    const mockGroups = [
+      {
+        id: 10,
+        restore: jest.fn(),
+      },
+    ];
+    const mockQuotas = [
+      { id: 100, restore: jest.fn() },
+      { id: 101, restore: jest.fn() },
+    ];
+
+    Periods.findOne.mockResolvedValue(mockPeriod);
+    Groups.findAll.mockResolvedValue(mockGroups);
+    Quotas.findAll.mockResolvedValue(mockQuotas);
+
+    // Middleware mock user (jika pakai auth)
+    app.use((req, res, next) => {
+      req.user = mockUser;
+      next();
+    });
+
+    const res = await mockRequest("1");
+    console.log("ini error", res.body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      status: "success",
+      message: "Periode dan semua data terkait berhasil dikembalikan.",
+    });
+
+    expect(Periods.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+
+    expect(Groups.findAll).toHaveBeenCalledWith({
+      where: { periodId: "1" },
+      paranoid: false,
+    });
+
+    expect(Quotas.findAll).toHaveBeenCalledWith({
+      where: { groupId: 10 },
+      paranoid: false,
+    });
+
+    expect(mockQuotas[0].restore).toHaveBeenCalled();
+    expect(mockQuotas[1].restore).toHaveBeenCalled();
+    expect(mockGroups[0].restore).toHaveBeenCalled();
+    expect(mockPeriod.restore).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: mockUser.id,
+      action: "Mengembalikan Periode",
+      description: `${mockUser.fullname} berhasil mengembalikan periode.`,
+      device: mockHeaders["user-agent"],
+      ipAddress: expect.any(String),
+    });
+  });
+
+  it("should return 404 if period not found", async () => {
+    Periods.findOne.mockResolvedValue(null);
+
+    const res = await mockRequest("99");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toMatchObject({
+      status: "error",
+      message: "Periode dengan ID tersebut tidak ditemukan.",
+    });
   });
 });

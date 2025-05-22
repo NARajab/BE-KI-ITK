@@ -50,6 +50,14 @@ const updateSubmissionScheme = async (req, res, next) => {
       return next(new ApiError("UserSubmission tidak ditemukan", 404));
     }
 
+    const progress = await Progresses.findOne({
+      where: { userSubmissionId: id },
+      order: [["id", "DESC"]],
+    });
+    if (!progress) {
+      return next(new ApiError("Progress tidak ditemukan", 404));
+    }
+
     const submission = await Submissions.findOne({
       where: { id: userSubmission.submissionId },
     });
@@ -114,6 +122,8 @@ const updateSubmissionScheme = async (req, res, next) => {
         });
       }
     }
+
+    await Progresses.update({ isStatus: true }, { where: { id: progress.id } });
 
     await logActivity({
       userId: req.user.id,
