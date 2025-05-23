@@ -36,6 +36,11 @@ router.get("/get-by-id/:id", UserSubmission.getUserSubmissionById);
 
 router.get("/get-by-submision-type/:id", UserSubmission.getByIdSubmissionType);
 
+router.get(
+  "/get-by-submision-type/status/:id",
+  UserSubmission.getByIdSubmissionTypeStatusSelesai
+);
+
 router.get("/", UserSubmission.getAllUserSubmission);
 
 router.get("/progress/:id", UserSubmission.getProgressById);

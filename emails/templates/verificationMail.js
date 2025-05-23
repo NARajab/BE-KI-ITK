@@ -21,6 +21,7 @@ const verificationMail = ({ fullname, verificationLink }) => {
               background-color: #fff;
               padding: 20px;
               border-radius: 10px;
+              color: #000;
             }
             .email-button {
               display: block;
@@ -44,15 +45,16 @@ const verificationMail = ({ fullname, verificationLink }) => {
         <body>
           <div class="email-container">
             <div class="email-header">
-              <h2>Verify Your Account</h2>
+              <h2>Verifikasi Akun Anda</h2>
             </div>
             <div class="email-content">
               <p>Halo ${fullname},</p>
-              <p>Thank you for registering. Please click the button below to verify your account:</p>
+              <p>Selamat datang di layanan digital Pusat Kekayaan Intelektual Institut Teknologi Kalimantan (KI-ITK). Silakan verifikasi email Anda untuk melanjutkan proses pendaftaran.</p>
+              <hr style="border: none; border-top: 1px solid #ccc; margin: 20px 0;">
+              <p>Silakan klik tombol di bawah ini untuk memverifikasi akun Anda:</p>
               <a href="${verificationLink}" class="email-button">Verify Account</a>
-              <p>If you did not register, please ignore this email.</p>
-              <p>Thank you,</p>
-              <p>Support Team</p>
+              <p>Jika Anda tidak mendaftar, abaikan email ini.</p>
+              <p>Terima kasih,</p>
             </div>
             <div class="email-footer">
               <p>&copy; 2025 KI-ITK. All rights reserved.</p>
