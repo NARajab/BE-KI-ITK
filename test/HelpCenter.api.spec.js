@@ -293,7 +293,7 @@ describe("GET /api/v1/help-center", () => {
 
     expect(HelpCenters.findAndCountAll).toHaveBeenCalledWith({
       limit: 5,
-      offset: 10, // (3 - 1) * 5
+      offset: 10,
       order: [["id", "ASC"]],
     });
   });
@@ -381,18 +381,14 @@ describe("PATCH /api/v1/help-center/active/:id", () => {
   });
 
   it("should restore a deleted Help Center entry", async () => {
-    // Mock req.user injected by auth middleware
-    // Mock HelpCenters.findOne returns deleted entry
     HelpCenters.findOne.mockResolvedValue(mockHelpCenterDeleted);
 
-    // Mock logActivity to resolve immediately
     logActivity.mockResolvedValue();
 
-    // Simulate request with user-agent and ip
     const response = await request(app)
       .patch("/api/v1/help-center/active/1")
       .set("User-Agent", "jest-test")
-      .set("X-Forwarded-For", "127.0.0.1") // or .set("X-Real-IP", "127.0.0.1")
+      .set("X-Forwarded-For", "127.0.0.1")
       .send();
 
     expect(HelpCenters.findOne).toHaveBeenCalledWith({
@@ -472,7 +468,7 @@ describe("DELETE /api/v1/help-center/:id", () => {
     const response = await request(app)
       .delete("/api/v1/help-center/1")
       .set("User-Agent", "jest-test")
-      .set("X-Forwarded-For", "127.0.0.1") // optional for IP
+      .set("X-Forwarded-For", "127.0.0.1")
       .send();
 
     expect(HelpCenters.findByPk).toHaveBeenCalledWith("1");

@@ -120,9 +120,8 @@ describe("PATCH /api/v1/faq/type", () => {
     const oldType = "old-category";
     const newType = "new-category";
 
-    // Mock findAll mengembalikan array FAQ yang matching oldType
     Faqs.findAll.mockResolvedValue([{ id: 1, type: oldType }]);
-    Faqs.update.mockResolvedValue([1]); // Sequelize update returns [affectedCount]
+    Faqs.update.mockResolvedValue([1]);
     logActivity.mockResolvedValue();
 
     const response = await request(app)
@@ -150,7 +149,7 @@ describe("PATCH /api/v1/faq/type", () => {
   });
 
   it("should return 404 if no FAQ with oldType found", async () => {
-    Faqs.findAll.mockResolvedValue([]); // Tidak ada FAQ matching oldType
+    Faqs.findAll.mockResolvedValue([]);
 
     const response = await request(app)
       .patch("/api/v1/faq/type")
@@ -192,10 +191,8 @@ describe("POST /api/v1/faq/by-type/:type", () => {
     const question = "Apa itu FAQ?";
     const answer = "Frequently Asked Questions.";
 
-    // Mock kategori FAQ ditemukan
     Faqs.findOne.mockResolvedValue({ id: 1, type });
 
-    // Mock FAQ baru dibuat
     const newFaqData = { id: 2, type, question, answer };
     Faqs.create.mockResolvedValue(newFaqData);
 
@@ -224,7 +221,7 @@ describe("POST /api/v1/faq/by-type/:type", () => {
   });
 
   it("should return 404 if FAQ category not found", async () => {
-    Faqs.findOne.mockResolvedValue(null); // kategori tidak ditemukan
+    Faqs.findOne.mockResolvedValue(null);
 
     const response = await request(app)
       .post("/api/v1/faq/by-type/nonexistent")
@@ -480,7 +477,6 @@ describe("GET /api/v1/faq/by-type/:type", () => {
   it("should return paginated FAQs filtered by type with question NOT null", async () => {
     const faqType = "technical";
 
-    // Mock FAQ data (where question != null)
     const mockFaqs = [
       {
         id: 1,
@@ -500,7 +496,6 @@ describe("GET /api/v1/faq/by-type/:type", () => {
       },
     ];
 
-    // Mock total count
     const mockCount = 2;
 
     Faqs.findAndCountAll.mockResolvedValue({
@@ -548,10 +543,8 @@ describe("GET /api/v1/faq/by-type/:type", () => {
     const errorMessage = "Database failure";
     Faqs.findAndCountAll.mockRejectedValue(new Error(errorMessage));
 
-    // Mock next function
     const next = jest.fn();
 
-    // Call the controller function directly (optional)
     const req = {
       params: { type: faqType },
       query: { page: "1", limit: "10" },
@@ -854,7 +847,6 @@ describe("PATCH /api/v1/faq/type/active/:type", () => {
       restore: jest.fn(),
     };
 
-    // Mock findAll returning mixed deleted and active faqs
     Faqs.findAll.mockResolvedValue([
       mockDeletedFaq1,
       mockDeletedFaq2,

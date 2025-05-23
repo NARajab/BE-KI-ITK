@@ -335,7 +335,6 @@ describe("PATCH /api/v1/document/:id", () => {
     };
     Documents.findOne.mockResolvedValue(mockDoc);
 
-    // Mock fs.existsSync dan fs.unlinkSync untuk hapus file lama
     jest.spyOn(fs, "existsSync").mockImplementation((path) => true);
     jest.spyOn(fs, "unlinkSync").mockImplementation(() => {});
 
@@ -350,7 +349,6 @@ describe("PATCH /api/v1/document/:id", () => {
     expect(response.body.status).toBe("success");
     expect(response.body.updatedDoc.title).toBe("Updated Title");
 
-    // File lama harus dihapus
     expect(fs.existsSync).toHaveBeenCalledWith(
       expect.stringContaining("old-doc.pdf")
     );
@@ -359,7 +357,6 @@ describe("PATCH /api/v1/document/:id", () => {
     );
     expect(fs.unlinkSync).toHaveBeenCalledTimes(2);
 
-    // Properti dokumen dan cover harus update dengan filename baru
     expect(typeof mockDoc.document).toBe("string");
     expect(mockDoc.document).toMatch(/\.pdf$/);
 
@@ -471,7 +468,7 @@ describe("GET /api/v1/document", () => {
     expect(Documents.findAndCountAll).toHaveBeenCalledWith(
       expect.objectContaining({
         limit: 5,
-        offset: 10, // (3 - 1) * 5
+        offset: 10,
       })
     );
   });
@@ -748,7 +745,6 @@ describe("PATCH /api/v1/document/type/active/:type", () => {
     fullname: "John Doe",
   };
 
-  // Dokumen contoh yang sudah dihapus
   const mockDeletedDocs = [
     {
       id: 1,
@@ -764,7 +760,6 @@ describe("PATCH /api/v1/document/type/active/:type", () => {
     },
   ];
 
-  // Dokumen contoh yang tidak dihapus (deletedAt = null)
   const mockNotDeletedDocs = [
     {
       id: 3,
@@ -791,11 +786,9 @@ describe("PATCH /api/v1/document/type/active/:type", () => {
     expect(response.body.message).toBe(
       "Semua document dengan type 'Surat Pernyataan' berhasil di-restore"
     );
-    // cek restore dipanggil untuk semua dokumen yang dihapus
     mockDeletedDocs.forEach((doc) => {
       expect(doc.restore).toHaveBeenCalled();
     });
-    // cek logActivity terpanggil
     expect(logActivity).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: mockUser.id,
@@ -808,7 +801,6 @@ describe("PATCH /api/v1/document/type/active/:type", () => {
   });
 
   it("should return 404 if no deleted documents found for the given type", async () => {
-    // Semua dokumen tidak dihapus, jadi tidak ada yang harus di-restore
     Documents.findAll.mockResolvedValue(mockNotDeletedDocs);
 
     const response = await request(app)
@@ -921,7 +913,6 @@ describe("DELETE /api/v1/document/type/:type", () => {
       "Semua document dengan type 'surat-pernyataan' berhasil dihapus"
     );
 
-    // Pastikan setiap dokumen dipanggil destroy
     mockDocs.forEach((doc) => {
       expect(doc.destroy).toHaveBeenCalled();
     });

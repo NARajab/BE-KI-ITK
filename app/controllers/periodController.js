@@ -240,17 +240,25 @@ const updateGroup = async (req, res, next) => {
 const updateQuota = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { quota, remainingQuota } = req.body;
-
+    const { quota } = req.body;
     const kuota = await Quotas.findByPk(id);
 
     if (!kuota) {
       return next(new ApiError("Quota tidak ditemukan.", 404));
     }
 
+    const oldQuota = kuota.quota;
+    const oldRemaining = kuota.remainingQuota;
+    const newQuota = parseInt(quota, 10);
+
+    const difference = newQuota - oldQuota;
+
+    let newRemainingQuota = oldRemaining + difference;
+    if (newRemainingQuota < 0) newRemainingQuota = 0;
+
     await kuota.update({
-      quota,
-      remainingQuota,
+      quota: newQuota,
+      remainingQuota: newRemainingQuota,
     });
 
     await logActivity({

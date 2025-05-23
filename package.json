@@ -26,6 +26,8 @@
     "test:notif": "jest test/Notification.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:term": "jest test/Term.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:period": "jest test/Period.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:payment": "jest test/Payment.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:submission": "jest test/Submission.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",

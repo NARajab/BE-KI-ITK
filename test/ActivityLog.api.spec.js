@@ -3,7 +3,6 @@ const app = require("../app/index");
 const { ActivityLogs } = require("../app/models");
 const ApiError = require("../utils/apiError");
 
-// Mock ApiError sebagai constructor agar bisa dipanggil dengan `new`
 jest.mock("../utils/apiError", () =>
   jest.fn().mockImplementation(function ApiError(message, statusCode) {
     this.message = message;

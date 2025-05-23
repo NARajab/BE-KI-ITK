@@ -1243,6 +1243,136 @@ describe("GET /api/v1/period/this-year", () => {
   });
 });
 
+describe("PATCH /api/v1/period/year/active/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Admin User",
+  };
+
+  const mockHeaders = {
+    "user-agent": "Mozilla/5.0",
+  };
+
+  const mockRequest = (id = "1") =>
+    request(app)
+      .patch(`/api/v1/period/year/active/${id}`)
+      .set("User-Agent", mockHeaders["user-agent"])
+      .set("Authorization", "Bearer fake-token")
+      .set("X-Forwarded-For", "127.0.0.1");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should restore a period and all related groups and quotas", async () => {
+    const mockPeriod = {
+      id: 1,
+      restore: jest.fn(),
+    };
+
+    const mockGroups = [
+      {
+        id: 101,
+        restore: jest.fn(),
+      },
+      {
+        id: 102,
+        restore: jest.fn(),
+      },
+    ];
+
+    const mockQuotas = {
+      101: [
+        { id: 201, restore: jest.fn() },
+        { id: 202, restore: jest.fn() },
+      ],
+      102: [{ id: 203, restore: jest.fn() }],
+    };
+
+    Periods.findOne.mockResolvedValue(mockPeriod);
+    Groups.findAll.mockResolvedValue(mockGroups);
+    Quotas.findAll.mockImplementation(({ where }) =>
+      Promise.resolve(mockQuotas[where.groupId] || [])
+    );
+
+    app.use((req, res, next) => {
+      req.user = mockUser;
+      next();
+    });
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      status: "success",
+      message: "Periode dan semua data terkait berhasil dikembalikan.",
+    });
+
+    expect(Periods.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+
+    expect(Groups.findAll).toHaveBeenCalledWith({
+      where: { periodId: "1" },
+      paranoid: false,
+    });
+
+    for (const group of mockGroups) {
+      expect(Quotas.findAll).toHaveBeenCalledWith({
+        where: { groupId: group.id },
+        paranoid: false,
+      });
+    }
+
+    for (const group of mockGroups) {
+      expect(group.restore).toHaveBeenCalled();
+    }
+
+    for (const groupId in mockQuotas) {
+      for (const quota of mockQuotas[groupId]) {
+        expect(quota.restore).toHaveBeenCalled();
+      }
+    }
+
+    expect(mockPeriod.restore).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: mockUser.id,
+      action: "Mengembalikan Periode",
+      description: `${mockUser.fullname} berhasil mengembalikan periode.`,
+      device: mockHeaders["user-agent"],
+      ipAddress: "::ffff:127.0.0.1",
+    });
+  });
+
+  it("should return 404 if period not found", async () => {
+    Periods.findOne.mockResolvedValue(null);
+
+    const res = await mockRequest("99");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({
+      status: "Failed",
+      message: "Periode dengan ID tersebut tidak ditemukan.",
+      statusCode: 404,
+    });
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    Periods.findOne.mockRejectedValue(new Error("Unexpected error"));
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      status: "Error",
+      message: "Unexpected error",
+      statusCode: 500,
+    });
+  });
+});
+
 describe("PATCH /api/v1/period/active/:id", () => {
   const mockUser = {
     id: 1,
@@ -1257,28 +1387,28 @@ describe("PATCH /api/v1/period/active/:id", () => {
     request(app)
       .patch(`/api/v1/period/active/${id}`)
       .set("User-Agent", mockHeaders["user-agent"])
-      .set("Authorization", "Bearer fake-token") // jika middleware auth digunakan
+      .set("Authorization", "Bearer fake-token")
       .set("X-Forwarded-For", "127.0.0.1");
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should restore a group and its related quotas", async () => {
+  it("should restore group and related quotas successfully", async () => {
     const mockGroup = {
       id: 1,
       restore: jest.fn(),
     };
 
     const mockQuotas = [
-      { id: 1, restore: jest.fn() },
-      { id: 2, restore: jest.fn() },
+      { id: 10, restore: jest.fn() },
+      { id: 11, restore: jest.fn() },
     ];
 
     Groups.findOne.mockResolvedValue(mockGroup);
     Quotas.findAll.mockResolvedValue(mockQuotas);
 
-    // Middleware mock user (jika pakai auth)
+    // Middleware simulasi user
     app.use((req, res, next) => {
       req.user = mockUser;
       next();
@@ -1303,8 +1433,10 @@ describe("PATCH /api/v1/period/active/:id", () => {
     });
 
     expect(mockGroup.restore).toHaveBeenCalled();
-    expect(mockQuotas[0].restore).toHaveBeenCalled();
-    expect(mockQuotas[1].restore).toHaveBeenCalled();
+    for (const quota of mockQuotas) {
+      expect(quota.restore).toHaveBeenCalled();
+    }
+
     expect(logActivity).toHaveBeenCalledWith({
       userId: mockUser.id,
       action: "Mengembalikan Gelombang",
@@ -1317,12 +1449,13 @@ describe("PATCH /api/v1/period/active/:id", () => {
   it("should return 404 if group not found", async () => {
     Groups.findOne.mockResolvedValue(null);
 
-    const res = await mockRequest("99");
+    const res = await mockRequest("999");
 
     expect(res.status).toBe(404);
-    expect(res.body).toMatchObject({
+    expect(res.body).toEqual({
       status: "Failed",
       message: "Gelombang tidak ditemukan.",
+      statusCode: 404,
     });
   });
 
@@ -1332,17 +1465,18 @@ describe("PATCH /api/v1/period/active/:id", () => {
     const res = await mockRequest("1");
 
     expect(res.status).toBe(500);
-    expect(res.body).toMatchObject({
+    expect(res.body).toEqual({
       status: "Error",
       message: "Unexpected error",
+      statusCode: 500,
     });
   });
 });
 
-describe("PATCH /api/v1/period/active/:id", () => {
+describe("DELETE /api/v1/period/:id", () => {
   const mockUser = {
     id: 1,
-    fullname: "Test User",
+    fullname: "Admin User",
   };
 
   const mockHeaders = {
@@ -1351,85 +1485,191 @@ describe("PATCH /api/v1/period/active/:id", () => {
 
   const mockRequest = (id = "1") =>
     request(app)
-      .patch(`/api/v1/period/active/${id}`)
+      .delete(`/api/v1/period/${id}`)
       .set("User-Agent", mockHeaders["user-agent"])
-      .set("Authorization", "Bearer fake-token") // jika pakai JWT
+      .set("Authorization", "Bearer fake-token")
       .set("X-Forwarded-For", "127.0.0.1");
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should restore period, its groups, and related quotas", async () => {
-    const mockPeriod = { id: 1, restore: jest.fn() };
-    const mockGroups = [
-      {
-        id: 10,
-        restore: jest.fn(),
-      },
-    ];
-    const mockQuotas = [
-      { id: 100, restore: jest.fn() },
-      { id: 101, restore: jest.fn() },
-    ];
+  it("should delete group and related quotas successfully", async () => {
+    const mockGroup = {
+      id: 1,
+      destroy: jest.fn(),
+    };
 
-    Periods.findOne.mockResolvedValue(mockPeriod);
-    Groups.findAll.mockResolvedValue(mockGroups);
-    Quotas.findAll.mockResolvedValue(mockQuotas);
+    Groups.findByPk.mockResolvedValue(mockGroup);
+    Quotas.destroy.mockResolvedValue(2); // asumsi 2 data quota dihapus
 
-    // Middleware mock user (jika pakai auth)
     app.use((req, res, next) => {
       req.user = mockUser;
       next();
     });
 
     const res = await mockRequest("1");
-    console.log("ini error", res.body);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       status: "success",
-      message: "Periode dan semua data terkait berhasil dikembalikan.",
+      message: "Gelombang dan quota terkait berhasil dihapus",
     });
 
-    expect(Periods.findOne).toHaveBeenCalledWith({
-      where: { id: "1" },
-      paranoid: false,
+    expect(Groups.findByPk).toHaveBeenCalledWith("1");
+    expect(Quotas.destroy).toHaveBeenCalledWith({
+      where: { groupId: "1" },
     });
-
-    expect(Groups.findAll).toHaveBeenCalledWith({
-      where: { periodId: "1" },
-      paranoid: false,
-    });
-
-    expect(Quotas.findAll).toHaveBeenCalledWith({
-      where: { groupId: 10 },
-      paranoid: false,
-    });
-
-    expect(mockQuotas[0].restore).toHaveBeenCalled();
-    expect(mockQuotas[1].restore).toHaveBeenCalled();
-    expect(mockGroups[0].restore).toHaveBeenCalled();
-    expect(mockPeriod.restore).toHaveBeenCalled();
+    expect(mockGroup.destroy).toHaveBeenCalled();
 
     expect(logActivity).toHaveBeenCalledWith({
       userId: mockUser.id,
-      action: "Mengembalikan Periode",
-      description: `${mockUser.fullname} berhasil mengembalikan periode.`,
+      action: "Menghapus Gelombang",
+      description: `${mockUser.fullname} berhasil menghapus gelombang.`,
       device: mockHeaders["user-agent"],
-      ipAddress: expect.any(String),
+      ipAddress: "::ffff:127.0.0.1",
+    });
+  });
+
+  it("should return 404 if group not found", async () => {
+    Groups.findByPk.mockResolvedValue(null);
+
+    const res = await mockRequest("999");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({
+      status: "Failed",
+      message: "Gelombang tidak ditemukan.",
+      statusCode: 404,
+    });
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    Groups.findByPk.mockRejectedValue(new Error("Unexpected error"));
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      status: "Error",
+      message: "Unexpected error",
+      statusCode: 500,
+    });
+  });
+});
+
+describe("DELETE /api/v1/period/year/:id", () => {
+  const mockUser = {
+    id: 1,
+    fullname: "Admin User",
+  };
+
+  const mockHeaders = {
+    "user-agent": "Mozilla/5.0",
+  };
+
+  const mockRequest = (id = "1") =>
+    request(app)
+      .delete(`/api/v1/period/year/${id}`)
+      .set("User-Agent", mockHeaders["user-agent"])
+      .set("Authorization", "Bearer fake-token")
+      .set("X-Forwarded-For", "127.0.0.1");
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should delete period, related groups, and quotas successfully", async () => {
+    const mockPeriod = {
+      id: 1,
+      destroy: jest.fn(),
+    };
+
+    const mockGroups = [
+      { id: 101, destroy: jest.fn() },
+      { id: 102, destroy: jest.fn() },
+    ];
+
+    const mockQuotas = {
+      101: [
+        { id: 201, destroy: jest.fn() },
+        { id: 202, destroy: jest.fn() },
+      ],
+      102: [{ id: 203, destroy: jest.fn() }],
+    };
+
+    Periods.findByPk.mockResolvedValue(mockPeriod);
+    Groups.findAll.mockResolvedValue(mockGroups);
+    Quotas.findAll.mockImplementation(({ where }) =>
+      Promise.resolve(mockQuotas[where.groupId] || [])
+    );
+
+    app.use((req, res, next) => {
+      req.user = mockUser;
+      next();
+    });
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      status: "success",
+      message: "Periode dan semua data terkait berhasil dihapus.",
+    });
+
+    expect(Periods.findByPk).toHaveBeenCalledWith("1");
+    expect(Groups.findAll).toHaveBeenCalledWith({ where: { periodId: "1" } });
+
+    for (const group of mockGroups) {
+      expect(Quotas.findAll).toHaveBeenCalledWith({
+        where: { groupId: group.id },
+      });
+    }
+
+    for (const groupId in mockQuotas) {
+      for (const quota of mockQuotas[groupId]) {
+        expect(quota.destroy).toHaveBeenCalled();
+      }
+    }
+
+    for (const group of mockGroups) {
+      expect(group.destroy).toHaveBeenCalled();
+    }
+
+    expect(mockPeriod.destroy).toHaveBeenCalled();
+
+    expect(logActivity).toHaveBeenCalledWith({
+      userId: mockUser.id,
+      action: "Menghapus Periode",
+      description: `${mockUser.fullname} berhasil menghapus periode.`,
+      device: mockHeaders["user-agent"],
+      ipAddress: "::ffff:127.0.0.1",
     });
   });
 
   it("should return 404 if period not found", async () => {
-    Periods.findOne.mockResolvedValue(null);
+    Periods.findByPk.mockResolvedValue(null);
 
-    const res = await mockRequest("99");
+    const res = await mockRequest("999");
 
     expect(res.status).toBe(404);
-    expect(res.body).toMatchObject({
-      status: "error",
+    expect(res.body).toEqual({
+      status: "Failed",
       message: "Periode dengan ID tersebut tidak ditemukan.",
+      statusCode: 404,
+    });
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    Periods.findByPk.mockRejectedValue(new Error("Unexpected error"));
+
+    const res = await mockRequest("1");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      status: "Error",
+      message: "Unexpected error",
+      statusCode: 500,
     });
   });
 });
