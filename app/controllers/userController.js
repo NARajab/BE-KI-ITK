@@ -2,6 +2,7 @@ const { Users } = require("../models");
 const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -64,13 +65,32 @@ const getAllUsers = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim() || "";
 
     const offset = (page - 1) * limit;
 
-    const { count, rows: users } = await Users.findAndCountAll({
+    const whereCondition = search
+      ? {
+          [Op.or]: [
+            { email: { [Op.iLike]: `%${search}%` } },
+            { fullname: { [Op.iLike]: `%${search}%` } },
+            { institution: { [Op.iLike]: `%${search}%` } },
+            { role: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    const { count, rows } = await Users.findAndCountAll({
       limit,
       offset,
+      where: whereCondition,
       order: [["id", "ASC"]],
+    });
+
+    const users = rows.map((user) => {
+      const userData = user.toJSON();
+      delete userData.password;
+      return userData;
     });
 
     return res.status(200).json({
