@@ -19,7 +19,7 @@ const getActivityLogs = async (req, res, next) => {
         {
           model: Users,
           as: "user",
-          attributes: ["fullname"],
+          attributes: ["fullname", "email", "role"],
           where: fullname
             ? {
                 fullname: {
