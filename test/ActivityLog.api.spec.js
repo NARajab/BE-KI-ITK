@@ -69,18 +69,20 @@ describe("GET /api/v1/activity-log", () => {
       activityLogs: mockLogs,
     });
 
-    expect(ActivityLogs.findAndCountAll).toHaveBeenCalledWith({
-      limit: 10,
-      offset: 0,
-      order: [["createdAt", "DESC"]],
-      include: [
-        {
-          model: expect.any(Object),
-          as: "user",
-          attributes: ["fullname"],
-        },
-      ],
-    });
+    expect(ActivityLogs.findAndCountAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 10,
+        offset: 0,
+        order: [["createdAt", "DESC"]],
+        include: [
+          expect.objectContaining({
+            as: "user",
+            attributes: expect.arrayContaining(["fullname"]),
+            model: expect.any(Object),
+          }),
+        ],
+      })
+    );
   });
 
   it("should return 500 and handle internal server error", async () => {

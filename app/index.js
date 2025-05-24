@@ -19,7 +19,14 @@ if (process.env.NODE_ENV !== "test") {
 }
 app.use(router);
 
-app.all("/{*any}", (req, res, next) => {
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Success connected",
+  });
+});
+
+app.all("*any", (req, res, next) => {
   next(new ApiError("Routes does not exist", 404));
 });
 

@@ -151,14 +151,28 @@ describe("GET /api/v1/user", () => {
     Users.findAndCountAll.mockResolvedValue({
       count: 3,
       rows: [
-        { id: 1, fullname: "User One", email: "one@example.com" },
-        { id: 2, fullname: "User Two", email: "two@example.com" },
+        {
+          toJSON: () => ({
+            id: 1,
+            fullname: "User One",
+            email: "one@example.com",
+          }),
+        },
+        {
+          toJSON: () => ({
+            id: 2,
+            fullname: "User Two",
+            email: "two@example.com",
+          }),
+        },
       ],
     });
 
     const response = await request(app)
       .get("/api/v1/user?page=1&limit=2")
       .set("Authorization", `Bearer ${mockToken}`);
+
+    console.log("Response body:", response.body);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("status", "success");
@@ -172,13 +186,22 @@ describe("GET /api/v1/user", () => {
       limit: 2,
       offset: 0,
       order: [["id", "ASC"]],
+      where: {},
     });
   });
 
   it("should use default page and limit if query params are missing", async () => {
     Users.findAndCountAll.mockResolvedValue({
       count: 1,
-      rows: [{ id: 1, fullname: "User One", email: "one@example.com" }],
+      rows: [
+        {
+          toJSON: () => ({
+            id: 1,
+            fullname: "User One",
+            email: "one@example.com",
+          }),
+        },
+      ],
     });
 
     const response = await request(app)
@@ -193,6 +216,7 @@ describe("GET /api/v1/user", () => {
       limit: 10,
       offset: 0,
       order: [["id", "ASC"]],
+      where: {},
     });
   });
 

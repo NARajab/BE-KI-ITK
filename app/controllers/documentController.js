@@ -225,18 +225,19 @@ const getAllDocType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || "";
+    const search = req.query.search?.trim() || "";
 
     const whereCondition = {
       title: {
         [Op.eq]: null,
       },
-      type: {
-        ...(search && {
-          [Op.iLike]: `%${search}%`,
-        }),
-      },
     };
+
+    if (search) {
+      whereCondition.type = {
+        [Op.iLike]: `%${search}%`,
+      };
+    }
 
     const offset = (page - 1) * limit;
 

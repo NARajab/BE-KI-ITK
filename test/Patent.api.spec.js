@@ -216,22 +216,19 @@ describe("POST /api/v1/patent", () => {
 
 describe("PATCH /api/v1/patent/type/:id", () => {
   it("should successfully update a patent type", async () => {
-    // Arrange: mock implementasi PatentTypes.update
-    PatentTypes.update.mockResolvedValue([1]); // [1] berarti 1 row diubah
+    PatentTypes.update.mockResolvedValue([1]);
 
     const response = await request(app)
       .patch("/api/v1/patent/type/1")
       .send({ title: "Updated Patent Type" });
 
-    // Assert response
     expect(response.status).toBe(200);
     expect(response.body.status).toBe("success");
     expect(response.body.message).toBe("Kategori paten berhasil diperbarui");
 
-    // Assert pemanggilan fungsi
     expect(PatentTypes.update).toHaveBeenCalledWith(
       { title: "Updated Patent Type" },
-      { where: { id: "1" } } // ingat, req.params.id itu string
+      { where: { id: "1" } }
     );
   });
 
@@ -244,5 +241,367 @@ describe("PATCH /api/v1/patent/type/:id", () => {
 
     expect(response.status).toBe(500);
     expect(response.body.message).toBe("Database error");
+  });
+});
+
+describe("PATCH /api/v1/patent/:id", () => {
+  const baseUrl = "/api/v1/patent";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return 404 if patent is not found", async () => {
+    Patents.findByPk.mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`${baseUrl}/1`)
+      .send({ inventionTitle: "Updated Title" });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Patent tidak ditemukan");
+  });
+
+  it("should return 404 if submission is not found", async () => {
+    Patents.findByPk.mockResolvedValue({ id: 1 });
+    Submissions.findOne.mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`${baseUrl}/1`)
+      .send({ inventionTitle: "Updated Title" });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Submission tidak ditemukan");
+  });
+
+  it("should return 404 if user submission is not found", async () => {
+    Patents.findByPk.mockResolvedValue({ id: 1 });
+    Submissions.findOne.mockResolvedValue({ id: 10 });
+    UserSubmissions.findOne.mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`${baseUrl}/1`)
+      .send({ inventionTitle: "Updated Title" });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("UserSubmission tidak ditemukan");
+  });
+
+  it("should return 404 if progress is not found", async () => {
+    Patents.findByPk.mockResolvedValue({ id: 1 });
+    Submissions.findOne.mockResolvedValue({ id: 10 });
+    UserSubmissions.findOne.mockResolvedValue({ id: 100 });
+    Progresses.findOne.mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch(`${baseUrl}/1`)
+      .send({ inventionTitle: "Updated Title" });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Progress tidak ditemukan");
+  });
+
+  it("should update the patent and return 200", async () => {
+    const mockPatent = {
+      id: 1,
+      update: jest.fn(),
+      entirePatentDocument: "old.pdf",
+      description: "old-desc.pdf",
+      abstract: "old-abs.pdf",
+      claim: "old-claim.pdf",
+      inventionImage: "old-img.jpg",
+      statementInventionOwnership: "old-own.pdf",
+      letterTransferRightsInvention: "old-rights.pdf",
+      letterPassedReviewStage: "old-stage.pdf",
+    };
+
+    Patents.findByPk.mockResolvedValue(mockPatent);
+    Submissions.findOne.mockResolvedValue({ id: 10 });
+    UserSubmissions.findOne.mockResolvedValue({ id: 100 });
+    Progresses.findOne.mockResolvedValue({ id: 200 });
+    Users.findAll.mockResolvedValue([{ email: "admin@example.com" }]);
+    Progresses.update.mockResolvedValue();
+    sendEmail.mockResolvedValue();
+    logActivity.mockResolvedValue();
+
+    const res = await request(app)
+      .patch(`${baseUrl}/1`)
+      .field("inventionTitle", "Updated Title")
+      .field("patentTypeId", "2")
+      .field("numberClaims", "5")
+      .attach("entirePatentDocument", Buffer.from("file1.pdf"))
+      .attach("description", Buffer.from("file2.pdf"))
+      .attach("abstract", Buffer.from("file3.pdf"))
+      .attach("claim", Buffer.from("file4.pdf"))
+      .attach("inventionImage", Buffer.from("file5.pdf"))
+      .attach("statementInventionOwnership", Buffer.from("file6.pdf"))
+      .attach("letterTransferRightsInvention", Buffer.from("file7.pdf"))
+      .attach("letterPassedReviewStage", Buffer.from("file8.pdf"));
+
+    expect(res.statusCode).toBe(200);
+    expect(mockPatent.update).toHaveBeenCalled();
+    expect(Progresses.update).toHaveBeenCalledWith(
+      { isStatus: true },
+      { where: { id: 200 } }
+    );
+    expect(sendEmail).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalled();
+    expect(res.body.message).toBe("Patent berhasil diperbaharui");
+  });
+});
+
+describe("GET /api/v1/patent/type", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return all patent types without search", async () => {
+    const mockTypes = [
+      { id: 1, title: "Utility Model" },
+      { id: 2, title: "Design Patent" },
+    ];
+
+    PatentTypes.findAndCountAll.mockResolvedValue({
+      count: mockTypes.length,
+      rows: mockTypes,
+    });
+
+    const res = await request(app).get("/api/v1/patent/type");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe("success");
+    expect(res.body.patentTypes).toHaveLength(2);
+    expect(PatentTypes.findAndCountAll).toHaveBeenCalledWith({
+      where: {},
+      limit: 10,
+      offset: 0,
+    });
+  });
+
+  it("should return filtered patent types with search and pagination", async () => {
+    const mockTypes = [{ id: 2, title: "Design Patent" }];
+
+    PatentTypes.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: mockTypes,
+    });
+
+    const res = await request(app)
+      .get("/api/v1/patent/type")
+      .query({ page: 2, limit: 5, search: "design" });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.currentPage).toBe(2);
+    expect(res.body.totalPages).toBe(1);
+    expect(res.body.totalTypes).toBe(1);
+    expect(res.body.patentTypes).toEqual(mockTypes);
+    expect(PatentTypes.findAndCountAll).toHaveBeenCalledWith({
+      where: {
+        title: {
+          [Op.iLike]: "%design%",
+        },
+      },
+      limit: 5,
+      offset: 5,
+    });
+  });
+
+  it("should handle errors and return 500", async () => {
+    PatentTypes.findAndCountAll.mockRejectedValue(new Error("Database error"));
+
+    const res = await request(app).get("/api/v1/patent/type");
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("Database error");
+  });
+});
+
+describe("GET /api/v1/patent/type/not-pagination", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return all patent types without pagination", async () => {
+    const mockTypes = [
+      { id: 1, title: "Utility Model" },
+      { id: 2, title: "Design Patent" },
+    ];
+
+    PatentTypes.findAll.mockResolvedValue(mockTypes);
+
+    const res = await request(app).get("/api/v1/patent/type/not-pagination");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe("success");
+    expect(res.body.patentTypes).toEqual(mockTypes);
+    expect(PatentTypes.findAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("should handle errors and return 500", async () => {
+    PatentTypes.findAll.mockRejectedValue(new Error("Database error"));
+
+    const res = await request(app).get("/api/v1/patent/type/not-pagination");
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("Database error");
+  });
+});
+
+describe("GET /api/v1/patent/type/:id", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should return a patent type by id", async () => {
+    const mockType = { id: 1, title: "Utility Model" };
+
+    PatentTypes.findByPk.mockResolvedValue(mockType);
+
+    const res = await request(app).get("/api/v1/patent/type/1");
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe("success");
+    expect(res.body.message).toBe("Kategori paten berhasil ditemukan");
+    expect(res.body.patentType).toEqual(mockType);
+    expect(PatentTypes.findByPk).toHaveBeenCalledWith("1");
+  });
+
+  it("should return 404 if patent type not found", async () => {
+    PatentTypes.findByPk.mockResolvedValue(null);
+
+    const res = await request(app).get("/api/v1/patent/type/99");
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Kategori paten tidak ditemukan");
+  });
+
+  it("should return 500 if there is a server error", async () => {
+    PatentTypes.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const res = await request(app).get("/api/v1/patent/type/1");
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("DB error");
+  });
+});
+
+describe("PATCH /api/v1/patent/type/active/:id", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should restore a soft-deleted patent type", async () => {
+    const mockPatentType = {
+      id: 1,
+      restore: jest.fn(),
+    };
+
+    PatentTypes.findOne.mockResolvedValue(mockPatentType);
+    logActivity.mockResolvedValue();
+
+    const res = await request(app)
+      .patch("/api/v1/patent/type/active/1")
+      .set("Authorization", "Bearer validtoken")
+      .set("user-agent", "jest-agent")
+      .set("Content-Type", "application/json")
+      .send();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Kategori paten berhasil dikembalikan");
+    expect(PatentTypes.findOne).toHaveBeenCalledWith({
+      where: { id: "1" },
+      paranoid: false,
+    });
+    expect(mockPatentType.restore).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        action: "Mengembalikan Kategori Paten",
+        description: `Admin User berhasil mengembalikan kategori paten.`,
+        device: "jest-agent",
+        ipAddress: "::ffff:127.0.0.1",
+      })
+    );
+  });
+
+  it("should return 404 if patent type not found", async () => {
+    PatentTypes.findOne.mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch("/api/v1/patent/type/active/99")
+      .set("Authorization", "Bearer validtoken");
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Kategori paten tidak ditemukan");
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    PatentTypes.findOne.mockRejectedValue(new Error("DB error"));
+
+    const res = await request(app)
+      .patch("/api/v1/patent/type/active/1")
+      .set("Authorization", "Bearer validtoken");
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("DB error");
+  });
+});
+
+describe("DELETE /api/v1/patent/type/:id", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("should delete a patent type and return 200", async () => {
+    const mockPatentType = {
+      id: 1,
+      destroy: jest.fn().mockResolvedValue(),
+    };
+
+    PatentTypes.findByPk.mockResolvedValue(mockPatentType);
+    logActivity.mockResolvedValue();
+
+    const res = await request(app)
+      .delete("/api/v1/patent/type/1")
+      .set("Authorization", "Bearer validtoken")
+      .set("user-agent", "jest-agent")
+      .set("Content-Type", "application/json")
+      .send();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Kategori paten berhasil dihapus");
+    expect(PatentTypes.findByPk).toHaveBeenCalledWith("1");
+    expect(mockPatentType.destroy).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 1,
+        action: "Menghapus Kategori Paten",
+        description: `Admin User berhasil menghapus kategori paten.`,
+        device: "jest-agent",
+        ipAddress: "::ffff:127.0.0.1",
+      })
+    );
+  });
+
+  it("should return 404 if patent type not found", async () => {
+    PatentTypes.findByPk.mockResolvedValue(null);
+
+    const res = await request(app)
+      .delete("/api/v1/patent/type/99")
+      .set("Authorization", "Bearer validtoken");
+
+    expect(res.statusCode).toBe(404);
+    expect(res.body.message).toBe("Kategori paten tidak ditemukan");
+  });
+
+  it("should return 500 if an error occurs", async () => {
+    PatentTypes.findByPk.mockRejectedValue(new Error("DB error"));
+
+    const res = await request(app)
+      .delete("/api/v1/patent/type/1")
+      .set("Authorization", "Bearer validtoken");
+
+    expect(res.statusCode).toBe(500);
+    expect(res.body.message).toBe("DB error");
   });
 });
