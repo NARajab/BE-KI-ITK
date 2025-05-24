@@ -45,7 +45,7 @@ const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const emailToken = jwt.sign({ email }, process.env.JWT_SECRET, {
-      expiresIn: "1d",
+      expiresIn: "1h",
     });
 
     const newUser = await Users.create({
@@ -97,7 +97,24 @@ const login = async (req, res, next) => {
     }
 
     if (!user.isVerified) {
-      return next(new ApiError("Email belum diverifikasi", 401));
+      const emailToken = jwt.sign({ email }, process.env.JWT_SECRET, {
+        expiresIn: "1h",
+      });
+
+      const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
+
+      await sendEmail({
+        to: email,
+        subject: "Verifikasi Email Anda",
+        html: verificationMail({ fullname: user.fullname, verificationLink }),
+      });
+
+      return next(
+        new ApiError(
+          "Email belum diverifikasi. Link verifikasi telah dikirim ulang ke email Anda.",
+          401
+        )
+      );
     }
     const payload = {
       id: user.id,

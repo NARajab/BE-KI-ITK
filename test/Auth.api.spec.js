@@ -232,7 +232,9 @@ describe("POST /api/v1/auth/login", () => {
       .send({ email: user.email, password: "password123" });
 
     expect(response.status).toBe(401);
-    expect(response.body.message).toBe("Email belum diverifikasi");
+    expect(response.body.message).toBe(
+      "Email belum diverifikasi. Link verifikasi telah dikirim ulang ke email Anda."
+    );
   });
 
   it("should return 200 and a token if login is successful", async () => {

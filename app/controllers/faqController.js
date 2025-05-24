@@ -151,17 +151,23 @@ const getAllTypeFaq = async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
+    const search = req.query.search?.trim();
+
+    const whereCondition = {
+      question: { [Op.eq]: null },
+      ...(search && {
+        type: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
 
     const { count, rows } = await Faqs.findAndCountAll({
       limit,
       offset,
       attributes: ["id", "type", "createdAt", "updatedAt"],
       order: [["id", "ASC"]],
-      where: {
-        question: {
-          [Op.eq]: null,
-        },
-      },
+      where: whereCondition,
     });
 
     const counts = await Faqs.findAll({
@@ -207,19 +213,26 @@ const getFaqByType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
 
     const offset = (page - 1) * limit;
+
+    const whereCondition = {
+      type: req.params.type,
+      question: {
+        [Op.ne]: null,
+        ...(search && {
+          [Op.iLike]: `%${search}%`, // Untuk PostgreSQL
+          // [Op.like]: `%${search}%`, // Gunakan ini kalau pakai MySQL
+        }),
+      },
+    };
 
     const { count, rows: faqs } = await Faqs.findAndCountAll({
       limit,
       offset,
       order: [["id", "ASC"]],
-      where: {
-        type: req.params.type,
-        question: {
-          [Op.ne]: null,
-        },
-      },
+      where: whereCondition,
     });
 
     res.status(200).json({

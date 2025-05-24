@@ -805,6 +805,7 @@ describe("GET /api/v1/period", () => {
       limit: 10,
       offset: 0,
       order: [["year", "DESC"]],
+      where: {},
     });
   });
 

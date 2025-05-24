@@ -28,6 +28,8 @@
     "test:period": "jest test/Period.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:payment": "jest test/Payment.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:submission": "jest test/Submission.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:copyright": "jest test/Copyright.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:patent": "jest test/Patent.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",

@@ -1,4 +1,5 @@
 const { HelpCenters, Users } = require("../models");
+const { Op } = require("sequelize");
 
 const SendEmail = require("../../emails/services/sendMail");
 const helpCenterMailUser = require("../../emails/templates/helpCenterMailUser");
@@ -104,11 +105,24 @@ const getHelpCenter = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim();
 
+    const whereCondition = search
+      ? {
+          [Op.or]: [
+            { email: { [Op.iLike]: `%${search}%` } },
+            { phoneNumber: { [Op.iLike]: `%${search}%` } },
+            { problem: { [Op.iLike]: `%${search}%` } },
+            { message: { [Op.iLike]: `%${search}%` } },
+            { answer: { [Op.iLike]: `%${search}%` } },
+          ],
+        }
+      : {};
     const offset = (page - 1) * limit;
     const { count, rows: helpCenter } = await HelpCenters.findAndCountAll({
       limit,
       offset,
+      where: whereCondition,
       order: [["id", "ASC"]],
     });
     res.status(200).json({

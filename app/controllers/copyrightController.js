@@ -9,6 +9,7 @@ const {
   SubTypeCreations,
 } = require("../models");
 const fs = require("fs");
+const { Op } = require("sequelize");
 const path = require("path");
 
 const logActivity = require("../helpers/activityLogs");
@@ -66,8 +67,18 @@ const getAllTypeCreation = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+
+    const whereCondition = search
+      ? {
+          title: {
+            [Op.iLike]: `%${search}%`,
+          },
+        }
+      : {};
 
     const { count, rows: typeCreation } = await TypeCreations.findAndCountAll({
+      where: whereCondition,
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -90,13 +101,33 @@ const getAllSubTypeCreationByTypeCreation = async (req, res, next) => {
 
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+
+    const whereCondition = {
+      typeCreationId: id,
+      ...(search && {
+        title: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
 
     const { count, rows: subTypeCreation } =
       await SubTypeCreations.findAndCountAll({
-        where: { typeCreationId: id },
+        where: whereCondition,
         limit: limit,
         offset: (page - 1) * limit,
       });
+
+    if (count === 0) {
+      return res.status(200).json({
+        status: "success",
+        currentPage: page,
+        totalPages: 0,
+        limit,
+        subTypeCreation: [],
+      });
+    }
 
     res.status(200).json({
       status: "success",

@@ -10,6 +10,7 @@ const {
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -360,10 +361,20 @@ const getAllBrandTypes = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
 
     const offset = (page - 1) * limit;
 
+    const whereCondition = search
+      ? {
+          title: {
+            [Op.iLike]: `%${search}%`,
+          },
+        }
+      : {};
+
     const { count, rows: brandTypes } = await BrandTypes.findAndCountAll({
+      where: whereCondition,
       limit,
       offset,
       order: [["id", "ASC"]],

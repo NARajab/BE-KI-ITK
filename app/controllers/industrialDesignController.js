@@ -10,6 +10,7 @@ const {
 } = require("../models");
 const fs = require("fs");
 const path = require("path");
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -148,8 +149,18 @@ const getAllTypeDesignIndustri = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+
+    const whereCondition = search
+      ? {
+          title: {
+            [Op.iLike]: `%${search}%`,
+          },
+        }
+      : {};
 
     const { count, rows: typeDesigns } = await TypeDesigns.findAndCountAll({
+      where: whereCondition,
       limit: limit,
       offset: (page - 1) * limit,
     });
@@ -211,14 +222,33 @@ const getSubTypeDesignIndustri = async (req, res, next) => {
     }
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
+
+    const whereCondition = {
+      typeDesignId: id,
+      ...(search && {
+        title: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
 
     const { count, rows: subTypeDesign } = await SubTypeDesigns.findAndCountAll(
       {
-        where: { typeDesignId: id },
+        where: whereCondition,
         limit: limit,
         offset: (page - 1) * limit,
       }
     );
+    if (count === 0) {
+      return res.status(200).json({
+        status: "success",
+        currentPage: page,
+        totalPages: 0,
+        limit,
+        subTypeCreation: [],
+      });
+    }
     res.status(200).json({
       status: "success",
       message: "Sub Kategori Desain Industri berhasil ditemukan",

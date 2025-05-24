@@ -177,6 +177,7 @@ describe("GET /api/v1/terms", () => {
       limit: 10,
       offset: 0,
       order: [["id", "ASC"]],
+      where: {},
     });
   });
 

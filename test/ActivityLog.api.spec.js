@@ -1,7 +1,16 @@
 const request = require("supertest");
 const app = require("../app/index");
-const { ActivityLogs } = require("../app/models");
+const { ActivityLogs, Users } = require("../app/models");
 const ApiError = require("../utils/apiError");
+jest.mock("../app/models", () => ({
+  ActivityLogs: {
+    findAndCountAll: jest.fn(),
+    findAll: jest.fn(),
+  },
+  Users: {
+    findByPk: jest.fn(),
+  },
+}));
 
 jest.mock("../utils/apiError", () =>
   jest.fn().mockImplementation(function ApiError(message, statusCode) {
@@ -10,9 +19,30 @@ jest.mock("../utils/apiError", () =>
   })
 );
 
+jest.mock("jsonwebtoken", () => ({
+  sign: jest.fn(() => "mock-token"),
+  verify: jest.fn(() => ({
+    id: 1,
+    fullname: "Admin User",
+    email: "admin@example.com",
+    role: "superAdmin",
+  })),
+}));
+
 describe("GET /api/v1/activity-log", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Users.findByPk.mockImplementation((id) => {
+      if (id === 1) {
+        return Promise.resolve({
+          id: 1,
+          fullname: "Admin User",
+          email: "admin@example.com",
+          role: "superAdmin",
+        });
+      }
+      return Promise.resolve(null);
+    });
   });
 
   it("should return 200 and paginated activity logs", async () => {
@@ -25,7 +55,9 @@ describe("GET /api/v1/activity-log", () => {
       rows: mockLogs,
     });
 
-    const res = await request(app).get("/api/v1/activity-log?limit=10&page=1");
+    const res = await request(app)
+      .get("/api/v1/activity-log?limit=10&page=1")
+      .set("Authorization", "Bearer mock-token");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -41,7 +73,13 @@ describe("GET /api/v1/activity-log", () => {
       limit: 10,
       offset: 0,
       order: [["createdAt", "DESC"]],
-      include: ["user"],
+      include: [
+        {
+          model: expect.any(Object),
+          as: "user",
+          attributes: ["fullname"],
+        },
+      ],
     });
   });
 
@@ -52,7 +90,9 @@ describe("GET /api/v1/activity-log", () => {
       .fn()
       .mockRejectedValue(new Error("DB failed"));
 
-    const res = await request(app).get("/api/v1/activity-log?limit=10&page=1");
+    const res = await request(app)
+      .get("/api/v1/activity-log?limit=10&page=1")
+      .set("Authorization", "Bearer mock-token");
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({

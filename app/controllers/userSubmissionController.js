@@ -598,6 +598,7 @@ const getUserSubmissionById = async (req, res, next) => {
 const getByIdSubmissionType = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { search } = req.query;
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
@@ -724,7 +725,26 @@ const getByIdSubmissionType = async (req, res, next) => {
       order: [["id", "ASC"]],
     });
 
-    const userSubmissions = rows.map((item) => ({
+    const filteredRows = rows.filter((item) => {
+      const userFullname = item.user?.fullname || "";
+      const reviewerFullname = item.reviewer?.fullname || "";
+      const submissionScheme = item.submission?.submissionScheme || "";
+      const centralStatus = item.centralStatus || "";
+      const progressStatus = item.progress?.[0]?.status || "";
+
+      if (!search) return true;
+
+      const searchLower = search.toLowerCase();
+      return (
+        userFullname.toLowerCase().includes(searchLower) ||
+        reviewerFullname.toLowerCase().includes(searchLower) ||
+        submissionScheme.toLowerCase().includes(searchLower) ||
+        progressStatus.toLowerCase().includes(searchLower) ||
+        centralStatus.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const userSubmissions = filteredRows.map((item) => ({
       ...item.toJSON(),
       reviewerId: item.reviewerId === null ? "-" : item.reviewerId,
     }));
@@ -738,6 +758,168 @@ const getByIdSubmissionType = async (req, res, next) => {
       totalUserSubmissions: count,
       limit: limit,
       userSubmissions,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    const offset = (page - 1) * limit;
+
+    const currentYear = new Date().getFullYear();
+
+    const { count, rows } = await UserSubmissions.findAndCountAll({
+      distinct: true,
+      limit,
+      offset,
+      where: {
+        createdAt: {
+          [Op.gte]: new Date(`${currentYear}-01-01`),
+          [Op.lt]: new Date(`${currentYear + 1}-01-01`),
+        },
+      },
+      include: [
+        {
+          model: Users,
+          as: "user",
+        },
+        {
+          model: Users,
+          as: "reviewer",
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          separate: true,
+          limit: 1,
+          order: [["id", "DESC"]],
+          required: false,
+          include: [
+            {
+              model: RevisionFiles,
+              as: "revisionFile",
+            },
+          ],
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          where: {
+            submissionTypeId: id,
+          },
+          include: [
+            {
+              model: Periods,
+              as: "period",
+            },
+            {
+              model: Payments,
+              as: "payment",
+            },
+            {
+              model: Groups,
+              as: "group",
+            },
+            {
+              model: Copyrights,
+              as: "copyright",
+              include: [
+                {
+                  model: TypeCreations,
+                  as: "typeCreation",
+                },
+                {
+                  model: SubTypeCreations,
+                  as: "subTypeCreation",
+                },
+              ],
+            },
+            {
+              model: TermsConditions,
+              as: "termsConditions",
+              through: { attributes: [] },
+            },
+            {
+              model: Patents,
+              as: "patent",
+              include: [
+                {
+                  model: PatentTypes,
+                  as: "patentType",
+                },
+              ],
+            },
+            {
+              model: Brands,
+              as: "brand",
+              include: [
+                { model: AdditionalDatas, as: "additionalDatas" },
+                {
+                  model: BrandTypes,
+                  as: "brandType",
+                },
+              ],
+            },
+            {
+              model: IndustrialDesigns,
+              as: "industrialDesign",
+              include: [
+                {
+                  model: TypeDesigns,
+                  as: "typeDesign",
+                },
+                {
+                  model: SubTypeDesigns,
+                  as: "subTypeDesign",
+                },
+              ],
+            },
+            {
+              model: SubmissionTypes,
+              as: "submissionType",
+            },
+            {
+              model: PersonalDatas,
+              as: "personalDatas",
+            },
+          ],
+        },
+      ],
+      order: [["id", "ASC"]],
+    });
+
+    if (!rows || rows.length === 0) {
+      return next(new ApiError("UserSubmissions tidak ditemukan", 404));
+    }
+
+    const userSubmissions = rows.map((item) => {
+      const data = item.toJSON ? item.toJSON() : item;
+      return {
+        ...data,
+        reviewerId: data.reviewerId == null ? "-" : data.reviewerId,
+        progress: Array.isArray(data.progress) ? data.progress[0] : null,
+      };
+    });
+    const filteredUserSubmissions = userSubmissions.filter(
+      (item) => item.progress && item.progress.status === "Selesai"
+    );
+
+    if (userSubmissions.length === 0)
+      return next(new ApiError("UserSubmissions tidak ditemukan", 404));
+
+    return res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUserSubmissions: count,
+      limit: limit,
+      filteredUserSubmissions,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -1463,6 +1645,7 @@ module.exports = {
   getAllUserSubmission,
   getUserSubmissionById,
   getByIdSubmissionType,
+  getByIdSubmissionTypeStatusSelesai,
   getProgressById,
   getAllProgress,
   getSubmissionsByReviewerId,

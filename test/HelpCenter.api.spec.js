@@ -272,6 +272,7 @@ describe("GET /api/v1/help-center", () => {
       limit: 10,
       offset: 0,
       order: [["id", "ASC"]],
+      where: {},
     });
   });
 
@@ -295,6 +296,7 @@ describe("GET /api/v1/help-center", () => {
       limit: 5,
       offset: 10,
       order: [["id", "ASC"]],
+      where: {},
     });
   });
 
