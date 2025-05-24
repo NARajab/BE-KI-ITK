@@ -598,6 +598,7 @@ const getUserSubmissionById = async (req, res, next) => {
 const getByIdSubmissionType = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { search } = req.query;
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
@@ -724,7 +725,26 @@ const getByIdSubmissionType = async (req, res, next) => {
       order: [["id", "ASC"]],
     });
 
-    const userSubmissions = rows.map((item) => ({
+    const filteredRows = rows.filter((item) => {
+      const userFullname = item.user?.fullname || "";
+      const reviewerFullname = item.reviewer?.fullname || "";
+      const submissionScheme = item.submission?.submissionScheme || "";
+      const centralStatus = item.centralStatus || "";
+      const progressStatus = item.progress?.[0]?.status || "";
+
+      if (!search) return true;
+
+      const searchLower = search.toLowerCase();
+      return (
+        userFullname.toLowerCase().includes(searchLower) ||
+        reviewerFullname.toLowerCase().includes(searchLower) ||
+        submissionScheme.toLowerCase().includes(searchLower) ||
+        progressStatus.toLowerCase().includes(searchLower) ||
+        centralStatus.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const userSubmissions = filteredRows.map((item) => ({
       ...item.toJSON(),
       reviewerId: item.reviewerId === null ? "-" : item.reviewerId,
     }));
@@ -743,6 +763,7 @@ const getByIdSubmissionType = async (req, res, next) => {
     next(new ApiError(err.message, 500));
   }
 };
+
 const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
   try {
     const { id } = req.params;

@@ -176,6 +176,7 @@ const getAllDoc = async (req, res, next) => {
     let limit = parseInt(req.query.limit) || 10;
 
     const offset = (page - 1) * limit;
+    const search = req.query.search?.trim() || "";
 
     const { count, rows: docs } = await Documents.findAndCountAll({
       limit,
@@ -183,6 +184,9 @@ const getAllDoc = async (req, res, next) => {
       where: {
         title: {
           [Op.ne]: null,
+          ...(search && {
+            [Op.iLike]: `%${search}%`,
+          }),
         },
       },
     });
@@ -221,10 +225,16 @@ const getAllDocType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
 
     const whereCondition = {
       title: {
         [Op.eq]: null,
+      },
+      type: {
+        ...(search && {
+          [Op.iLike]: `%${search}%`,
+        }),
       },
     };
 

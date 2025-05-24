@@ -1,5 +1,5 @@
 const { Periods, Groups, Quotas } = require("../models");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -286,13 +286,22 @@ const getAllGroupByYear = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
+    const search = req.query.search?.trim();
+
+    const whereCondition = {
+      periodId: req.params.id,
+      ...(search && {
+        group: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
+
     const { count, rows: groups } = await Groups.findAndCountAll({
       limit,
       offset,
       order: [["id", "ASC"]],
-      where: {
-        periodId: req.params.id,
-      },
+      where: whereCondition,
     });
 
     res.status(200).json({
@@ -339,8 +348,18 @@ const getAllPeriod = async (req, res, next) => {
     let limit = parseInt(req.query.limit) || 10;
 
     const offset = (page - 1) * limit;
+    const search = req.query.search?.trim();
+
+    const whereCondition = {
+      ...(search && {
+        year: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
 
     const { count, rows: periods } = await Periods.findAndCountAll({
+      where: whereCondition,
       limit,
       offset,
       order: [["year", "DESC"]],
@@ -465,8 +484,19 @@ const getQuotaByIdGroup = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const search = req.query.search?.trim();
+
+    const whereCondition = {
+      groupId: id,
+      ...(search && {
+        title: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
+
     const quotas = await Quotas.findAll({
-      where: { groupId: id },
+      where: whereCondition,
     });
 
     if (!quotas || quotas.length === 0) {

@@ -1,4 +1,5 @@
 const { TermsConditions } = require("../models");
+const { Op } = require("sequelize");
 
 const logActivity = require("../helpers/activityLogs");
 const ApiError = require("../../utils/apiError");
@@ -55,12 +56,22 @@ const getAllTerms = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim();
 
     const offset = (page - 1) * limit;
+
+    const whereCondition = {
+      ...(search && {
+        terms: {
+          [Op.iLike]: `%${search}%`,
+        },
+      }),
+    };
 
     const { count, rows: terms } = await TermsConditions.findAndCountAll({
       limit,
       offset,
+      where: whereCondition,
       order: [["id", "ASC"]],
     });
 

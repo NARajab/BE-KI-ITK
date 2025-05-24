@@ -20,11 +20,19 @@ const getSubmissionType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || "";
 
     const offset = (page - 1) * limit;
 
+    const whereCondition = search
+      ? {
+          [Op.or]: [{ title: { [Op.iLike]: `%${search}%` } }],
+        }
+      : {};
+
     const { count, rows: submissionsType } =
       await SubmissionTypes.findAndCountAll({
+        where: whereCondition,
         limit,
         offset,
       });
