@@ -1,4 +1,5 @@
 const { admin, client } = require("../../config/firebase");
+const axios = require("axios");
 const logActivity = require("../helpers/activityLogs");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -146,29 +147,32 @@ const login = async (req, res, next) => {
 
 const loginGoogle = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { accessToken } = req.body;
 
-    if (!idToken) {
-      return next(new ApiError("ID Token is required", 400));
+    if (!accessToken) {
+      return next(new ApiError("Access Token is required", 400));
     }
 
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const response = await axios.get(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-    const { uid } = decodedToken;
-
-    const userRecord = await admin.auth().getUser(uid);
-    console.log(userRecord);
-
-    let user = await Users.findOne({ where: { firebase_uid: uid } });
+    const userInfo = response.data;
+    let user = await Users.findOne({ where: { firebase_uid: userInfo.sub } });
 
     if (!user) {
       user = await Users.create({
-        firebase_uid: uid,
-        email: userRecord.email,
-        fullname: userRecord.displayName || "Unnamed User",
-        image: userRecord.photoURL,
-        phoneNumber: userRecord.phoneNumber,
-        isVerified: true,
+        firebase_uid: userInfo.sub,
+        email: userInfo.email,
+        fullname: userInfo.name || "Unnamed User",
+        image: userInfo.picture,
+        phoneNumber: userInfo.phone_number || null,
+        isVerified: userInfo.email_verified || true,
         role: "user",
       });
     }
@@ -179,10 +183,6 @@ const loginGoogle = async (req, res, next) => {
         email: user.email,
         fullname: user.fullname,
         image: user.image,
-        phoneNumber: user.phoneNumber,
-        faculty: user.faculty,
-        studyProgram: user.studyProgram,
-        institution: user.institution,
         phoneNumber: user.phoneNumber,
         role: user.role,
       },
