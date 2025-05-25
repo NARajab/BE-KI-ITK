@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Patents extends Model {
     /**
@@ -10,25 +8,38 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      Patents.hasOne(models.Submissions, {
+        foreignKey: "patentId",
+        as: "submission",
+      });
+      Patents.belongsTo(models.PatentTypes, {
+        foreignKey: "patentTypeId",
+        as: "patentType",
+      });
     }
   }
-  Patents.init({
-    draftPatentApplicationFile: DataTypes.STRING,
-    entirePatentDocument: DataTypes.STRING,
-    inventionTitle: DataTypes.STRING,
-    patentType: DataTypes.STRING,
-    numberClaims: DataTypes.STRING,
-    description: DataTypes.STRING,
-    abstract: DataTypes.STRING,
-    claim: DataTypes.STRING,
-    inventionImage: DataTypes.STRING,
-    statementInventionOwnership: DataTypes.STRING,
-    letterTransferRightsInvention: DataTypes.STRING,
-    letterPassedReviewStage: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'Patents',
-  });
+  Patents.init(
+    {
+      draftPatentApplicationFile: DataTypes.STRING,
+      entirePatentDocument: DataTypes.STRING,
+      inventionTitle: DataTypes.STRING,
+      patentTypeId: DataTypes.INTEGER,
+      numberClaims: DataTypes.STRING,
+      description: DataTypes.STRING,
+      abstract: DataTypes.STRING,
+      claim: DataTypes.STRING,
+      inventionImage: DataTypes.STRING,
+      statementInventionOwnership: DataTypes.STRING,
+      letterTransferRightsInvention: DataTypes.STRING,
+      letterPassedReviewStage: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "Patents",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
+    }
+  );
   return Patents;
 };

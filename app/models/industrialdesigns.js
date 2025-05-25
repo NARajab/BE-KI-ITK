@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class IndustrialDesigns extends Model {
     /**
@@ -10,28 +8,47 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      // define association here
+      IndustrialDesigns.hasOne(models.Submissions, {
+        foreignKey: "industrialDesignId",
+        as: "submission",
+      });
+      IndustrialDesigns.belongsTo(models.TypeDesigns, {
+        foreignKey: "typeDesignId",
+        as: "typeDesign",
+      });
+
+      IndustrialDesigns.belongsTo(models.SubTypeDesigns, {
+        foreignKey: "subtypeDesignId",
+        as: "subTypeDesign",
+      });
     }
   }
-  IndustrialDesigns.init({
-    titleDesign: DataTypes.STRING,
-    type: DataTypes.STRING,
-    typeDesign: DataTypes.STRING,
-    subtypeDesign: DataTypes.STRING,
-    claim: DataTypes.STRING,
-    looksPerspective: DataTypes.STRING,
-    frontView: DataTypes.STRING,
-    backView: DataTypes.STRING,
-    rightSideView: DataTypes.STRING,
-    lefttSideView: DataTypes.STRING,
-    topView: DataTypes.STRING,
-    downView: DataTypes.STRING,
-    moreImages: DataTypes.STRING,
-    letterTransferDesignRights: DataTypes.STRING,
-    designOwnershipLetter: DataTypes.STRING
-  }, {
-    sequelize,
-    modelName: 'IndustrialDesigns',
-  });
+  IndustrialDesigns.init(
+    {
+      draftDesainIndustriApplicationFile: DataTypes.STRING,
+      titleDesign: DataTypes.STRING,
+      type: DataTypes.STRING,
+      typeDesignId: DataTypes.INTEGER,
+      subtypeDesignId: DataTypes.INTEGER,
+      claim: DataTypes.ARRAY(DataTypes.STRING),
+      looksPerspective: DataTypes.STRING,
+      frontView: DataTypes.STRING,
+      backView: DataTypes.STRING,
+      rightSideView: DataTypes.STRING,
+      lefttSideView: DataTypes.STRING,
+      topView: DataTypes.STRING,
+      downView: DataTypes.STRING,
+      moreImages: DataTypes.STRING,
+      letterTransferDesignRights: DataTypes.STRING,
+      designOwnershipLetter: DataTypes.STRING,
+    },
+    {
+      sequelize,
+      modelName: "IndustrialDesigns",
+      paranoid: true,
+      deletedAt: "deletedAt",
+      timestamps: true,
+    }
+  );
   return IndustrialDesigns;
 };

@@ -1,55 +1,55 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Copyrights', {
+    await queryInterface.createTable("Copyrights", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       titleInvention: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
-      typeCreation: {
-        type: Sequelize.STRING
+      typeCreationId: {
+        type: Sequelize.INTEGER,
       },
-      subTypeCreation: {
-        type: Sequelize.STRING
+      subTypeCreationId: {
+        type: Sequelize.INTEGER,
       },
       countryFirstAnnounced: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       cityFirstAnnounced: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       timeFirstAnnounced: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       briefDescriptionCreation: {
-        type: Sequelize.TEXT
+        type: Sequelize.TEXT,
       },
       statementLetter: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       letterTransferCopyright: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       exampleCreation: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Copyrights');
-  }
+    await queryInterface.dropTable("Copyrights");
+  },
 };
