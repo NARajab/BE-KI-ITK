@@ -1,0 +1,9 @@
+// Jangan copy folder node_modules ke dalam image
+node_modules
+
+// File log & build artifacts
+npm-debug.log
+
+// File konfigurasi yang tidak perlu di-copy
+Dockerfile
+.dockerignore
