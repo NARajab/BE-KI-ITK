@@ -20,8 +20,8 @@ services:
       dockerfile: Dockerfile
     container_name: ki-backend
     working_dir: /app
-    # volumes:
-    #   - ./:/app
+    volumes:
+      - ./:/app
 
     environment:
       - PORT=9000
