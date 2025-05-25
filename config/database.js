@@ -1,22 +1,11 @@
 const Sequelize = require("sequelize");
 
-const {
-  DB_USERNAME = "",
-  DB_PASSWORD = "",
-  DB_NAME = "",
-  DB_HOST = "127.0.0.1",
-  DB_PORT = "5432",
-} = process.env;
+const { DB_USERNAME = "", DB_PASSWORD = "", DB_NAME = "", DB_HOST = "127.0.0.1", DB_PORT = "5432" } = process.env;
 
-const sequelize = new Sequelize(
-  `${DB_NAME}_development`,
-  DB_USERNAME,
-  DB_PASSWORD,
-  {
-    host: DB_HOST,
-    dialect: "postgres",
-  }
-);
+const sequelize = new Sequelize(`${DB_NAME}`, DB_USERNAME, DB_PASSWORD, {
+  host: DB_HOST,
+  dialect: "postgres",
+});
 
 const databaseValidation = async () => {
   try {
