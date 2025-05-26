@@ -19,7 +19,6 @@ module.exports = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.log(err);
     if (err.name === "TokenExpiredError") {
       return next(
         new ApiError("Your session has expired. Please log in again.", 401)

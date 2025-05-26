@@ -25,7 +25,7 @@ router.post(
       next();
     });
   },
-  DesignIndustri.createDesignIndustri
+  DesignIndustri.createIndustrialDesign
 );
 
 router.get("/type", DesignIndustri.getAllTypeDesignIndustri);

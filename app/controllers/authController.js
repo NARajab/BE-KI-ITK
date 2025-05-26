@@ -199,6 +199,7 @@ const loginGoogle = async (req, res, next) => {
 
     return res.status(200).json({
       message: "Login berhasil",
+      role: user.role,
       token,
     });
   } catch (err) {
