@@ -162,7 +162,8 @@ const loginGoogle = async (req, res, next) => {
     );
 
     const userInfo = response.data;
-    let user = await Users.findOne({ where: { firebase_uid: userInfo.sub } });
+    console.log(userInfo);
+    let user = await Users.findOne({ where: { email: userInfo.email } });
 
     if (!user) {
       user = await Users.create({
