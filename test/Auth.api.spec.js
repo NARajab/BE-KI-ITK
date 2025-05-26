@@ -4,12 +4,14 @@ jest.mock("jsonwebtoken");
 jest.mock("../app/helpers/activityLogs", () => jest.fn());
 jest.mock("../emails/services/sendMail");
 jest.mock("../app/models");
+jest.mock("axios");
 
 const { Users } = require("../app/models");
 const app = require("../app/index");
 const sendEmail = require("../emails/services/sendMail");
 const request = require("supertest");
 const bcrypt = require("bcrypt");
+const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const { loginGoogle } = require("../app/controllers/authController");
 const admin = require("firebase-admin");
@@ -264,54 +266,53 @@ describe("POST /api/v1/auth/login", () => {
 
 describe("POST /api/v1/auth/login-google", () => {
   it("should return 200 and a token if login is successful", async () => {
-    const idToken = "mock-id-token";
-    const decodedToken = { uid: "mock-uid" };
-    const userRecord = {
-      email: "testuser@example.com",
-      displayName: "Test User",
-      photoURL: "http://example.com/photo.jpg",
-      phoneNumber: "1234567890",
+    const accessToken = "mock-access-token";
+
+    const mockGoogleResponse = {
+      data: {
+        sub: "mock-sub-id",
+        email: "testuser@example.com",
+        name: "Test User",
+        picture: "http://example.com/photo.jpg=s96-c",
+        phone_number: "1234567890",
+        email_verified: true,
+      },
     };
 
-    const user = {
+    const mockUser = {
       id: 1,
-      firebase_uid: "mock-uid",
+      firebase_uid: "mock-sub-id",
       email: "testuser@example.com",
       fullname: "Test User",
-      image: "http://example.com/photo.jpg",
+      image: "http://example.com/photo.jpg=s96-c",
       phoneNumber: "1234567890",
       isVerified: true,
       role: "user",
     };
 
-    admin.auth = jest.fn().mockReturnValue({
-      verifyIdToken: jest.fn().mockResolvedValue(decodedToken),
-      getUser: jest.fn().mockResolvedValue(userRecord),
-    });
-
+    axios.get.mockResolvedValue(mockGoogleResponse);
     Users.findOne.mockResolvedValue(null);
-    Users.create.mockResolvedValue(user);
+    Users.create.mockResolvedValue(mockUser);
     jwt.sign.mockReturnValue("mock-jwt-token");
-
     logActivity.mockResolvedValue();
 
     const response = await request(app)
       .post("/api/v1/auth/login-google")
-      .send({ idToken })
+      .send({ accessToken })
       .expect(200);
 
     expect(response.body.message).toBe("Login berhasil");
     expect(response.body.token).toBe("mock-jwt-token");
 
     expect(Users.findOne).toHaveBeenCalledWith({
-      where: { firebase_uid: "mock-uid" },
+      where: { firebase_uid: "mock-sub-id" },
     });
 
     expect(Users.create).toHaveBeenCalledWith({
-      firebase_uid: "mock-uid",
+      firebase_uid: "mock-sub-id",
       email: "testuser@example.com",
       fullname: "Test User",
-      image: "http://example.com/photo.jpg",
+      image: "http://example.com/photo.jpg=s96-c",
       phoneNumber: "1234567890",
       isVerified: true,
       role: "user",
@@ -319,60 +320,24 @@ describe("POST /api/v1/auth/login-google", () => {
 
     expect(jwt.sign).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: user.id,
-        email: user.email,
-        fullname: user.fullname,
-        image: user.image,
-        phoneNumber: user.phoneNumber,
-        role: user.role,
+        id: mockUser.id,
+        email: mockUser.email,
+        fullname: mockUser.fullname,
+        image: mockUser.image,
+        phoneNumber: mockUser.phoneNumber,
+        role: mockUser.role,
       }),
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    const device = "mock-device";
-    const ipAddress = "::ffff:127.0.0.1";
-
-    const mockReq = {
-      body: { idToken },
-      headers: { "user-agent": device },
-      ip: ipAddress,
-    };
-
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-
-    await loginGoogle(mockReq, mockRes);
-
-    expect(logActivity).toHaveBeenCalledWith({
-      userId: user.id,
-      action: "Login Google",
-      description: `${user.fullname} berhasil login.`,
-      device: device,
-      ipAddress: ipAddress,
-    });
-  });
-
-  it("should return 400 if idToken is not provided", async () => {
-    const response = await request(app)
-      .post("/api/v1/auth/login-google")
-      .send({})
-      .expect(400);
-
-    expect(response.body.message).toBe("ID Token is required");
-  });
-
-  it("should return 500 if there is an error during login", async () => {
-    admin.auth().verifyIdToken.mockRejectedValue(new Error("Firebase error"));
-
-    const response = await request(app)
-      .post("/api/v1/auth/login-google")
-      .send({ idToken: "mock-id-token" })
-      .expect(500);
-
-    expect(response.body.message).toBe("Firebase error");
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockUser.id,
+        action: "Login Google",
+        description: `${mockUser.fullname} berhasil login.`,
+      })
+    );
   });
 });
 

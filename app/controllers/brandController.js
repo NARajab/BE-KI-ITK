@@ -439,7 +439,6 @@ const updateAdditionalDatas = async (req, res, next) => {
     const { description } = req.body;
     const newFile = req.files?.file?.[0];
 
-    // Cari additionalData berdasarkan ID
     const additionalData = await AdditionalDatas.findByPk(id);
     if (!additionalData) {
       return next(new ApiError("AdditionalData tidak ditemukan", 404));
@@ -501,7 +500,6 @@ const restoreBrandType = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Cari termasuk yang sudah soft deleted (paranoid: false)
     const brandType = await BrandTypes.findOne({
       where: { id },
       paranoid: false,

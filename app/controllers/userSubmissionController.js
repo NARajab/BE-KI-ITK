@@ -1536,6 +1536,7 @@ const restoreUserSubmission = async (req, res, next) => {
       message: "UserSubmission dan seluruh data terkait berhasil direstore",
     });
   } catch (err) {
+    console.error(err);
     await transaction.rollback();
     next(new ApiError(err.message, 500));
   }
