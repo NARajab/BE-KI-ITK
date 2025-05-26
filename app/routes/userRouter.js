@@ -34,6 +34,8 @@ router.patch(
   User.restoreUser
 );
 
+router.post("/password", authenticate, User.changePassword);
+
 router.delete(
   "/:id",
   authenticate,

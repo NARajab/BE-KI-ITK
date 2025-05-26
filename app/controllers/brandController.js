@@ -306,8 +306,6 @@ const updateBrand = async (req, res, next) => {
         });
       }
     }
-    console.log("Parsed additionalDatas:", additionalDatas);
-    console.log("Uploaded files:", req.files?.additionalDataFiles);
 
     if (
       additionalDatas.length !== (req.files?.additionalDataFiles?.length || 0)

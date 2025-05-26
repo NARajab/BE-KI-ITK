@@ -64,7 +64,7 @@ const createSubTypeDesignIndustri = async (req, res, next) => {
   }
 };
 
-const createDesignIndustri = async (req, res, next) => {
+const createIndustrialDesign = async (req, res, next) => {
   try {
     const { submissionTypeId, personalDatas } = req.body;
 
@@ -639,7 +639,7 @@ const deleteSubTypeDesignIndustri = async (req, res, next) => {
 module.exports = {
   createTypeDesignIndustri,
   createSubTypeDesignIndustri,
-  createDesignIndustri,
+  createIndustrialDesign,
   getAllTypeDesignIndustri,
   getAllTypeDesignIndustriWtoPagination,
   getTypeById,

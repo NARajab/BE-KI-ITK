@@ -187,6 +187,52 @@ const updateUser = async (req, res, next) => {
   }
 };
 
+const changePassword = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    const user = await Users.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ message: "Pengguna tidak ditemukan" });
+    }
+
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    if (!oldPassword) {
+      return res.status(400).json({ message: "Password lama wajib diisi." });
+    }
+
+    if (!newPassword) {
+      return res.status(400).json({ message: "Password baru wajib diisi." });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        message: "Password baru dan konfirmasi password tidak cocok.",
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!passwordMatch) {
+      return res.status(400).json({ message: "Password lama salah." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await user.update({ password: hashedPassword });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Mengubah Password Pengguna",
+      description: `${req.user.fullname} berhasil memperbaharui password pengguna.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({ message: "Password berhasil diperbaharui" });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const deleteUser = async (req, res, next) => {
   try {
     const user = await Users.findByPk(req.params.id);
@@ -248,6 +294,7 @@ module.exports = {
   getUserById,
   getAllUserReviewer,
   updateUser,
+  changePassword,
   deleteUser,
   restoreUser,
 };

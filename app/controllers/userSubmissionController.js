@@ -729,6 +729,9 @@ const getByIdSubmissionType = async (req, res, next) => {
       const userFullname = item.user?.fullname || "";
       const reviewerFullname = item.reviewer?.fullname || "";
       const submissionScheme = item.submission?.submissionScheme || "";
+      const titleInvention = item.submission?.copyright?.titleInvention || "";
+      const inventionTitle = item.submission?.patent?.inventionTitle || "";
+      const titleDesign = item.submission?.industrialDesign?.titleDesign || "";
       const centralStatus = item.centralStatus || "";
       const progressStatus = item.progress?.[0]?.status || "";
 
@@ -739,6 +742,9 @@ const getByIdSubmissionType = async (req, res, next) => {
         userFullname.toLowerCase().includes(searchLower) ||
         reviewerFullname.toLowerCase().includes(searchLower) ||
         submissionScheme.toLowerCase().includes(searchLower) ||
+        titleInvention.toLowerCase().includes(searchLower) ||
+        inventionTitle.toLowerCase().includes(searchLower) ||
+        titleDesign.toLowerCase().includes(searchLower) ||
         progressStatus.toLowerCase().includes(searchLower) ||
         centralStatus.toLowerCase().includes(searchLower)
       );
@@ -767,6 +773,7 @@ const getByIdSubmissionType = async (req, res, next) => {
 const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { search } = req.query;
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
@@ -779,6 +786,7 @@ const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
       limit,
       offset,
       where: {
+        userId: req.user.id,
         createdAt: {
           [Op.gte]: new Date(`${currentYear}-01-01`),
           [Op.lt]: new Date(`${currentYear + 1}-01-01`),
@@ -894,11 +902,32 @@ const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
       order: [["id", "ASC"]],
     });
 
-    if (!rows || rows.length === 0) {
-      return next(new ApiError("UserSubmissions tidak ditemukan", 404));
-    }
+    const filteredRows = rows.filter((item) => {
+      const userFullname = item.user?.fullname || "";
+      const reviewerFullname = item.reviewer?.fullname || "";
+      const submissionScheme = item.submission?.submissionScheme || "";
+      const titleInvention = item.submission?.copyright?.titleInvention || "";
+      const inventionTitle = item.submission?.patent?.inventionTitle || "";
+      const titleDesign = item.submission?.industrialDesign?.titleDesign || "";
+      const centralStatus = item.centralStatus || "";
+      const progressStatus = item.progress?.[0]?.status || "";
 
-    const userSubmissions = rows.map((item) => {
+      if (!search) return true;
+
+      const searchLower = search.toLowerCase();
+      return (
+        userFullname.toLowerCase().includes(searchLower) ||
+        reviewerFullname.toLowerCase().includes(searchLower) ||
+        submissionScheme.toLowerCase().includes(searchLower) ||
+        titleInvention.toLowerCase().includes(searchLower) ||
+        inventionTitle.toLowerCase().includes(searchLower) ||
+        titleDesign.toLowerCase().includes(searchLower) ||
+        progressStatus.toLowerCase().includes(searchLower) ||
+        centralStatus.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const userSubmissions = filteredRows.map((item) => {
       const data = item.toJSON ? item.toJSON() : item;
       return {
         ...data,
@@ -1107,123 +1136,148 @@ const getSubmissionsByUserId = async (req, res, next) => {
 
     const offset = (page - 1) * limit;
 
+    const { search } = req.query;
     const submissionTypeIdParam = req.query.submissionTypeId;
     const submissionTypeIds = submissionTypeIdParam
       ? submissionTypeIdParam.split(",").map((id) => parseInt(id))
       : null;
 
-    const { count, rows: userSubmissions } =
-      await UserSubmissions.findAndCountAll({
-        distinct: true,
-        limit,
-        offset,
-        where: {
-          userId: req.user.id,
+    const { count, rows } = await UserSubmissions.findAndCountAll({
+      distinct: true,
+      limit,
+      offset,
+      where: {
+        userId: req.user.id,
+      },
+      include: [
+        {
+          model: Users,
+          as: "user",
         },
-        include: [
-          {
-            model: Users,
-            as: "user",
-          },
-          {
-            model: Users,
-            as: "reviewer",
-          },
-          {
-            model: Progresses,
-            as: "progress",
-            separate: true,
-            order: [["id", "DESC"]],
-            include: [
-              {
-                model: RevisionFiles,
-                as: "revisionFile",
-              },
-            ],
-          },
-          {
-            model: Submissions,
-            as: "submission",
-            where: submissionTypeIds
-              ? {
-                  submissionTypeId: {
-                    [Op.in]: submissionTypeIds,
-                  },
-                }
-              : undefined,
-            include: [
-              {
-                model: Periods,
-                as: "period",
-              },
-              { model: Payments, as: "payment" },
-              {
-                model: Groups,
-                as: "group",
-              },
-              {
-                model: Copyrights,
-                as: "copyright",
-                include: [
-                  {
-                    model: TypeCreations,
-                    as: "typeCreation",
-                  },
-                  {
-                    model: SubTypeCreations,
-                    as: "subTypeCreation",
-                  },
-                ],
-              },
-              {
-                model: TermsConditions,
-                as: "termsConditions",
-                through: { attributes: [] },
-              },
-              {
-                model: Patents,
-                as: "patent",
-                include: [
-                  {
-                    model: PatentTypes,
-                    as: "patentType",
-                  },
-                ],
-              },
-              {
-                model: Brands,
-                as: "brand",
-                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
-              },
-              {
-                model: IndustrialDesigns,
-                as: "industrialDesign",
-                include: [
-                  {
-                    model: TypeDesigns,
-                    as: "typeDesign",
-                  },
-                  {
-                    model: SubTypeDesigns,
-                    as: "subTypeDesign",
-                  },
-                ],
-              },
-              {
-                model: SubmissionTypes,
-                as: "submissionType",
-              },
-              {
-                model: PersonalDatas,
-                as: "personalDatas",
-              },
-            ],
-          },
-        ],
-        order: [["id", "ASC"]],
-      });
+        {
+          model: Users,
+          as: "reviewer",
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          separate: true,
+          order: [["id", "DESC"]],
+          include: [
+            {
+              model: RevisionFiles,
+              as: "revisionFile",
+            },
+          ],
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          where: submissionTypeIds
+            ? {
+                submissionTypeId: {
+                  [Op.in]: submissionTypeIds,
+                },
+              }
+            : undefined,
+          include: [
+            {
+              model: Periods,
+              as: "period",
+            },
+            { model: Payments, as: "payment" },
+            {
+              model: Groups,
+              as: "group",
+            },
+            {
+              model: Copyrights,
+              as: "copyright",
+              include: [
+                {
+                  model: TypeCreations,
+                  as: "typeCreation",
+                },
+                {
+                  model: SubTypeCreations,
+                  as: "subTypeCreation",
+                },
+              ],
+            },
+            {
+              model: TermsConditions,
+              as: "termsConditions",
+              through: { attributes: [] },
+            },
+            {
+              model: Patents,
+              as: "patent",
+              include: [
+                {
+                  model: PatentTypes,
+                  as: "patentType",
+                },
+              ],
+            },
+            {
+              model: Brands,
+              as: "brand",
+              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+            },
+            {
+              model: IndustrialDesigns,
+              as: "industrialDesign",
+              include: [
+                {
+                  model: TypeDesigns,
+                  as: "typeDesign",
+                },
+                {
+                  model: SubTypeDesigns,
+                  as: "subTypeDesign",
+                },
+              ],
+            },
+            {
+              model: SubmissionTypes,
+              as: "submissionType",
+            },
+            {
+              model: PersonalDatas,
+              as: "personalDatas",
+            },
+          ],
+        },
+      ],
+      order: [["id", "ASC"]],
+    });
 
-    const userSubmissionsSorted = userSubmissions.sort((a, b) => {
+    const filteredRows = rows.filter((item) => {
+      const userFullname = item.user?.fullname || "";
+      const reviewerFullname = item.reviewer?.fullname || "";
+      const submissionScheme = item.submission?.submissionScheme || "";
+      const titleInvention = item.submission?.copyright?.titleInvention || "";
+      const inventionTitle = item.submission?.patent?.inventionTitle || "";
+      const titleDesign = item.submission?.industrialDesign?.titleDesign || "";
+      const centralStatus = item.centralStatus || "";
+      const progressStatus = item.progress?.[0]?.status || "";
+
+      if (!search) return true;
+
+      const searchLower = search.toLowerCase();
+      return (
+        userFullname.toLowerCase().includes(searchLower) ||
+        reviewerFullname.toLowerCase().includes(searchLower) ||
+        submissionScheme.toLowerCase().includes(searchLower) ||
+        titleInvention.toLowerCase().includes(searchLower) ||
+        inventionTitle.toLowerCase().includes(searchLower) ||
+        titleDesign.toLowerCase().includes(searchLower) ||
+        progressStatus.toLowerCase().includes(searchLower) ||
+        centralStatus.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const userSubmissionsSorted = filteredRows.sort((a, b) => {
       const aUpdatedAt = new Date(
         Math.max(
           new Date(a.updatedAt).getTime(),
