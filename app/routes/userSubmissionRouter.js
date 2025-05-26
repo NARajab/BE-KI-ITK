@@ -38,6 +38,7 @@ router.get("/get-by-submision-type/:id", UserSubmission.getByIdSubmissionType);
 
 router.get(
   "/get-by-submision-type/status/:id",
+  authenticat,
   UserSubmission.getByIdSubmissionTypeStatusSelesai
 );
 
