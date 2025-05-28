@@ -19,6 +19,7 @@ const badWords = loadBadWords();
 const fuseOptions = {
   includeScore: true,
   threshold: 0.3,
+  distance: 50,
   keys: ["word"],
 };
 
@@ -27,16 +28,19 @@ const fuse = new Fuse(
   fuseOptions
 );
 
-const replaceNumbersWithLetters = (text) => {
-  const replacements = {
-    3: "e",
-    4: "a",
-    1: "i",
-    0: "o",
-    5: "s",
-    7: "t",
-  };
+const replacements = {
+  1: "i",
+  3: "e",
+  4: "a",
+  5: "s",
+  7: "t",
+  0: "o",
+};
 
+const shouldReplace = (text) => /[013457]/.test(text) && /\d/.test(text);
+
+const replaceNumbersWithLetters = (text) => {
+  if (!shouldReplace(text)) return text;
   return text
     .split("")
     .map((char) => replacements[char] || char)
@@ -52,8 +56,10 @@ const containsProfanity = (text) => {
   const words = text.toLowerCase().split(/\s+/);
   for (const word of words) {
     const cleaned = cleanWord(word);
+    if (cleaned.length < 3) continue;
+
     const results = fuse.search(cleaned);
-    const match = results.find((r) => r.score < 0.3);
+    const match = results.find((r) => r.score < 0.1);
     if (match) {
       console.log(
         `🚫 Kata terdeteksi: "${word}" → Dibersihkan: "${cleaned}" → Cocok dengan: "${match.item.word}"`

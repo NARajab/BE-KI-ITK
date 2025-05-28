@@ -162,7 +162,6 @@ const loginGoogle = async (req, res, next) => {
     );
 
     const userInfo = response.data;
-    console.log(userInfo);
     let user = await Users.findOne({ where: { email: userInfo.email } });
 
     if (!user) {
