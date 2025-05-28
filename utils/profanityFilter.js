@@ -60,9 +60,9 @@ const containsProfanity = (text) => {
     const match = results.find((r) => r.score < 0.5); // Tetap mempertahankan threshold 0.3
 
     if (match) {
-      console.log(
-        `🚫 Kata terdeteksi: "${word}" → Dibersihkan: "${cleaned}" → Cocok dengan: "${match.item.word}"`
-      );
+      // console.log(
+      //   `🚫 Kata terdeteksi: "${word}" → Dibersihkan: "${cleaned}" → Cocok dengan: "${match.item.word}"`
+      // );
       return true;
     }
   }

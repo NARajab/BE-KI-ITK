@@ -33,7 +33,9 @@
     "test:patent": "jest test/Patent.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:brand": "jest test/Brand.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
     "test:industri": "jest test/IndustrialDesign.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
-    "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
+    "test:auth": "jest test/Auth.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:copyright-type": "jest test/Copyright/Type.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit",
+    "test:copyright-sub-type": "jest test/Copyright/SubType.api.spec.js --setupFiles dotenv/config --verbose --detectOpenHandles --forceExit"
   },
   "author": "Nur Ali Rajab",
   "license": "ISC",

@@ -1,4 +1,3 @@
-const { admin, client } = require("../../config/firebase");
 const axios = require("axios");
 const logActivity = require("../helpers/activityLogs");
 const bcrypt = require("bcrypt");

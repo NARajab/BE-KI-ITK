@@ -1,4 +1,3 @@
-jest.mock("firebase-admin");
 jest.mock("nodemailer");
 jest.mock("jsonwebtoken");
 jest.mock("../app/helpers/activityLogs", () => jest.fn());
@@ -13,11 +12,9 @@ const request = require("supertest");
 const bcrypt = require("bcrypt");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
-const { loginGoogle } = require("../app/controllers/authController");
-const admin = require("firebase-admin");
 const logActivity = require("../app/helpers/activityLogs");
 
-describe("GET /api/v1/auth/me", () => {
+describe("GET Me With Token", () => {
   beforeAll(async () => {
     const hashedPassword = await bcrypt.hash("Kiadmin123", 10);
     const mockUser = {
@@ -49,7 +46,7 @@ describe("GET /api/v1/auth/me", () => {
     }));
   });
 
-  it("should login first, then return user profile data successfully", async () => {
+  it("login then profile", async () => {
     const loginResponse = await request(app).post("/api/v1/auth/login").send({
       email: "user@superadmin.com",
       password: "Kiadmin123",
@@ -80,12 +77,12 @@ describe("GET /api/v1/auth/me", () => {
   });
 });
 
-describe("POST /api/v1/auth/register", () => {
+describe("POST Register", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should register a new user and send a verification email", async () => {
+  it("register and verify", async () => {
     const newUser = {
       email: "123user@example.com",
       fullname: "example User",
@@ -132,7 +129,7 @@ describe("POST /api/v1/auth/register", () => {
     );
   });
 
-  it("should return an error if the email is already registered", async () => {
+  it("email already used", async () => {
     const existingUser = {
       email: "user@example.com",
       fullname: "exampel User",
@@ -161,7 +158,7 @@ describe("POST /api/v1/auth/register", () => {
     expect(response.body.message).toBe("Email sudah terdaftar.");
   });
 
-  it("should return an error if there is profanity in the fields", async () => {
+  it("profanity detected", async () => {
     const response = await request(app).post("/api/v1/auth/register").send({
       email: "user@example.com",
       fullname: "Test BadWord",
@@ -179,7 +176,7 @@ describe("POST /api/v1/auth/register", () => {
   });
 });
 
-describe("POST /api/v1/auth/login", () => {
+describe("POST Login", () => {
   let user;
 
   beforeEach(() => {
@@ -198,7 +195,7 @@ describe("POST /api/v1/auth/login", () => {
     logActivity.mockResolvedValue();
   });
 
-  it("should return 401 if user not found", async () => {
+  it("user not found", async () => {
     Users.findOne.mockResolvedValue(null);
 
     const response = await request(app)
@@ -211,7 +208,7 @@ describe("POST /api/v1/auth/login", () => {
     );
   });
 
-  it("should return 401 if password is incorrect", async () => {
+  it("password is incorrect", async () => {
     Users.findOne.mockResolvedValue(user);
     bcrypt.compare.mockResolvedValue(false);
 
@@ -225,7 +222,7 @@ describe("POST /api/v1/auth/login", () => {
     );
   });
 
-  it("should return 401 if email is not verified", async () => {
+  it("email is not verified", async () => {
     Users.findOne.mockResolvedValue({ ...user, isVerified: false });
     bcrypt.compare.mockResolvedValue(true);
 
@@ -239,7 +236,7 @@ describe("POST /api/v1/auth/login", () => {
     );
   });
 
-  it("should return 200 and a token if login is successful", async () => {
+  it("login is successful", async () => {
     Users.findOne.mockResolvedValue(user);
     bcrypt.compare.mockResolvedValue(true);
     jwt.sign.mockReturnValue("mock-jwt-token");
@@ -264,8 +261,8 @@ describe("POST /api/v1/auth/login", () => {
   });
 });
 
-describe("POST /api/v1/auth/login-google", () => {
-  it("should return 200 and a token if login is successful", async () => {
+describe("POST Login Google", () => {
+  it("google login success", async () => {
     const accessToken = "mock-access-token";
 
     const mockGoogleResponse = {
@@ -341,11 +338,11 @@ describe("POST /api/v1/auth/login-google", () => {
   });
 });
 
-describe("GET /api/v1/auth/verify-email/:emailToken", () => {
+describe("GET Verify Email", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
-  it("should verify email successfully with valid token", async () => {
+  it("email verify success", async () => {
     const mockEmail = "test@example.com";
     const mockUser = {
       email: mockEmail,
@@ -366,7 +363,7 @@ describe("GET /api/v1/auth/verify-email/:emailToken", () => {
     expect(mockUser.save).toHaveBeenCalled();
   });
 
-  it("should return 400 if token is invalid or expired", async () => {
+  it("invalid or expired token", async () => {
     jwt.verify.mockImplementation(() => {
       throw new Error("invalid token");
     });
@@ -380,7 +377,7 @@ describe("GET /api/v1/auth/verify-email/:emailToken", () => {
     );
   });
 
-  it("should return 404 if user is not found", async () => {
+  it("user not found", async () => {
     const mockEmail = "notfound@example.com";
 
     jwt.verify.mockReturnValue({ email: mockEmail });
@@ -393,7 +390,7 @@ describe("GET /api/v1/auth/verify-email/:emailToken", () => {
     expect(response.body.message).toBe("Pengguna tidak ditemukan.");
   });
 
-  it("should return 400 if user is already verified", async () => {
+  it("already verified", async () => {
     const mockEmail = "verified@example.com";
     const mockUser = {
       email: mockEmail,
@@ -410,7 +407,7 @@ describe("GET /api/v1/auth/verify-email/:emailToken", () => {
     expect(response.body.message).toBe("Email sudah diverifikasi sebelumnya.");
   });
 
-  it("should return 400 if emailToken param is missing", async () => {
+  it("missing token param", async () => {
     const { verifyEmail } = require("../app/controllers/authController");
 
     const req = { params: {} };
@@ -429,12 +426,12 @@ describe("GET /api/v1/auth/verify-email/:emailToken", () => {
   });
 });
 
-describe("POST /api/v1/auth/send-email-reset-password", () => {
+describe("POST Send Email Reset Password", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should send reset email successfully if email exists", async () => {
+  it("send email success", async () => {
     const mockEmail = "user@example.com";
     const mockUser = {
       email: mockEmail,
@@ -463,7 +460,7 @@ describe("POST /api/v1/auth/send-email-reset-password", () => {
     );
   });
 
-  it("should return 400 if email is not provided", async () => {
+  it("missing email field", async () => {
     const response = await request(app)
       .post("/api/v1/auth/send-email-reset-password")
       .send({})
@@ -472,7 +469,7 @@ describe("POST /api/v1/auth/send-email-reset-password", () => {
     expect(response.body.message).toBe("Email diperlukan");
   });
 
-  it("should return 404 if user is not found", async () => {
+  it("user not found", async () => {
     Users.findOne.mockResolvedValue(null);
 
     const response = await request(app)
@@ -483,7 +480,7 @@ describe("POST /api/v1/auth/send-email-reset-password", () => {
     expect(response.body.message).toBe("Pengguna tidak ditemukan");
   });
 
-  it("should return 500 if something fails inside try block", async () => {
+  it("internal server error", async () => {
     Users.findOne.mockImplementation(() => {
       throw new Error("Unexpected error");
     });
@@ -497,7 +494,7 @@ describe("POST /api/v1/auth/send-email-reset-password", () => {
   });
 });
 
-describe("POST /api/v1/auth/reset-password/:token", () => {
+describe("POST Reset Password", () => {
   const validToken = "valid-token";
   const decodedPayload = { email: "user@example.com" };
   const mockUser = {
@@ -512,7 +509,7 @@ describe("POST /api/v1/auth/reset-password/:token", () => {
     jest.clearAllMocks();
   });
 
-  it("should return 400 if token is missing", async () => {
+  it("missing token param", async () => {
     const response = await request(app)
       .post("/api/v1/auth/reset-password/")
       .send({ newPassword: "newpass123", confirmPassword: "newpass123" });
@@ -520,7 +517,7 @@ describe("POST /api/v1/auth/reset-password/:token", () => {
     expect(response.status).toBe(404);
   });
 
-  it("should return 400 if newPassword is missing", async () => {
+  it("missing newPassword", async () => {
     const response = await request(app)
       .post(`/api/v1/auth/reset-password/${validToken}`)
       .send({ confirmPassword: "newpass123" });
@@ -529,7 +526,7 @@ describe("POST /api/v1/auth/reset-password/:token", () => {
     expect(response.body.message).toBe("Password baru wajib diisi.");
   });
 
-  it("should return 400 if newPassword and confirmPassword do not match", async () => {
+  it("password mismatch", async () => {
     const response = await request(app)
       .post(`/api/v1/auth/reset-password/${validToken}`)
       .send({ newPassword: "newpass123", confirmPassword: "differentpass" });
@@ -540,7 +537,7 @@ describe("POST /api/v1/auth/reset-password/:token", () => {
     );
   });
 
-  it("should return 404 if user not found", async () => {
+  it("user not found", async () => {
     jwt.verify = jest.fn().mockReturnValue(decodedPayload);
     Users.findOne = jest.fn().mockResolvedValue(null);
 
@@ -557,7 +554,7 @@ describe("POST /api/v1/auth/reset-password/:token", () => {
     expect(response.body.message).toBe("Pengguna tidak ditemukan.");
   });
 
-  it("should reset password successfully and log activity", async () => {
+  it("reset password success", async () => {
     jwt.verify = jest.fn().mockReturnValue(decodedPayload);
     Users.findOne = jest.fn().mockResolvedValue(mockUser);
     bcrypt.hash = jest.fn().mockResolvedValue("hashedNewPassword");

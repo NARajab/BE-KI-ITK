@@ -41,7 +41,7 @@ const { containsProfanity } = require("../utils/profanityFilter");
 const { login, loginGoogle } = require("../app/controllers/authController");
 const logActivity = require("../app/helpers/activityLogs");
 
-describe("POST /api/v1/user", () => {
+describe("POST Create User", () => {
   const mockToken = "dummy-token";
 
   beforeAll(() => {
@@ -70,7 +70,7 @@ describe("POST /api/v1/user", () => {
     });
   });
 
-  it("should create a new user successfully", async () => {
+  it("success create new user", async () => {
     Users.findOne.mockResolvedValue(null);
 
     Users.create.mockResolvedValue({
@@ -108,7 +108,7 @@ describe("POST /api/v1/user", () => {
     expect(logActivity).toHaveBeenCalled();
   });
 
-  it("should return 400 if email already exists", async () => {
+  it("email already exists", async () => {
     Users.findOne.mockResolvedValue({
       id: 1,
       email: "test@example.com",
@@ -131,7 +131,7 @@ describe("POST /api/v1/user", () => {
   });
 });
 
-describe("GET /api/v1/user", () => {
+describe("GET All Users", () => {
   const mockToken = "dummy-token";
 
   beforeAll(() => {
@@ -147,7 +147,7 @@ describe("GET /api/v1/user", () => {
     Users.findAndCountAll.mockReset();
   });
 
-  it("should return paginated users", async () => {
+  it("return paginated users", async () => {
     Users.findAndCountAll.mockResolvedValue({
       count: 3,
       rows: [
@@ -190,7 +190,7 @@ describe("GET /api/v1/user", () => {
     });
   });
 
-  it("should use default page and limit if query params are missing", async () => {
+  it("use default params", async () => {
     Users.findAndCountAll.mockResolvedValue({
       count: 1,
       rows: [
@@ -220,7 +220,7 @@ describe("GET /api/v1/user", () => {
     });
   });
 
-  it("should call next with ApiError on failure", async () => {
+  it("handle fetch error", async () => {
     const errorMessage = "Database failure";
     Users.findAndCountAll.mockRejectedValue(new Error(errorMessage));
 
@@ -245,12 +245,12 @@ describe("GET /api/v1/user", () => {
   });
 });
 
-describe("GET /api/v1/user/:id", () => {
+describe("GET User by ID", () => {
   beforeEach(() => {
     Users.findByPk.mockReset();
   });
 
-  it("should return 200 and user data when user exists", async () => {
+  it("success fetch user data", async () => {
     const mockUser = {
       id: 1,
       fullname: "User Test",
@@ -274,7 +274,7 @@ describe("GET /api/v1/user/:id", () => {
     expect(Users.findByPk).toHaveBeenCalledWith("1");
   });
 
-  it("should return 404 when user not found", async () => {
+  it("user not found", async () => {
     Users.findByPk.mockResolvedValue(null);
 
     const response = await request(app).get("/api/v1/user/999");
@@ -284,7 +284,7 @@ describe("GET /api/v1/user/:id", () => {
     expect(Users.findByPk).toHaveBeenCalledWith("999");
   });
 
-  it("should call next with ApiError on exception", async () => {
+  it("handle fetch error", async () => {
     const errorMessage = "Database error";
     Users.findByPk.mockRejectedValue(new Error(errorMessage));
 
@@ -308,12 +308,12 @@ describe("GET /api/v1/user/:id", () => {
   });
 });
 
-describe("GET /api/v1/user/reviewer", () => {
+describe("GET User reviewer", () => {
   beforeEach(() => {
     Users.findAll.mockReset();
   });
 
-  it("should return 200 and list of reviewers", async () => {
+  it("succeess fetch reviewer datas", async () => {
     const mockReviewers = [
       { id: 1, fullname: "Reviewer One", role: "reviewer" },
       { id: 2, fullname: "Reviewer Two", role: "reviewer" },
@@ -330,7 +330,7 @@ describe("GET /api/v1/user/reviewer", () => {
     expect(Users.findAll).toHaveBeenCalledWith({ where: { role: "reviewer" } });
   });
 
-  it("should call next with ApiError on exception", async () => {
+  it("handle fetch error", async () => {
     const errorMessage = "Database failure";
     Users.findAll.mockRejectedValue(new Error(errorMessage));
 
@@ -354,7 +354,7 @@ describe("GET /api/v1/user/reviewer", () => {
   });
 });
 
-describe("PATCH /api/v1/user/:id", () => {
+describe("PATCH Update User", () => {
   const mockToken = "dummy-token";
   beforeAll(() => {
     jwt.sign.mockReturnValue(mockToken);
@@ -396,7 +396,7 @@ describe("PATCH /api/v1/user/:id", () => {
     update: jest.fn().mockResolvedValue(true),
   };
 
-  it("should update user successfully", async () => {
+  it("success update user", async () => {
     containsProfanity.mockReturnValue(false);
 
     const response = await request(app)
@@ -433,7 +433,7 @@ describe("PATCH /api/v1/user/:id", () => {
       })
     );
   });
-  it("should return 404 if user not found", async () => {
+  it("user not found", async () => {
     Users.findByPk.mockResolvedValue(null);
 
     const response = await request(app)
@@ -443,7 +443,7 @@ describe("PATCH /api/v1/user/:id", () => {
     expect(response.status).toBe(404);
     expect(response.body).toHaveProperty("message", "Pengguna tidak ditemukan");
   });
-  it("should return 400 if fullname contains profanity", async () => {
+  it("contains profanity", async () => {
     containsProfanity.mockImplementation((text) => text.includes("badword"));
 
     const response = await request(app)
@@ -459,13 +459,11 @@ describe("PATCH /api/v1/user/:id", () => {
       expect.stringContaining("fullname")
     );
   });
-  it("should update user and replace old image if file uploaded", async () => {
+  it("success update user image", async () => {
     containsProfanity.mockReturnValue(false);
     mockUser.image = "old-image.jpg";
     mockUser.update = jest.fn().mockResolvedValue(mockUser);
     fs.unlink.mockImplementation((path, cb) => cb(null));
-
-    console.log("Starting PATCH test with file upload");
 
     const response = await request(app)
       .patch("/api/v1/user/2")
@@ -490,7 +488,7 @@ describe("PATCH /api/v1/user/:id", () => {
       })
     );
   });
-  it("should log error if fs.unlink fails but continue", async () => {
+  it("handle unlink error", async () => {
     containsProfanity.mockReturnValue(false);
     mockUser.image = "old-image.jpg";
     const unlinkError = new Error("unlink failed");
@@ -511,7 +509,7 @@ describe("PATCH /api/v1/user/:id", () => {
 
     console.error.mockRestore();
   });
-  it("should return 500 if an error is thrown", async () => {
+  it("handle fetch error", async () => {
     Users.findByPk.mockImplementation(() => {
       throw new Error("Database down");
     });
@@ -525,7 +523,7 @@ describe("PATCH /api/v1/user/:id", () => {
   });
 });
 
-describe("DELETE /api/v1/user/:id", () => {
+describe("DELETE User", () => {
   const mockToken = "dummy-token";
 
   beforeAll(() => {
@@ -548,7 +546,7 @@ describe("DELETE /api/v1/user/:id", () => {
     logActivity.mockReset();
   });
 
-  it("should delete the user successfully", async () => {
+  it("success delete user ", async () => {
     const mockUserToDelete = {
       id: 2,
       fullname: "User to Delete",
@@ -590,7 +588,7 @@ describe("DELETE /api/v1/user/:id", () => {
     );
   });
 
-  it("should return 404 if user not found", async () => {
+  it("user not found", async () => {
     Users.findByPk.mockImplementation((id) => {
       if (id === 1)
         return Promise.resolve({
@@ -613,7 +611,7 @@ describe("DELETE /api/v1/user/:id", () => {
     expect(Users.findByPk).toHaveBeenCalledWith("999");
   });
 
-  it("should handle server error", async () => {
+  it("handle fetch error", async () => {
     Users.findByPk.mockRejectedValue(new Error("DB error"));
 
     const response = await request(app)
@@ -625,7 +623,7 @@ describe("DELETE /api/v1/user/:id", () => {
   });
 });
 
-describe("PATCH /api/v1/user/active/:id", () => {
+describe("PATCH Restore Soft Deleted User", () => {
   const mockToken = "dummy-token";
 
   beforeAll(() => {
@@ -643,7 +641,7 @@ describe("PATCH /api/v1/user/active/:id", () => {
     logActivity.mockReset();
   });
 
-  it("should restore a soft-deleted user successfully", async () => {
+  it("success restore user ", async () => {
     Users.findByPk.mockResolvedValue({
       id: 1,
       fullname: "Admin User",
@@ -689,7 +687,7 @@ describe("PATCH /api/v1/user/active/:id", () => {
     );
   });
 
-  it("should return 404 if user is not found", async () => {
+  it("user not found", async () => {
     Users.findByPk.mockResolvedValue({
       id: 1,
       fullname: "Admin User",
@@ -706,7 +704,7 @@ describe("PATCH /api/v1/user/active/:id", () => {
     expect(response.body).toHaveProperty("message", "Pengguna tidak ditemukan");
   });
 
-  it("should return 400 if user is not soft deleted", async () => {
+  it("failed to restore", async () => {
     Users.findByPk.mockResolvedValue({
       id: 1,
       fullname: "Admin User",
