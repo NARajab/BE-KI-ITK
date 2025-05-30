@@ -1,4 +1,4 @@
-jest.mock("../app/models", () => ({
+jest.mock("../../app/models", () => ({
   Patents: {
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -44,7 +44,7 @@ jest.mock("jsonwebtoken", () => ({
     role: "admin",
   })),
 }));
-jest.mock("../app/middlewares/authenticat", () => {
+jest.mock("../../app/middlewares/authenticat", () => {
   return (req, res, next) => {
     req.user = {
       id: 1,
@@ -55,8 +55,8 @@ jest.mock("../app/middlewares/authenticat", () => {
   };
 });
 
-jest.mock("../app/helpers/activityLogs", () => jest.fn());
-jest.mock("../emails/services/sendMail", () => jest.fn());
+jest.mock("../../app/helpers/activityLogs", () => jest.fn());
+jest.mock("../../emails/services/sendMail", () => jest.fn());
 jest.mock("fs", () => {
   const fsActual = jest.requireActual("fs");
   return {
@@ -69,7 +69,7 @@ jest.mock("fs", () => {
 });
 
 const request = require("supertest");
-const app = require("../app/index");
+const app = require("../../app/index");
 const {
   UserSubmissions,
   Users,
@@ -78,11 +78,11 @@ const {
   Patents,
   PersonalDatas,
   PatentTypes,
-} = require("../app/models");
+} = require("../../app/models");
 const fs = require("fs");
 const { Op } = require("sequelize");
-const logActivity = require("../app/helpers/activityLogs");
-const sendEmail = require("../emails/services/sendMail");
+const logActivity = require("../../app/helpers/activityLogs");
+const sendEmail = require("../../emails/services/sendMail");
 
 describe("POST Create Patent Type", () => {
   it("should create a new patent type successfully", async () => {
@@ -111,8 +111,6 @@ describe("POST Create Patent Type", () => {
   });
 
   it("should return 500 if an error occurs", async () => {
-    const { PatentTypes } = require("../app/models");
-
     PatentTypes.create = jest
       .fn()
       .mockRejectedValue(new Error("Database error"));

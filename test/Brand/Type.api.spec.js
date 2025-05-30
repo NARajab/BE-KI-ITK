@@ -1,4 +1,4 @@
-jest.mock("../app/models", () => ({
+jest.mock("../../app/models", () => ({
   Brands: {
     findByPk: jest.fn(),
     create: jest.fn(),
@@ -50,7 +50,7 @@ jest.mock("jsonwebtoken", () => ({
     role: "admin",
   })),
 }));
-jest.mock("../app/middlewares/authenticat", () => {
+jest.mock("../../app/middlewares/authenticat", () => {
   return (req, res, next) => {
     req.user = {
       id: 1,
@@ -61,9 +61,9 @@ jest.mock("../app/middlewares/authenticat", () => {
   };
 });
 
-jest.mock("../app/helpers/activityLogs", () => jest.fn());
-jest.mock("../emails/services/sendMail", () => jest.fn());
-jest.mock("../emails/templates/brandSubmissionMail", () => jest.fn());
+jest.mock("../../app/helpers/activityLogs", () => jest.fn());
+jest.mock("../../emails/services/sendMail", () => jest.fn());
+jest.mock("../../emails/templates/brandSubmissionMail", () => jest.fn());
 jest.mock("fs", () => {
   const fsActual = jest.requireActual("fs");
   return {
@@ -76,7 +76,7 @@ jest.mock("fs", () => {
 });
 
 const request = require("supertest");
-const app = require("../app/index");
+const app = require("../../app/index");
 const {
   UserSubmissions,
   Submissions,
@@ -86,13 +86,13 @@ const {
   PersonalDatas,
   AdditionalDatas,
   Users,
-} = require("../app/models");
+} = require("../../app/models");
 const fs = require("fs");
 const { Op } = require("sequelize");
-const ApiError = require("../utils/apiError");
-const logActivity = require("../app/helpers/activityLogs");
-const sendEmail = require("../emails/services/sendMail");
-const brandSubmissionMail = require("../emails/templates/brandSubmissionMail");
+const ApiError = require("../../utils/apiError");
+const logActivity = require("../../app/helpers/activityLogs");
+const sendEmail = require("../../emails/services/sendMail");
+const brandSubmissionMail = require("../../emails/templates/brandSubmissionMail");
 
 describe("POST Create Brand Type", () => {
   afterEach(() => {
@@ -465,7 +465,9 @@ describe("DELETE Brand Type", () => {
       json: jest.fn(),
     };
 
-    const { deleteBrandType } = require("../app/controllers/brandController");
+    const {
+      deleteBrandType,
+    } = require("../../app/controllers/brandController");
 
     await deleteBrandType(req, res, next);
 

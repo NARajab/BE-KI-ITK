@@ -166,366 +166,84 @@ const {
   deleteUserSubmission,
 } = require("../app/controllers/userSubmissionController");
 
-describe("PATCH /api/v1/user-submission/submission-schema/:id", () => {
-  const mockId = 1;
-
-  const mockSubmission = {
-    id: 10,
-    periodId: 1,
-    groupId: 1,
-    submissionScheme: "Mandiri",
-    copyrightId: 1,
-    patentId: null,
-    brandId: null,
-    industrialDesignId: null,
-    save: jest.fn(),
-  };
-
-  const mockProgress = {
-    id: 123,
-  };
-
+describe("PATCH /api/v1/user-submission/submission-progress/:id", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it("should update to 'Pendanaan' scheme and reduce quota", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: mockId,
-      submissionId: mockSubmission.id,
-    });
-    Submissions.findOne.mockResolvedValue(mockSubmission);
-    Progresses.findOne.mockResolvedValue(mockProgress);
-    SubmissionTerms.bulkCreate.mockResolvedValue(true);
-    Quotas.findOne.mockResolvedValue({ id: 99, remainingQuota: 3 });
-    Quotas.update.mockResolvedValue(true);
-    Progresses.update.mockResolvedValue(true);
-    logActivity.mockResolvedValue(true);
+  it("should update submission progress successfully", async () => {
+    const mockSubmission = {
+      id: 1,
+      userId: 2,
+      submissionId: 3,
+    };
+
+    const mockProgress = { id: 10 };
+    const mockUser = { email: "test@example.com", fullname: "John Doe", id: 2 };
+
+    UserSubmissions.findOne.mockResolvedValue(mockSubmission);
+    Progresses.create.mockResolvedValue(mockProgress);
+    UserSubmissions.update.mockResolvedValue([1]);
+    Payments.update.mockResolvedValue([1]);
+    Progresses.update.mockResolvedValue([1]);
+    RevisionFiles.create.mockResolvedValue({});
+    Users.findOne.mockResolvedValue(mockUser);
+    sendEmail.mockResolvedValue();
+    sendNotification.mockResolvedValue();
+    logActivity.mockResolvedValue();
 
     const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({
-        periodId: 2,
-        groupId: 3,
-        submissionScheme: "Pendanaan",
-        termsConditionId: [1, 2, 3],
-      })
-      .set("Authorization", "Bearer mock-token");
+      .patch("/api/v1/user-submission/submission-progress/1")
+      .field("reviewStatus", "Revisi")
+      .field("comments", "Perlu perbaikan")
+      .field("billingCode", "BILL-123")
+      .field("fileNames", JSON.stringify(["file1.pdf"]))
+      .attach("files", Buffer.from("dummy file"), "file1.pdf")
+      .attach("certificateFile", Buffer.from("certificate"), "cert.pdf");
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe("SubmissionScheme berhasil diupdate");
+    expect(res.body).toHaveProperty("status", "success");
+    expect(res.body).toHaveProperty(
+      "message",
+      "SubmissionProgress berhasil diupdate"
+    );
     expect(UserSubmissions.findOne).toHaveBeenCalledWith({
       where: { id: "1" },
     });
-    expect(SubmissionTerms.bulkCreate).toHaveBeenCalled();
-    expect(Quotas.update).toHaveBeenCalledWith(
-      { remainingQuota: 2 },
-      { where: { id: 99 } }
+    expect(Progresses.create).toHaveBeenCalled();
+    expect(UserSubmissions.update).toHaveBeenCalledWith(
+      { progressId: mockProgress.id },
+      { where: { id: "1" } }
     );
-    expect(Progresses.update).toHaveBeenCalledWith(
-      { isStatus: true },
-      { where: { id: mockProgress.id } }
-    );
-  });
-
-  it("should update to 'Mandiri' scheme and create payment if not exists", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: mockId,
-      submissionId: mockSubmission.id,
-    });
-    Submissions.findOne.mockResolvedValue(mockSubmission);
-    Progresses.findOne.mockResolvedValue(mockProgress);
-    Payments.findOne.mockResolvedValue(null);
-    Payments.create.mockResolvedValue(true);
-    SubmissionTerms.destroy.mockResolvedValue(true);
-    Progresses.update.mockResolvedValue(true);
-    logActivity.mockResolvedValue(true);
-
-    const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({
-        periodId: 2,
-        groupId: 3,
-        submissionScheme: "Mandiri",
-      })
-      .set("Authorization", "Bearer mock-token");
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body.message).toBe("SubmissionScheme berhasil diupdate");
-    expect(Payments.create).toHaveBeenCalledWith({
-      userId: 1,
-      submissionId: mockSubmission.id,
-      paymentStatus: false,
-    });
+    expect(sendNotification).toHaveBeenCalled();
+    expect(sendEmail).toHaveBeenCalled();
+    expect(logActivity).toHaveBeenCalled();
   });
 
   it("should return 404 if UserSubmission not found", async () => {
     UserSubmissions.findOne.mockResolvedValue(null);
 
     const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({ periodId: 2, groupId: 3, submissionScheme: "Mandiri" })
-      .set("Authorization", "Bearer mock-token");
+      .patch("/api/v1/user-submission/submission-progress/999")
+      .field("reviewStatus", "Approved");
 
     expect(res.statusCode).toBe(404);
-    expect(res.body.message).toBe("UserSubmission tidak ditemukan");
-  });
-
-  it("should return 404 if Submission not found", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: mockId,
-      submissionId: 999,
-    });
-    Submissions.findOne.mockResolvedValue(null);
-
-    const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({ periodId: 2, groupId: 3, submissionScheme: "Mandiri" })
-      .set("Authorization", "Bearer mock-token");
-
-    expect(res.statusCode).toBe(404);
-    expect(res.body.message).toBe("Submission tidak ditemukan");
-  });
-
-  it("should return 404 if Progress not found", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: mockId,
-      submissionId: mockSubmission.id,
-    });
-    Submissions.findOne.mockResolvedValue(mockSubmission);
-    Progresses.findOne.mockResolvedValue(null);
-
-    const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({ periodId: 2, groupId: 3, submissionScheme: "Mandiri" })
-      .set("Authorization", "Bearer mock-token");
-
-    expect(res.statusCode).toBe(404);
-    expect(res.body.message).toBe("Progress tidak ditemukan");
-  });
-
-  it("should return 500 if quota not available", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: mockId,
-      submissionId: mockSubmission.id,
-    });
-    Submissions.findOne.mockResolvedValue(mockSubmission);
-    Progresses.findOne.mockResolvedValue(mockProgress);
-    SubmissionTerms.bulkCreate.mockResolvedValue(true);
-    Quotas.findOne.mockResolvedValue({ id: 88, remainingQuota: 0 }); // no quota
-
-    const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({
-        periodId: 2,
-        groupId: 3,
-        submissionScheme: "Pendanaan",
-        termsConditionId: [1],
-      })
-      .set("Authorization", "Bearer mock-token");
-
-    expect(res.statusCode).toBe(500);
-    expect(res.body.message).toBe("Kuota tidak tersedia atau sudah habis.");
-  });
-
-  it("should return 500 if unexpected error occurs", async () => {
-    UserSubmissions.findOne.mockRejectedValue(new Error("Unexpected DB Error"));
-
-    const res = await request(app)
-      .patch(`/api/v1/user-submission/submission-schema/${mockId}`)
-      .send({
-        periodId: 2,
-        groupId: 3,
-        submissionScheme: "Mandiri",
-      })
-      .set("Authorization", "Bearer mock-token");
-
-    expect(res.statusCode).toBe(500);
-    expect(res.body.message).toBe("Unexpected DB Error");
-  });
-});
-
-describe("PATCH /api/v1/user-submission/submission-schema/:id", () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it("should update submission scheme successfully when valid data and quota available", async () => {
-    // Mocking findOne userSubmission
-    UserSubmissions.findOne.mockResolvedValue({
-      id: "subm-1",
-      submissionId: 10,
-    });
-
-    // Mocking findOne submission with copyrightId to test quota
-    Submissions.findOne.mockResolvedValue({
-      id: 10,
-      copyrightId: 1,
-      patentId: null,
-      brandId: null,
-      industrialDesignId: null,
-      periodId: null,
-      groupId: null,
-      submissionScheme: null,
-      save: jest.fn().mockResolvedValue(true),
-    });
-
-    // Mock progress findOne
-    Progresses.findOne.mockResolvedValue({
-      id: 100,
-    });
-
-    // Mock quota findOne
-    Quotas.findOne.mockResolvedValue({
-      id: 50,
-      remainingQuota: 5,
-      groupId: 2,
-      title: "Hak Cipta",
-    });
-
-    // Mock quota update
-    Quotas.update.mockResolvedValue([1]);
-
-    // Mock SubmissionTerms bulkCreate (when Pendanaan with termsConditionId)
-    SubmissionTerms.bulkCreate.mockResolvedValue(true);
-
-    // Mock Payments findOne returns null (Mandiri case not tested here)
-    Payments.findOne.mockResolvedValue(null);
-
-    // Mock Progresses.update
-    Progresses.update.mockResolvedValue([1]);
-
-    // Mock logActivity
-    logActivity.mockResolvedValue();
-
-    const response = await request(app)
-      .patch("/api/v1/user-submission/submission-schema/subm-1")
-      .set("Authorization", "Bearer mock-token")
-      .send({
-        periodId: 1,
-        groupId: 2,
-        submissionScheme: "Pendanaan",
-        termsConditionId: [1, 2],
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("status", "success");
-    expect(response.body).toHaveProperty(
+    expect(res.body).toHaveProperty("status", "error");
+    expect(res.body).toHaveProperty(
       "message",
-      "SubmissionScheme berhasil diupdate"
-    );
-    expect(Submissions.findOne).toHaveBeenCalledWith({ where: { id: 10 } });
-    expect(SubmissionTerms.bulkCreate).toHaveBeenCalledWith([
-      { submissionId: 10, termsConditionId: 1 },
-      { submissionId: 10, termsConditionId: 2 },
-    ]);
-    expect(Quotas.update).toHaveBeenCalledWith(
-      { remainingQuota: 4 },
-      { where: { id: 50 } }
-    );
-    expect(Progresses.update).toHaveBeenCalledWith(
-      { isStatus: true },
-      { where: { id: 100 } }
+      "UserSubmission tidak ditemukan"
     );
   });
 
-  it("should return 404 if UserSubmission not found", async () => {
-    UserSubmissions.findOne.mockResolvedValue(null);
+  it("should handle server error", async () => {
+    UserSubmissions.findOne.mockRejectedValue(new Error("DB error"));
 
-    const response = await request(app)
-      .patch("/api/v1/user-submission/submission-schema/notfound")
-      .set("Authorization", "Bearer mock-token")
-      .send({
-        periodId: 1,
-        groupId: 2,
-        submissionScheme: "Pendanaan",
-        termsConditionId: [1],
-      });
+    const res = await request(app)
+      .patch("/api/v1/user-submission/submission-progress/1")
+      .field("reviewStatus", "Approved");
 
-    expect(response.status).toBe(404);
-    expect(response.body.message).toMatch(/UserSubmission tidak ditemukan/);
-  });
-
-  it("should handle quota not available error", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: "subm-1",
-      submissionId: 10,
-    });
-
-    Submissions.findOne.mockResolvedValue({
-      id: 10,
-      copyrightId: 1,
-      patentId: null,
-      brandId: null,
-      industrialDesignId: null,
-      save: jest.fn(),
-    });
-
-    Progresses.findOne.mockResolvedValue({ id: 100 });
-
-    Quotas.findOne.mockResolvedValue({
-      id: 50,
-      remainingQuota: 0, // quota habis
-      groupId: 2,
-      title: "Hak Cipta",
-    });
-
-    const response = await request(app)
-      .patch("/api/v1/user-submission/submission-schema/subm-1")
-      .set("Authorization", "Bearer mock-token")
-      .send({
-        periodId: 1,
-        groupId: 2,
-        submissionScheme: "Pendanaan",
-        termsConditionId: [1],
-      });
-
-    expect(response.status).toBe(500);
-    expect(response.body.message).toMatch(
-      /Kuota tidak tersedia atau sudah habis/
-    );
-  });
-
-  it("should handle Mandiri submission scheme: destroy terms and create payment if not exists", async () => {
-    UserSubmissions.findOne.mockResolvedValue({
-      id: "subm-1",
-      submissionId: 10,
-    });
-    Submissions.findOne.mockResolvedValue({
-      id: 10,
-      copyrightId: null,
-      patentId: null,
-      brandId: null,
-      industrialDesignId: null,
-      save: jest.fn(),
-    });
-    Progresses.findOne.mockResolvedValue({ id: 100 });
-
-    SubmissionTerms.destroy.mockResolvedValue(1);
-    Payments.findOne.mockResolvedValue(null);
-    Payments.create.mockResolvedValue(true);
-    Progresses.update.mockResolvedValue([1]);
-    logActivity.mockResolvedValue();
-
-    const response = await request(app)
-      .patch("/api/v1/user-submission/submission-schema/subm-1")
-      .set("Authorization", "Bearer mock-token")
-      .send({
-        periodId: 1,
-        groupId: 2,
-        submissionScheme: "Mandiri",
-        termsConditionId: [],
-      });
-
-    expect(response.status).toBe(200);
-    expect(SubmissionTerms.destroy).toHaveBeenCalledWith({
-      where: { submissionId: 10 },
-    });
-    expect(Payments.create).toHaveBeenCalledWith({
-      userId: 1,
-      submissionId: 10,
-      paymentStatus: false,
-    });
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toHaveProperty("message", "DB error");
   });
 });
 

@@ -51,7 +51,7 @@ jest.mock("jsonwebtoken", () => ({
     role: "admin",
   })),
 }));
-jest.mock("../app/middlewares/authenticat", () => {
+jest.mock("../../app/middlewares/authenticat", () => {
   return (req, res, next) => {
     req.user = {
       id: 1,
@@ -378,10 +378,9 @@ describe("GET Sub Type Design by ID", () => {
       json: jest.fn(),
     };
 
-    // Import handler directly
     const {
       getSubTypeById,
-    } = require("../app/controllers/industrialDesignController");
+    } = require("../../app/controllers/industrialDesignController");
 
     await getSubTypeById(req, res, next);
 
@@ -458,7 +457,7 @@ describe("PATCH Update Sub Type Design", () => {
 
     const {
       updateSubTypeDesignIndustri,
-    } = require("..././app/controllers/industrialDesignController");
+    } = require("../../app/controllers/industrialDesignController");
 
     await updateSubTypeDesignIndustri(req, res, next);
 

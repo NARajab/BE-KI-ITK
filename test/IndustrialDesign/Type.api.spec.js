@@ -51,7 +51,7 @@ jest.mock("jsonwebtoken", () => ({
     role: "admin",
   })),
 }));
-jest.mock("../app/middlewares/authenticat", () => {
+jest.mock("../../app/middlewares/authenticat", () => {
   return (req, res, next) => {
     req.user = {
       id: 1,
@@ -400,7 +400,7 @@ describe("PATCH Update Type Design", () => {
 
     const {
       updateTypeDesignIndustri,
-    } = require("../app/controllers/industrialDesignController");
+    } = require("../../app/controllers/industrialDesignController");
 
     await updateTypeDesignIndustri(req, res, next);
 
