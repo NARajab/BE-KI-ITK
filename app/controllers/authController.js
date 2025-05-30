@@ -8,21 +8,10 @@ const sendEmail = require("../../emails/services/sendMail");
 const verificationMail = require("../../emails/templates/verificationMail");
 const resetPasswordMail = require("../../emails/templates/resetPasswordMail");
 const ApiError = require("../../utils/apiError");
-const {
-  containsProfanity,
-  censorText,
-} = require("../../utils/profanityFilter");
+const { containsProfanity, censorText } = require("../../utils/profanityFilter");
 
 const register = async (req, res, next) => {
-  const {
-    email,
-    fullname,
-    password,
-    phoneNumber,
-    faculty,
-    studyProgram,
-    institution,
-  } = req.body;
+  const { email, fullname, password, phoneNumber, faculty, studyProgram, institution } = req.body;
 
   try {
     for (let key in req.body) {
@@ -61,7 +50,7 @@ const register = async (req, res, next) => {
       role: "user",
     });
 
-    const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
+    const verificationLink = `${process.env.BASE_URL}/aktivasi-email/${emailToken}`;
 
     await sendEmail({
       to: email,
@@ -86,14 +75,10 @@ const login = async (req, res, next) => {
   try {
     const user = await Users.findOne({ where: { email } });
 
-    const isPasswordValid = user
-      ? await bcrypt.compare(password, user.password)
-      : false;
+    const isPasswordValid = user ? await bcrypt.compare(password, user.password) : false;
 
     if (!user || !isPasswordValid) {
-      return next(
-        new ApiError("Email dan password yang anda masukkan salah", 401)
-      );
+      return next(new ApiError("Email dan password yang anda masukkan salah", 401));
     }
 
     if (!user.isVerified) {
@@ -101,7 +86,7 @@ const login = async (req, res, next) => {
         expiresIn: "1h",
       });
 
-      const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
+      const verificationLink = `${process.env.BASE_URL}/aktivasi-email/${emailToken}`;
 
       await sendEmail({
         to: email,
@@ -109,12 +94,7 @@ const login = async (req, res, next) => {
         html: verificationMail({ fullname: user.fullname, verificationLink }),
       });
 
-      return next(
-        new ApiError(
-          "Email belum diverifikasi. Link verifikasi telah dikirim ulang ke email Anda.",
-          401
-        )
-      );
+      return next(new ApiError("Email belum diverifikasi. Link verifikasi telah dikirim ulang ke email Anda.", 401));
     }
     const payload = {
       id: user.id,
@@ -152,14 +132,11 @@ const loginGoogle = async (req, res, next) => {
       return next(new ApiError("Access Token is required", 400));
     }
 
-    const response = await axios.get(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
     const userInfo = response.data;
     console.log(userInfo);
@@ -212,9 +189,7 @@ const verifyEmail = async (req, res, next) => {
   const { emailToken } = req.params;
 
   if (!emailToken) {
-    return res
-      .status(400)
-      .json({ message: "Token verifikasi tidak ditemukan." });
+    return res.status(400).json({ message: "Token verifikasi tidak ditemukan." });
   }
 
   try {
@@ -229,9 +204,7 @@ const verifyEmail = async (req, res, next) => {
     }
 
     if (user.isVerified) {
-      return res
-        .status(400)
-        .json({ message: "Email sudah diverifikasi sebelumnya." });
+      return res.status(400).json({ message: "Email sudah diverifikasi sebelumnya." });
     }
 
     user.isVerified = true;
@@ -242,9 +215,7 @@ const verifyEmail = async (req, res, next) => {
     });
   } catch (err) {
     console.error(err);
-    return res
-      .status(400)
-      .json({ message: "Token tidak valid atau telah kedaluwarsa." });
+    return res.status(400).json({ message: "Token tidak valid atau telah kedaluwarsa." });
   }
 };
 
@@ -296,9 +267,7 @@ const resetPassword = async (req, res, next) => {
   }
 
   if (newPassword !== confirmPassword) {
-    return res
-      .status(400)
-      .json({ message: "Password baru dan konfirmasi password tidak cocok." });
+    return res.status(400).json({ message: "Password baru dan konfirmasi password tidak cocok." });
   }
 
   try {
