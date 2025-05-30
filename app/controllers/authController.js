@@ -1,6 +1,6 @@
 const axios = require("axios");
 const logActivity = require("../helpers/activityLogs");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Users } = require("../models");
 

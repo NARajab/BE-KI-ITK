@@ -8,15 +8,10 @@ const {
   DB_PORT = "5432",
 } = process.env;
 
-const sequelize = new Sequelize(
-  `${DB_NAME}_development`,
-  DB_USERNAME,
-  DB_PASSWORD,
-  {
-    host: DB_HOST,
-    dialect: "postgres",
-  }
-);
+const sequelize = new Sequelize(`${DB_NAME}`, DB_USERNAME, DB_PASSWORD, {
+  host: DB_HOST,
+  dialect: "postgres",
+});
 
 const databaseValidation = async () => {
   try {
@@ -32,7 +27,7 @@ module.exports = {
   development: {
     username: DB_USERNAME,
     password: DB_PASSWORD,
-    database: `${DB_NAME}_development`,
+    database: `${DB_NAME}`,
     host: DB_HOST,
     port: DB_PORT,
     dialect: "postgres",

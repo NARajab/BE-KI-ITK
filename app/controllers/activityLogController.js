@@ -7,7 +7,7 @@ const getActivityLogs = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
-    let fullname = req.query.fullname || "";
+    let search = req.query.fullname || "";
 
     const offset = (page - 1) * limit;
 
@@ -20,11 +20,20 @@ const getActivityLogs = async (req, res, next) => {
           model: Users,
           as: "user",
           attributes: ["fullname", "email", "role"],
-          where: fullname
+          where: search
             ? {
-                fullname: {
-                  [Op.iLike]: `%${fullname}%`,
-                },
+                [Op.or]: [
+                  {
+                    fullname: {
+                      [Op.iLike]: `%${search}%`,
+                    },
+                  },
+                  {
+                    email: {
+                      [Op.iLike]: `%${search}%`,
+                    },
+                  },
+                ],
               }
             : undefined,
         },
