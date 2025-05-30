@@ -1321,13 +1321,25 @@ const getAdminDashboard = async (req, res, next) => {
       ]);
 
     const [totalPendanaan, totalMandiri] = await Promise.all([
-      Submissions.count({ where: { submissionScheme: "pendanaan" } }),
-      Submissions.count({ where: { submissionScheme: "mandiri" } }),
+      Submissions.count({ where: { submissionScheme: "Pendanaan" } }),
+      Submissions.count({ where: { submissionScheme: "Mandiri" } }),
     ]);
 
     const [totalFaq, totalDocuments] = await Promise.all([
-      Faqs.count(),
-      Documents.count(),
+      Faqs.count({
+        where: {
+          question: {
+            [Op.ne]: null,
+          },
+        },
+      }),
+      Documents.count({
+        where: {
+          title: {
+            [Op.ne]: null,
+          },
+        },
+      }),
     ]);
 
     const recentSubmissions = await UserSubmissions.findAll({

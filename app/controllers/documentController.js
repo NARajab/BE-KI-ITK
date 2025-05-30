@@ -277,18 +277,27 @@ const getDocByType = async (req, res, next) => {
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim() || "";
 
     const offset = (page - 1) * limit;
+
+    const whereCondition = {
+      type: req.params.type,
+      title: {
+        [Op.ne]: null,
+      },
+    };
+
+    if (search) {
+      whereCondition.title = {
+        [Op.iLike]: `%${search}%`,
+      };
+    }
 
     const { count, rows: docs } = await Documents.findAndCountAll({
       limit,
       offset,
-      where: {
-        type: req.params.type,
-        title: {
-          [Op.ne]: null,
-        },
-      },
+      where: whereCondition,
     });
     res.status(200).json({
       status: "success",
