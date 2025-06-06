@@ -1297,13 +1297,15 @@ const getSubmissionsByUserId = async (req, res, next) => {
       return bUpdatedAt - aUpdatedAt;
     });
 
+    const paginated = userSubmissionsSorted.slice(offset, offset + limit);
+
     res.status(200).json({
       status: "success",
       currentPage: page,
-      totalPages: Math.ceil(count / limit),
-      totalUserSubmissions: count,
+      totalPages: Math.ceil(filteredRows.length / limit),
+      totalUserSubmissions: filteredRows.length,
       limit: limit,
-      userSubmissionsSorted,
+      userSubmissionsSorted: paginated,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
