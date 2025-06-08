@@ -58,6 +58,10 @@ router.get("/by-user", authenticat, UserSubmission.getSubmissionsByUserId);
 
 router.get("/admin-dashboard", UserSubmission.getAdminDashboard);
 
+router.get("/user-dashboard", authenticat, UserSubmission.getUserDashboard);
+
+router.get("/count", UserSubmission.getAllSubmissionsCount);
+
 router.patch("/active/:id", authenticat, UserSubmission.restoreUserSubmission);
 
 router.delete("/:id", authenticat, UserSubmission.deleteUserSubmission);

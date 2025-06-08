@@ -1297,13 +1297,15 @@ const getSubmissionsByUserId = async (req, res, next) => {
       return bUpdatedAt - aUpdatedAt;
     });
 
+    const paginated = userSubmissionsSorted.slice(offset, offset + limit);
+
     res.status(200).json({
       status: "success",
       currentPage: page,
-      totalPages: Math.ceil(count / limit),
-      totalUserSubmissions: count,
+      totalPages: Math.ceil(filteredRows.length / limit),
+      totalUserSubmissions: filteredRows.length,
       limit: limit,
-      userSubmissionsSorted,
+      userSubmissionsSorted: paginated,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -1321,13 +1323,25 @@ const getAdminDashboard = async (req, res, next) => {
       ]);
 
     const [totalPendanaan, totalMandiri] = await Promise.all([
-      Submissions.count({ where: { submissionScheme: "pendanaan" } }),
-      Submissions.count({ where: { submissionScheme: "mandiri" } }),
+      Submissions.count({ where: { submissionScheme: "Pendanaan" } }),
+      Submissions.count({ where: { submissionScheme: "Mandiri" } }),
     ]);
 
     const [totalFaq, totalDocuments] = await Promise.all([
-      Faqs.count(),
-      Documents.count(),
+      Faqs.count({
+        where: {
+          question: {
+            [Op.ne]: null,
+          },
+        },
+      }),
+      Documents.count({
+        where: {
+          title: {
+            [Op.ne]: null,
+          },
+        },
+      }),
     ]);
 
     const recentSubmissions = await UserSubmissions.findAll({
@@ -1369,13 +1383,12 @@ const getAdminDashboard = async (req, res, next) => {
 
     const currentYear = new Date().getFullYear();
 
-    // Grafik Pengajuan Berdasarkan Gelombang (4 gelombang di tahun berjalan)
     const getCountByGelombang = async () => {
       const gelombangRanges = [
-        [0, 3], // Gelombang 1: Jan-Mar
-        [3, 6], // Gelombang 2: Apr-Jun
-        [6, 9], // Gelombang 3: Jul-Sep
-        [9, 12], // Gelombang 4: Okt-Des
+        [0, 3],
+        [3, 6],
+        [6, 9],
+        [9, 12],
       ];
 
       const gelombangCounts = await Promise.all(
@@ -1383,7 +1396,6 @@ const getAdminDashboard = async (req, res, next) => {
           const start = new Date(currentYear, startMonth, 1);
           const end = new Date(currentYear, endMonth, 1);
 
-          // Totalkan semua jenis pengajuan untuk gelombang tersebut
           const [hc, pt, br, di] = await Promise.all([
             Copyrights.count({
               where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
@@ -1408,27 +1420,7 @@ const getAdminDashboard = async (req, res, next) => {
 
     const totalPerGelombang = await getCountByGelombang();
 
-    // Grafik Pengajuan Berdasarkan Tahun (5 tahun terakhir)
     const startYear = currentYear - 4;
-
-    const getYearlyCount = async (Model) => {
-      const counts = await Promise.all(
-        Array.from({ length: 5 }, (_, i) => {
-          const year = startYear + i;
-          const start = new Date(year, 0, 1);
-          const end = new Date(year + 1, 0, 1);
-          return Model.count({
-            where: {
-              createdAt: {
-                [Op.gte]: start,
-                [Op.lt]: end,
-              },
-            },
-          });
-        })
-      );
-      return counts;
-    };
 
     const getTotalYearlyCount = async () => {
       const counts = await Promise.all(
@@ -1493,6 +1485,390 @@ const getAdminDashboard = async (req, res, next) => {
   }
 };
 
+const getUserDashboard = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const [totalHakCipta, totalPaten, totalMerek, totalDesainIndustri] =
+      await Promise.all([
+        Copyrights.count({
+          include: [
+            {
+              model: Submissions,
+              as: "submission",
+              include: [
+                {
+                  model: UserSubmissions,
+                  as: "userSubmissions",
+                  where: { userId },
+                  required: true,
+                },
+              ],
+              required: true,
+            },
+          ],
+        }),
+        Patents.count({
+          include: [
+            {
+              model: Submissions,
+              as: "submission",
+              include: [
+                {
+                  model: UserSubmissions,
+                  as: "userSubmissions",
+                  where: { userId },
+                  required: true,
+                },
+              ],
+              required: true,
+            },
+          ],
+        }),
+        Brands.count({
+          include: [
+            {
+              model: Submissions,
+              as: "submission",
+              include: [
+                {
+                  model: UserSubmissions,
+                  as: "userSubmissions",
+                  where: { userId },
+                  required: true,
+                },
+              ],
+              required: true,
+            },
+          ],
+        }),
+        IndustrialDesigns.count({
+          include: [
+            {
+              model: Submissions,
+              as: "submission",
+              include: [
+                {
+                  model: UserSubmissions,
+                  as: "userSubmissions",
+                  where: { userId },
+                  required: true,
+                },
+              ],
+              required: true,
+            },
+          ],
+        }),
+      ]);
+
+    const [totalPendanaan, totalMandiri] = await Promise.all([
+      Submissions.count({
+        where: { submissionScheme: "Pendanaan" },
+        include: [
+          {
+            model: UserSubmissions,
+            as: "userSubmissions",
+            where: { userId },
+            required: true,
+          },
+        ],
+      }),
+      Submissions.count({
+        where: { submissionScheme: "Mandiri" },
+        include: [
+          {
+            model: UserSubmissions,
+            as: "userSubmissions",
+            where: { userId },
+            required: true,
+          },
+        ],
+      }),
+    ]);
+
+    const recentSubmissions = await UserSubmissions.findAll({
+      where: { userId },
+      limit: 5,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Users,
+          as: "user",
+          attributes: ["fullname"],
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          include: [
+            {
+              model: SubmissionTypes,
+              as: "submissionType",
+              attributes: ["title"],
+            },
+          ],
+        },
+        {
+          model: Progresses,
+          as: "progress",
+          attributes: ["status"],
+        },
+      ],
+    });
+
+    const formattedRecent = recentSubmissions.map((item) => ({
+      id: item.id,
+      namaPengguna: item.user?.fullname || "-",
+      jenisPengajuan: item.submission?.submissionType?.title || "-",
+      pendanaan: item.submission?.submissionScheme || "-",
+      progres: item.progress?.status || "-",
+      waktuPengajuan: moment(item.createdAt).format("DD MMMM YYYY"),
+    }));
+
+    const currentYear = new Date().getFullYear();
+
+    const getCountByGelombang = async () => {
+      const gelombangRanges = [
+        [0, 3],
+        [3, 6],
+        [6, 9],
+        [9, 12],
+      ];
+
+      const gelombangCounts = await Promise.all(
+        gelombangRanges.map(async ([startMonth, endMonth]) => {
+          const start = new Date(currentYear, startMonth, 1);
+          const end = new Date(currentYear, endMonth, 1);
+
+          const [hc, pt, br, di] = await Promise.all([
+            Copyrights.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            Patents.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            Brands.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            IndustrialDesigns.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+          ]);
+
+          return hc + pt + br + di;
+        })
+      );
+
+      return gelombangCounts;
+    };
+
+    const totalPerGelombang = await getCountByGelombang();
+
+    const startYear = currentYear - 4;
+
+    const getTotalYearlyCount = async () => {
+      const counts = await Promise.all(
+        Array.from({ length: 5 }, async (_, i) => {
+          const year = startYear + i;
+          const start = new Date(year, 0, 1);
+          const end = new Date(year + 1, 0, 1);
+
+          const [hc, pt, br, di] = await Promise.all([
+            Copyrights.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            Patents.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            Brands.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+            IndustrialDesigns.count({
+              where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+              include: [
+                {
+                  model: Submissions,
+                  as: "submission",
+                  include: [
+                    {
+                      model: UserSubmissions,
+                      as: "userSubmissions",
+                      where: { userId },
+                      required: true,
+                    },
+                  ],
+                  required: true,
+                },
+              ],
+            }),
+          ]);
+
+          return hc + pt + br + di;
+        })
+      );
+      return counts;
+    };
+
+    const totalPerTahun = await getTotalYearlyCount();
+
+    res.status(200).json({
+      totalPengajuan: {
+        hakCipta: totalHakCipta,
+        paten: totalPaten,
+        merek: totalMerek,
+        desainIndustri: totalDesainIndustri,
+      },
+      totalPendanaan: {
+        pendanaan: totalPendanaan,
+        mandiri: totalMandiri,
+      },
+      pengajuanTerakhir: formattedRecent,
+      berdasarkanGelombang: {
+        labels: ["Gelombang 1", "Gelombang 2", "Gelombang 3", "Gelombang 4"],
+        data: totalPerGelombang,
+      },
+      berdasarkanTahun: {
+        labels: Array.from(
+          { length: 5 },
+          (_, i) => `${currentYear - i}`
+        ).reverse(),
+        data: totalPerTahun,
+      },
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
+  }
+};
+
+const getAllSubmissionsCount = async (req, res, next) => {
+  try {
+    const [totalHakCipta, totalPaten, totalMerek, totalDesainIndustri] =
+      await Promise.all([
+        Copyrights.count(),
+        Patents.count(),
+        Brands.count(),
+        IndustrialDesigns.count(),
+      ]);
+
+    res.status(200).json({
+      status: "Success",
+      message: "Total keseluruhan pengajuan berhasil dihitung",
+      data: {
+        hakCipta: totalHakCipta,
+        paten: totalPaten,
+        merek: totalMerek,
+        desainIndustri: totalDesainIndustri,
+      },
+    });
+  } catch (error) {
+    next(new ApiError(error.message, 500));
+  }
+};
+
 const restoreUserSubmission = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
@@ -1525,25 +1901,20 @@ const restoreUserSubmission = async (req, res, next) => {
 
     const { copyrightId, patentId, brandId, industrialDesignId } = submission;
 
-    // Restore user submission
     await userSubmission.restore({ transaction });
 
-    // Restore submission
     await Submissions.restore({ where: { id: submissionId }, transaction });
 
-    // Restore progresses
     await Progresses.restore({
       where: { userSubmissionId: id },
       transaction,
     });
 
-    // Restore personal datas
     await PersonalDatas.restore({
       where: { submissionId },
       transaction,
     });
 
-    // Restore revision files
     const progressIds = userSubmission.progress.map((p) => p.id);
     if (progressIds.length > 0) {
       await RevisionFiles.restore({
@@ -1552,13 +1923,11 @@ const restoreUserSubmission = async (req, res, next) => {
       });
     }
 
-    // Restore termsConditions relationship
     if (submission.termsConditions?.length > 0) {
       const termIds = submission.termsConditions.map((t) => t.id);
       await submission.setTermsConditions(termIds, { transaction });
     }
 
-    // Restore related hak kekayaan intelektual
     if (copyrightId) {
       await Copyrights.restore({ where: { id: copyrightId }, transaction });
     }
@@ -1705,6 +2074,8 @@ module.exports = {
   getSubmissionsByReviewerId,
   getSubmissionsByUserId,
   getAdminDashboard,
+  getUserDashboard,
+  getAllSubmissionsCount,
   restoreUserSubmission,
   deleteUserSubmission,
 };

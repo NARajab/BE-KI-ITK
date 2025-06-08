@@ -1,5 +1,5 @@
 const { Users } = require("../models");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
 const { Op } = require("sequelize");
@@ -123,9 +123,39 @@ const getUserById = async (req, res, next) => {
 
 const getAllUserReviewer = async (req, res, next) => {
   try {
-    const users = await Users.findAll({ where: { role: "reviewer" } });
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+    const searchRaw = req.query.search?.trim() || "";
+    const search = searchRaw.trim();
+    const hasSearch = search.length > 0;
+
+    const offset = (page - 1) * limit;
+
+    const whereCondition = {
+      role: "reviewer", // wajib reviewer
+      ...(hasSearch && {
+        [Op.or]: [
+          { email: { [Op.iLike]: `%${search}%` } },
+          { fullname: { [Op.iLike]: `%${search}%` } },
+          { institution: { [Op.iLike]: `%${search}%` } },
+          { role: { [Op.iLike]: `%${search}%` } },
+        ],
+      }),
+    };
+
+    const { rows: users, count } = await Users.findAndCountAll({
+      where: whereCondition,
+      limit,
+      offset,
+      order: [["createdAt", "DESC"]],
+    });
+
     return res.status(200).json({
       status: "success",
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      totalUsers: count,
+      limit: limit,
       users,
     });
   } catch (err) {

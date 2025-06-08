@@ -2,8 +2,13 @@ const router = require("express").Router();
 
 const Document = require("../controllers/documentController");
 const authenticat = require("../middlewares/authenticat");
-const { uploadFields } = require("../middlewares/multer");
+const { uploadFields, createMulter } = require("../middlewares/multer");
+const validateFileSize = require("../middlewares/validateFileSize");
 const checkRole = require("../middlewares/checkRole");
+
+const upload = createMulter({
+  limits: { fileSize: 1000 * 1024 * 1024 },
+});
 
 router.post(
   "/",
@@ -16,10 +21,13 @@ router.post(
   "/by-type/:type",
   authenticat,
   checkRole(["superAdmin", "admin"]),
-  uploadFields([
+  upload.fields([
     { name: "document", maxCount: 1 },
     { name: "cover", maxCount: 1 },
   ]),
+  validateFileSize({
+    cover: 5 * 1024 * 1024,
+  }),
   Document.createDocByType
 );
 

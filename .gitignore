@@ -4,3 +4,6 @@ serviceAccountKey.json
 uploads/image/*
 uploads/documents/*
 coverage
+.dockerignore
+docker-compose.yml
+Dockerfile

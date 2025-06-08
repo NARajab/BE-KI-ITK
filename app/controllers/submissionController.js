@@ -51,9 +51,16 @@ const getSubmissionType = async (req, res, next) => {
 };
 const getAllSubmissions = async (req, res, next) => {
   try {
-    let page = parseInt(req.query.page) || 1;
+    const page = parseInt(req.query.page) || 1;
     const isExport = req.query.export === "true";
-    let limit = isExport ? undefined : parseInt(req.query.limit) || 10;
+
+    let limit;
+    if (!isExport && req.query.limit && !isNaN(parseInt(req.query.limit))) {
+      limit = parseInt(req.query.limit);
+    } else if (!isExport) {
+      limit = 10;
+    }
+
     const offset = isExport ? undefined : (page - 1) * limit;
 
     const {
@@ -67,13 +74,17 @@ const getAllSubmissions = async (req, res, next) => {
       endDate,
     } = req.query;
 
-    const submissionWhere = {};
-    const userSubmissionWhere = {};
+    const personalWhere = {};
+    if (namaPengguna) personalWhere.name = { [Op.iLike]: `%${namaPengguna}%` };
+    if (peran) personalWhere.isLeader = peran.toLowerCase() === "ketua";
+    if (instansi) personalWhere.institution = { [Op.iLike]: `%${instansi}%` };
 
+    const submissionWhere = {};
     if (skemaPengajuan && ["Pendanaan", "Mandiri"].includes(skemaPengajuan)) {
       submissionWhere.submissionScheme = skemaPengajuan;
     }
 
+    const userSubmissionWhere = {};
     if (progressPengajuan) {
       userSubmissionWhere.reviewStatus = {
         [Op.iLike]: `%${progressPengajuan}%`,
@@ -91,11 +102,11 @@ const getAllSubmissions = async (req, res, next) => {
       };
     }
 
-    const { count, rows: submission } = await UserSubmissions.findAndCountAll({
-      where: userSubmissionWhere,
+    const { count, rows: personalDatas } = await PersonalDatas.findAndCountAll({
+      where: personalWhere,
       limit,
       offset,
-      order: [["id", "ASC"]],
+      distinct: true,
       include: [
         {
           model: Submissions,
@@ -106,50 +117,34 @@ const getAllSubmissions = async (req, res, next) => {
               model: SubmissionTypes,
               as: "submissionType",
               where: jenisPengajuan
-                ? {
-                    title: { [Op.iLike]: `%${jenisPengajuan}%` },
-                  }
+                ? { title: { [Op.iLike]: `%${jenisPengajuan}%` } }
                 : undefined,
             },
             {
-              model: PersonalDatas,
-              as: "personalDatas",
-              required: false,
-              where: {
-                ...(namaPengguna && {
-                  name: { [Op.iLike]: `%${namaPengguna}%` },
-                }),
-                ...(peran && {
-                  isLeader: peran.toLowerCase() === "ketua",
-                }),
-                ...(instansi && {
-                  institution: { [Op.iLike]: `%${instansi}%` },
-                }),
-              },
+              model: UserSubmissions,
+              as: "userSubmissions",
+              where: userSubmissionWhere,
             },
           ],
         },
       ],
     });
 
-    let formatted = [];
+    const formatted = personalDatas.map((pd) => {
+      const submission = pd.submission;
+      const userSubmission = submission?.userSubmission;
 
-    if (!isExport) {
-      formatted = submission.flatMap((userSubmission) => {
-        const { submission } = userSubmission;
-
-        return submission.personalDatas.map((personalData) => ({
-          id: userSubmission.id,
-          submissionId: submission.id,
-          namaPengguna: personalData.name || "-",
-          jenisPengajuan: submission.submissionType?.title || "-",
-          skemaPengajuan: submission.submissionScheme || "-",
-          progressPengajuan: userSubmission.reviewStatus || "-",
-          peran: personalData.isLeader ? "Ketua" : "Anggota",
-          waktuPengajuan: userSubmission.createdAt,
-        }));
-      });
-    }
+      return {
+        id: userSubmission?.id || "-",
+        submissionId: submission?.id || "-",
+        namaPengguna: pd.name || "-",
+        jenisPengajuan: submission?.submissionType?.title || "-",
+        skemaPengajuan: submission?.submissionScheme || "-",
+        progressPengajuan: userSubmission?.reviewStatus || "-",
+        peran: pd.isLeader ? "Ketua" : "Anggota",
+        waktuPengajuan: userSubmission?.createdAt || "-",
+      };
+    });
 
     res.status(200).json({
       status: "success",
@@ -158,7 +153,7 @@ const getAllSubmissions = async (req, res, next) => {
       totalSubmissions: count,
       limit: isExport ? undefined : limit,
       submissions: isExport ? undefined : formatted,
-      rawSubmissions: isExport ? submission : undefined,
+      rawSubmissions: isExport ? personalDatas : undefined,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));

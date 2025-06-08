@@ -1,6 +1,6 @@
 const axios = require("axios");
 const logActivity = require("../helpers/activityLogs");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { Users } = require("../models");
 
@@ -139,7 +139,6 @@ const loginGoogle = async (req, res, next) => {
     });
 
     const userInfo = response.data;
-    console.log(userInfo);
     let user = await Users.findOne({ where: { email: userInfo.email } });
 
     if (!user) {
