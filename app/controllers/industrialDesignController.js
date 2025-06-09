@@ -400,6 +400,10 @@ const updateIndustrialDesign = async (req, res, next) => {
       }
     };
 
+    const draftDesainIndustriApplicationFile = req.files
+      ?.draftDesainIndustriApplicationFile
+      ? req.files.draftDesainIndustriApplicationFile[0]
+      : null;
     const looksPerspective = req.files.looksPerspective
       ? req.files.looksPerspective[0]
       : null;
@@ -421,6 +425,8 @@ const updateIndustrialDesign = async (req, res, next) => {
       ? req.files.designOwnershipLetter[0]
       : null;
 
+    if (draftDesainIndustriApplicationFile)
+      removeOldFile(industrialDesign.draftDesainIndustriApplicationFile);
     if (looksPerspective)
       removeOldFile(industrialDesign.looksPerspective, "image");
     if (frontView) removeOldFile(industrialDesign.frontView, "image");
@@ -443,6 +449,9 @@ const updateIndustrialDesign = async (req, res, next) => {
       typeDesignId: typeDesignId,
       subtypeDesignId: subtypeDesignId,
       claim: claimArray,
+      draftDesainIndustriApplicationFile: draftDesainIndustriApplicationFile
+        ? draftDesainIndustriApplicationFile.filename
+        : null,
       looksPerspective: looksPerspective?.filename || null,
       frontView: frontView?.filename || null,
       backView: backView?.filename || null,

@@ -1012,143 +1012,11 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 10;
 
-    const offset = (page - 1) * limit;
-
-    const { count, rows: userSubmissions } =
-      await UserSubmissions.findAndCountAll({
-        distinct: true,
-        limit,
-        offset,
-        where: { reviewerId: req.user.id },
-        include: [
-          {
-            model: Users,
-            as: "user",
-          },
-          {
-            model: Users,
-            as: "reviewer",
-          },
-          {
-            model: Progresses,
-            as: "progress",
-            separate: true,
-            order: [["id", "DESC"]],
-            include: [
-              {
-                model: RevisionFiles,
-                as: "revisionFile",
-              },
-            ],
-          },
-          {
-            model: Submissions,
-            as: "submission",
-            include: [
-              {
-                model: Periods,
-                as: "period",
-              },
-              {
-                model: Groups,
-                as: "group",
-              },
-              {
-                model: Copyrights,
-                as: "copyright",
-                include: [
-                  {
-                    model: TypeCreations,
-                    as: "typeCreation",
-                  },
-                  {
-                    model: SubTypeCreations,
-                    as: "subTypeCreation",
-                  },
-                ],
-              },
-              {
-                model: TermsConditions,
-                as: "termsConditions",
-                through: { attributes: [] },
-              },
-              {
-                model: Patents,
-                as: "patent",
-                include: [
-                  {
-                    model: PatentTypes,
-                    as: "patentType",
-                  },
-                ],
-              },
-              {
-                model: Brands,
-                as: "brand",
-                include: [{ model: AdditionalDatas, as: "additionalDatas" }],
-              },
-              {
-                model: IndustrialDesigns,
-                as: "industrialDesign",
-                include: [
-                  {
-                    model: TypeDesigns,
-                    as: "typeDesign",
-                  },
-                  {
-                    model: SubTypeDesigns,
-                    as: "subTypeDesign",
-                  },
-                ],
-              },
-              {
-                model: SubmissionTypes,
-                as: "submissionType",
-              },
-              {
-                model: PersonalDatas,
-                as: "personalDatas",
-              },
-            ],
-          },
-        ],
-        order: [["id", "DESC"]],
-      });
-
-    res.status(200).json({
-      status: "success",
-      status: "success",
-      currentPage: page,
-      totalPages: Math.ceil(count / limit),
-      totalUserSubmissions: count,
-      limit: limit,
-      userSubmissions,
-    });
-  } catch (err) {
-    next(new ApiError(err.message, 500));
-  }
-};
-
-const getSubmissionsByUserId = async (req, res, next) => {
-  try {
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 10;
-
-    const offset = (page - 1) * limit;
-
     const { search } = req.query;
-    const submissionTypeIdParam = req.query.submissionTypeId;
-    const submissionTypeIds = submissionTypeIdParam
-      ? submissionTypeIdParam.split(",").map((id) => parseInt(id))
-      : null;
 
     const { count, rows } = await UserSubmissions.findAndCountAll({
       distinct: true,
-      limit,
-      offset,
-      where: {
-        userId: req.user.id,
-      },
+      where: { reviewerId: req.user.id },
       include: [
         {
           model: Users,
@@ -1173,19 +1041,11 @@ const getSubmissionsByUserId = async (req, res, next) => {
         {
           model: Submissions,
           as: "submission",
-          where: submissionTypeIds
-            ? {
-                submissionTypeId: {
-                  [Op.in]: submissionTypeIds,
-                },
-              }
-            : undefined,
           include: [
             {
               model: Periods,
               as: "period",
             },
-            { model: Payments, as: "payment" },
             {
               model: Groups,
               as: "group",
@@ -1249,7 +1109,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
           ],
         },
       ],
-      order: [["id", "ASC"]],
+      order: [["id", "DESC"]],
     });
 
     const filteredRows = rows.filter((item) => {
@@ -1277,7 +1137,7 @@ const getSubmissionsByUserId = async (req, res, next) => {
       );
     });
 
-    const userSubmissionsSorted = filteredRows.sort((a, b) => {
+    const sorted = filteredRows.sort((a, b) => {
       const aUpdatedAt = new Date(
         Math.max(
           new Date(a.updatedAt).getTime(),
@@ -1297,15 +1157,190 @@ const getSubmissionsByUserId = async (req, res, next) => {
       return bUpdatedAt - aUpdatedAt;
     });
 
-    const paginated = userSubmissionsSorted.slice(offset, offset + limit);
+    const totalItems = filteredRows.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    if (page > totalPages) page = totalPages || 1;
+    if (page < 1) page = 1;
+
+    const offset = (page - 1) * limit;
+    const paginated = sorted.slice(offset, offset + limit);
 
     res.status(200).json({
       status: "success",
       currentPage: page,
-      totalPages: Math.ceil(filteredRows.length / limit),
-      totalUserSubmissions: filteredRows.length,
+      totalPages: totalPages,
+      totalUserSubmissions: totalItems,
       limit: limit,
-      userSubmissionsSorted: paginated,
+      userSubmissions: paginated,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const getSubmissionsByUserId = async (req, res, next) => {
+  try {
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 10;
+
+    const { search } = req.query;
+    const submissionTypeIdParam = req.query.submissionTypeId;
+    const submissionTypeIds = submissionTypeIdParam
+      ? submissionTypeIdParam.split(",").map((id) => parseInt(id))
+      : null;
+
+    // Query data dulu tanpa limit dan offset supaya bisa filter & sort manual
+    const { rows } = await UserSubmissions.findAndCountAll({
+      where: {
+        userId: req.user.id,
+      },
+      distinct: true,
+      include: [
+        { model: Users, as: "user", required: false },
+        { model: Users, as: "reviewer", required: false },
+        {
+          model: Progresses,
+          as: "progress",
+          required: false,
+          separate: true,
+          order: [["id", "DESC"]],
+          include: [
+            { model: RevisionFiles, as: "revisionFile", required: false },
+          ],
+        },
+        {
+          model: Submissions,
+          as: "submission",
+          required: true,
+          where: submissionTypeIds
+            ? { submissionTypeId: { [Op.in]: submissionTypeIds } }
+            : undefined,
+          include: [
+            { model: Periods, as: "period", required: false },
+            { model: Payments, as: "payment", required: false },
+            { model: Groups, as: "group", required: false },
+            {
+              model: Copyrights,
+              as: "copyright",
+              required: false,
+              include: [
+                { model: TypeCreations, as: "typeCreation", required: false },
+                {
+                  model: SubTypeCreations,
+                  as: "subTypeCreation",
+                  required: false,
+                },
+              ],
+            },
+            {
+              model: TermsConditions,
+              as: "termsConditions",
+              required: false,
+              through: { attributes: [] },
+            },
+            {
+              model: Patents,
+              as: "patent",
+              required: false,
+              include: [
+                { model: PatentTypes, as: "patentType", required: false },
+              ],
+            },
+            {
+              model: Brands,
+              as: "brand",
+              required: false,
+              include: [
+                {
+                  model: AdditionalDatas,
+                  as: "additionalDatas",
+                  required: false,
+                },
+              ],
+            },
+            {
+              model: IndustrialDesigns,
+              as: "industrialDesign",
+              required: false,
+              include: [
+                { model: TypeDesigns, as: "typeDesign", required: false },
+                { model: SubTypeDesigns, as: "subTypeDesign", required: false },
+              ],
+            },
+            { model: SubmissionTypes, as: "submissionType", required: false },
+            { model: PersonalDatas, as: "personalDatas", required: false },
+          ],
+        },
+      ],
+      order: [["id", "ASC"]], // urutan sementara, nanti di sort manual lagi
+    });
+
+    // Filter manual berdasarkan search (karena di DB agak ribet dengan relasi dan `separate: true`)
+    const filteredRows = rows.filter((item) => {
+      if (!search) return true;
+
+      const searchLower = search.toLowerCase();
+
+      const userFullname = item.user?.fullname || "";
+      const reviewerFullname = item.reviewer?.fullname || "";
+      const submissionScheme = item.submission?.submissionScheme || "";
+      const titleInvention = item.submission?.copyright?.titleInvention || "";
+      const inventionTitle = item.submission?.patent?.inventionTitle || "";
+      const titleDesign = item.submission?.industrialDesign?.titleDesign || "";
+      const centralStatus = item.centralStatus || "";
+      const progressStatus = item.progress?.[0]?.status || "";
+
+      return (
+        userFullname.toLowerCase().includes(searchLower) ||
+        reviewerFullname.toLowerCase().includes(searchLower) ||
+        submissionScheme.toLowerCase().includes(searchLower) ||
+        titleInvention.toLowerCase().includes(searchLower) ||
+        inventionTitle.toLowerCase().includes(searchLower) ||
+        titleDesign.toLowerCase().includes(searchLower) ||
+        centralStatus.toLowerCase().includes(searchLower) ||
+        progressStatus.toLowerCase().includes(searchLower)
+      );
+    });
+
+    // Sort manual berdasarkan updatedAt (max dari updatedAt di berbagai relasi)
+    const sortedRows = filteredRows.sort((a, b) => {
+      const aUpdatedAt = new Date(
+        Math.max(
+          new Date(a.updatedAt).getTime(),
+          new Date(a.submission?.updatedAt || 0).getTime(),
+          ...(a.progress || []).map((p) => new Date(p.updatedAt).getTime())
+        )
+      );
+
+      const bUpdatedAt = new Date(
+        Math.max(
+          new Date(b.updatedAt).getTime(),
+          new Date(b.submission?.updatedAt || 0).getTime(),
+          ...(b.progress || []).map((p) => new Date(p.updatedAt).getTime())
+        )
+      );
+
+      return bUpdatedAt - aUpdatedAt;
+    });
+
+    // Pagination manual
+    const totalItems = filteredRows.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    if (page > totalPages) page = totalPages || 1;
+    if (page < 1) page = 1;
+
+    const offset = (page - 1) * limit;
+    const paginated = sortedRows.slice(offset, offset + limit);
+
+    res.status(200).json({
+      status: "success",
+      currentPage: page,
+      totalPages,
+      totalUserSubmissions: totalItems,
+      limit,
+      userSubmissions: paginated,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
