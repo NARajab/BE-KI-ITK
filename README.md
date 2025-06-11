@@ -1,4 +1,4 @@
-<h1 align="center">💥 BE-KI-ITK</h1>
+<h1 align="center">BE-KI-ITK</h1>
 
 <p align="center">
   <i>Empowering Innovation, Accelerating Impact, Unleashing Potential</i>
@@ -35,3 +35,86 @@
 <p align="justify">
   <strong>BE-KI-ITK</strong> adalah backend web service untuk sistem inovasi kampus yang dibangun menggunakan Node.js dengan framework Express. Proyek ini menyediakan REST API yang dapat digunakan untuk mengelola data inovasi, autentikasi pengguna, dan pengiriman email notifikasi.
 </p>
+
+## ⚙️ Features
+
+- 💻 RESTful API with Express
+- 🔐 User authentication with JWT
+- 🗄️ Database migrations and seeders using Sequelize CLI
+- 🛡️ Rate limiting and security best practices
+- 📤 File upload support with Multer\_
+- 📧 Email notifications with Nodemailer
+
+### Prerequisites
+
+- Node.js (v16+ recommended)
+- PostgreSQL database
+
+### Installation
+
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/yourusername/project-hki.git
+   cd project-hki
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+3. Create a `.env` file in the root of your project with the following content:
+    ```env
+    # Server configuration
+    PORT=3000
+    HOST=localhost
+
+    # Database configuration
+    DB_USERNAME=your_db_username
+    DB_PASSWORD=your_db_password
+    DB_HOST=localhost
+    DB_PORT=5432
+
+    # JWT & Security
+    PASSWORD_HASH=your_password_hash_key
+    SALT_ROUNDS=10
+    JWT_SECRET=your_jwt_secret_key
+    ```
+
+4. Setup the database
+   ```bash
+   npm run db:create
+   npm run db:migrate
+   npm run db:seed
+   ```
+
+### Running the app
+
+1. To start the server in production mode:
+    ```bash
+    npm start
+    ```
+2. To start the server in development mode with auto-reload:
+    ```bash
+    npm run dev
+    ```
+1. To start the server in production mode:
+    ```bash
+    npm start
+    ```
+
+### Other useful scripts
+- Drop the database:
+    ```bash
+    npm run db:drop
+    ```
+- Undo all migrations::
+    ```bash
+    npm run db:migrate:undo
+    ```
+- Run all migrations and seeds:
+    ```bash
+    npm run db:init
+    ```
