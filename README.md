@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/last-commit/NARajab/BE-KI-ITK?color=grey&style=flat-square" />
+  <img src="https://img.shields.io/github/last-commit/NARajab/BE-KI-ITK?style=flat-square" />
   <img src="https://img.shields.io/github/languages/top/NARajab/BE-KI-ITK?style=flat-square" />
   <img src="https://img.shields.io/github/languages/count/NARajab/BE-KI-ITK?style=flat-square" />
   <img src="https://img.shields.io/github/license/NARajab/BE-KI-ITK?style=flat-square" />
