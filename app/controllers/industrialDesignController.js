@@ -444,24 +444,29 @@ const updateIndustrialDesign = async (req, res, next) => {
     const claimArray = typeof claim === "string" ? JSON.parse(claim) : claim;
 
     await industrialDesign.update({
-      titleDesign: titleDesign,
-      type: type,
-      typeDesignId: typeDesignId,
-      subtypeDesignId: subtypeDesignId,
+      titleDesign,
+      type,
+      typeDesignId,
+      subtypeDesignId,
       claim: claimArray,
       draftDesainIndustriApplicationFile: draftDesainIndustriApplicationFile
         ? draftDesainIndustriApplicationFile.filename
-        : null,
-      looksPerspective: looksPerspective?.filename || null,
-      frontView: frontView?.filename || null,
-      backView: backView?.filename || null,
-      rightSideView: rightSideView?.filename || null,
-      lefttSideView: lefttSideView?.filename || null,
-      topView: topView?.filename || null,
-      downView: downView?.filename || null,
-      moreImages: moreImages?.filename || null,
-      letterTransferDesignRights: letterTransferDesignRights?.filename || null,
-      designOwnershipLetter: designOwnershipLetter?.filename || null,
+        : industrialDesign.draftDesainIndustriApplicationFile,
+      looksPerspective:
+        looksPerspective?.filename || industrialDesign.looksPerspective,
+      frontView: frontView?.filename || industrialDesign.frontView,
+      backView: backView?.filename || industrialDesign.backView,
+      rightSideView: rightSideView?.filename || industrialDesign.rightSideView,
+      lefttSideView: lefttSideView?.filename || industrialDesign.lefttSideView,
+      topView: topView?.filename || industrialDesign.topView,
+      downView: downView?.filename || industrialDesign.downView,
+      moreImages: moreImages?.filename || industrialDesign.moreImages,
+      letterTransferDesignRights:
+        letterTransferDesignRights?.filename ||
+        industrialDesign.letterTransferDesignRights,
+      designOwnershipLetter:
+        designOwnershipLetter?.filename ||
+        industrialDesign.designOwnershipLetter,
     });
 
     await Progresses.update(

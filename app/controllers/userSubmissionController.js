@@ -545,7 +545,10 @@ const getUserSubmissionById = async (req, res, next) => {
             {
               model: Brands,
               as: "brand",
-              include: [{ model: AdditionalDatas, as: "additionalDatas" }],
+              include: [
+                { model: AdditionalDatas, as: "additionalDatas" },
+                { model: BrandTypes, as: "brandType" },
+              ],
             },
             {
               model: IndustrialDesigns,

@@ -351,7 +351,6 @@ const updatePersonalDataBrand = async (req, res, next) => {
 
     const brandId = submission.brandId;
 
-    // Update data personal
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
       const ktpFile = ktpFiles[i]?.filename;
@@ -443,8 +442,26 @@ const updatePersonalDataBrand = async (req, res, next) => {
       }
     }
 
-    if (Object.keys(fileFieldsToUpdate).length > 0) {
-      await existingBrand.update(fileFieldsToUpdate);
+    const brandDataUpdate = {
+      ...fileFieldsToUpdate,
+      applicationType: req.body.applicationType,
+      brandType: req.body.brandType,
+      referenceName: req.body.referenceName,
+      elementColor: req.body.elementColor,
+      translate: req.body.translate,
+      pronunciation: req.body.pronunciation,
+      disclaimer: req.body.disclaimer,
+      description: req.body.description,
+      documentType: req.body.documentType,
+      information: req.body.information,
+    };
+
+    Object.keys(brandDataUpdate).forEach(
+      (key) => brandDataUpdate[key] === undefined && delete brandDataUpdate[key]
+    );
+
+    if (Object.keys(brandDataUpdate).length > 0) {
+      await existingBrand.update(brandDataUpdate);
     }
 
     await logActivity({
@@ -489,8 +506,6 @@ const updatePersonalDataCopyright = async (req, res, next) => {
     const exampleCreationFile = req.files?.exampleCreation
       ? req.files.exampleCreation[0]
       : null;
-    // const exampleCreation =
-    //   exampleCreationFile?.filename || req.body.exampleCreation || null;
 
     if (!submissionId || !personalDatas) {
       return next(
