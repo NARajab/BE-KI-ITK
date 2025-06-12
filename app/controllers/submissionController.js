@@ -3,6 +3,7 @@ const {
   Submissions,
   SubmissionTypes,
   PersonalDatas,
+  Progresses,
   Patents,
   Copyrights,
   Brands,
@@ -84,13 +85,14 @@ const getAllSubmissions = async (req, res, next) => {
       submissionWhere.submissionScheme = skemaPengajuan;
     }
 
-    const userSubmissionWhere = {};
+    const progressWhere = {};
     if (progressPengajuan) {
-      userSubmissionWhere.reviewStatus = {
+      progressWhere.status = {
         [Op.iLike]: `%${progressPengajuan}%`,
       };
     }
 
+    const userSubmissionWhere = {};
     if (startDate && endDate) {
       const start = new Date(startDate);
       const end = new Date(endDate);
@@ -104,8 +106,6 @@ const getAllSubmissions = async (req, res, next) => {
 
     const { count, rows: personalDatas } = await PersonalDatas.findAndCountAll({
       where: personalWhere,
-      limit,
-      offset,
       distinct: true,
       include: [
         {
@@ -123,7 +123,13 @@ const getAllSubmissions = async (req, res, next) => {
             {
               model: UserSubmissions,
               as: "userSubmissions",
-              where: userSubmissionWhere,
+              include: [
+                {
+                  model: Progresses,
+                  as: "progress",
+                  required: false,
+                },
+              ],
             },
           ],
         },
@@ -132,7 +138,13 @@ const getAllSubmissions = async (req, res, next) => {
 
     const formatted = personalDatas.map((pd) => {
       const submission = pd.submission;
-      const userSubmission = submission?.userSubmission;
+      const userSubmission = submission?.userSubmissions?.[0];
+
+      const latestProgress = userSubmission?.progress?.length
+        ? userSubmission.progress.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          )[0]
+        : null;
 
       return {
         id: userSubmission?.id || "-",
@@ -140,19 +152,31 @@ const getAllSubmissions = async (req, res, next) => {
         namaPengguna: pd.name || "-",
         jenisPengajuan: submission?.submissionType?.title || "-",
         skemaPengajuan: submission?.submissionScheme || "-",
-        progressPengajuan: userSubmission?.reviewStatus || "-",
+        progressPengajuan: latestProgress?.status || "-",
         peran: pd.isLeader ? "Ketua" : "Anggota",
         waktuPengajuan: userSubmission?.createdAt || "-",
       };
     });
 
+    const filtered = progressPengajuan
+      ? formatted.filter((f) =>
+          f.progressPengajuan
+            .toLowerCase()
+            .includes(progressPengajuan.toLowerCase())
+        )
+      : formatted;
+
+    const paginated = isExport
+      ? filtered
+      : filtered.slice((page - 1) * limit, page * limit);
+
     res.status(200).json({
       status: "success",
       currentPage: isExport ? undefined : page,
-      totalPages: isExport ? undefined : Math.ceil(count / limit),
-      totalSubmissions: count,
+      totalPages: isExport ? undefined : Math.ceil(filtered.length / limit),
+      totalSubmissions: filtered.length,
       limit: isExport ? undefined : limit,
-      submissions: isExport ? undefined : formatted,
+      submissions: isExport ? undefined : paginated,
       rawSubmissions: isExport ? personalDatas : undefined,
     });
   } catch (err) {
