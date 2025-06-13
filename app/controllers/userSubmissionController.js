@@ -159,6 +159,37 @@ const updateSubmissionProgress = async (req, res, next) => {
       where: { id },
     });
 
+    if (reviewStatus === "Ditolak") {
+      const submission = await Submissions.findOne({
+        where: { id: userSubmission.submissionId },
+      });
+
+      if (submission) {
+        let quotaTitle = null;
+
+        if (submission.copyrightId) quotaTitle = "Hak Cipta";
+        else if (submission.patentId) quotaTitle = "Patent";
+        else if (submission.brandId) quotaTitle = "Merek";
+        else if (submission.industrialDesignId) quotaTitle = "Desain Industri";
+
+        if (quotaTitle) {
+          const quota = await Quotas.findOne({
+            where: {
+              groupId: submission.groupId,
+              title: quotaTitle,
+            },
+          });
+
+          if (quota) {
+            await Quotas.update(
+              { remainingQuota: quota.remainingQuota + 1 },
+              { where: { id: quota.id } }
+            );
+          }
+        }
+      }
+    }
+
     if (!userSubmission) {
       return res.status(404).json({
         status: "error",

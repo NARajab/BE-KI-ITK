@@ -14,8 +14,8 @@ module.exports = (sequelize, DataTypes) => {
   Faqs.init(
     {
       type: DataTypes.STRING,
-      question: DataTypes.STRING,
-      answer: DataTypes.STRING,
+      question: DataTypes.TEXT,
+      answer: DataTypes.TEXT,
       process: DataTypes.DATE,
     },
     {

@@ -251,10 +251,18 @@ const updateQuota = async (req, res, next) => {
     const oldRemaining = kuota.remainingQuota;
     const newQuota = parseInt(quota, 10);
 
-    const difference = newQuota - oldQuota;
+    const usedQuota = oldQuota - oldRemaining;
 
-    let newRemainingQuota = oldRemaining + difference;
-    if (newRemainingQuota < 0) newRemainingQuota = 0;
+    if (newQuota < usedQuota) {
+      return next(
+        new ApiError(
+          `Kuota tidak boleh lebih kecil dari jumlah yang sudah digunakan (${usedQuota}).`,
+          400
+        )
+      );
+    }
+
+    const newRemainingQuota = newQuota - usedQuota;
 
     await kuota.update({
       quota: newQuota,
