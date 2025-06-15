@@ -253,7 +253,7 @@ const updateSubmissionType = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      message: "Jenis pengajuan berhasil diperbaharui",
+      message: "Jenis pengajuan berhasil diperbaharui.",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
