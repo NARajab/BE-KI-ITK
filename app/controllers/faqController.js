@@ -7,6 +7,13 @@ const { Op } = require("sequelize");
 const createTypeFaq = async (req, res, next) => {
   try {
     const { type } = req.body;
+    const existingType = await Faqs.findOne({ where: { type } });
+    if (existingType) {
+      return res.status(400).json({
+        status: "error",
+        message: `Kategori FAQ '${type}' sudah ada.`,
+      });
+    }
     await Faqs.create({ type: type });
 
     await logActivity({
@@ -36,6 +43,17 @@ const updateFaqType = async (req, res, next) => {
 
     if (affectedFaqs.length === 0) {
       return next(new ApiError("Tidak ada dokumen dengan id tersebut", 404));
+    }
+
+    const duplicateType = await Faqs.findOne({
+      where: { type: newType },
+    });
+
+    if (duplicateType && oldType !== newType) {
+      return res.status(400).json({
+        status: "error",
+        message: `Kategori FAQ '${newType}' sudah digunakan.`,
+      });
     }
 
     await Faqs.update({ type: newType }, { where: { type: oldType } });

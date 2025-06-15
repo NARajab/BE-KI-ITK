@@ -375,9 +375,13 @@ const updatePersonalDataBrand = async (req, res, next) => {
 
     const brandId = submission.brandId;
 
+    // Gunakan fileIndex untuk melacak posisi file yang dikirim
+    let fileIndex = 0;
+
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const ktpFile = ktpFiles[i]?.filename;
+      const uploadKtp = data.uploadKtp; // frontend harus kirim flag ini per data
+      const ktpFile = uploadKtp ? ktpFiles[fileIndex++]?.filename : null;
 
       let existingData = null;
       if (data.id) {
@@ -406,6 +410,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
       } else {
         const newData = { ...data };
         delete newData.id;
+
         await PersonalDatas.create({
           ...newData,
           submissionId,
@@ -442,9 +447,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
             "../../uploads/image/",
             existingBrand[field]
           );
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
+          if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath);
         }
         fileFieldsToUpdate[field] = file.filename;
       }
@@ -458,9 +461,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
             "../../uploads/documents/",
             existingBrand[field]
           );
-          if (fs.existsSync(oldDocPath)) {
-            fs.unlinkSync(oldDocPath);
-          }
+          if (fs.existsSync(oldDocPath)) fs.unlinkSync(oldDocPath);
         }
         fileFieldsToUpdate[field] = file.filename;
       }

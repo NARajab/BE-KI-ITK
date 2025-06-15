@@ -335,6 +335,30 @@ const updateReviewer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { reviewerId } = req.body;
+    const userSubmission = await UserSubmissions.findOne({ where: { id } });
+    if (!userSubmission) {
+      return res.status(404).json({
+        status: "error",
+        message: "UserSubmission tidak ditemukan",
+      });
+    }
+
+    if (reviewerId === null) {
+      await userSubmission.update({ reviewerId: null });
+
+      await logActivity({
+        userId: req.user.id,
+        action: "Menghapus Reviewer Pengajuan",
+        description: `${req.user.fullname} berhasil menghapus reviewer dari pengajuan.`,
+        device: req.headers["user-agent"],
+        ipAddress: req.ip,
+      });
+
+      return res.status(200).json({
+        status: "success",
+        message: "Reviewer berhasil dihapus dari pengajuan",
+      });
+    }
 
     const reviewerUser = await Users.findOne({ where: { id: reviewerId } });
     if (!reviewerUser) {
@@ -348,17 +372,6 @@ const updateReviewer = async (req, res, next) => {
       return res.status(400).json({
         status: "error",
         message: "User yang dipilih bukan seorang reviewer",
-      });
-    }
-
-    const userSubmission = await UserSubmissions.findOne({
-      where: { id },
-    });
-
-    if (!userSubmission) {
-      return res.status(404).json({
-        status: "error",
-        message: "UserSubmission tidak ditemukan",
       });
     }
 
