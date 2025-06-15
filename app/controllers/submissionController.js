@@ -345,6 +345,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
     const { personalDatas } = req.body || {};
 
     const ktpFiles = req.files?.ktpFiles || [];
+    console.log(ktpFiles);
     const labelBrand = req.files?.labelBrand ? req.files.labelBrand[0] : null;
     const fileUploade = req.files?.fileUploade
       ? req.files.fileUploade[0]
@@ -411,6 +412,11 @@ const updatePersonalDataBrand = async (req, res, next) => {
           ...data,
           ktp: ktpFile || existingData.ktp,
         });
+        console.log(
+          `Updated KTP for ${existingData.fullname || existingData.id}: ${
+            ktpFile || existingData.ktp
+          }`
+        );
       } else {
         const newData = { ...data };
         delete newData.id;
@@ -421,6 +427,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
           ktp: ktpFile || null,
           isLeader: i === 0,
         });
+        console.log(`Created new PersonalData with KTP: ${ktpFile || null}`);
       }
     }
 
