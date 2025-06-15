@@ -375,13 +375,17 @@ const updatePersonalDataBrand = async (req, res, next) => {
 
     const brandId = submission.brandId;
 
-    // Gunakan fileIndex untuk melacak posisi file yang dikirim
     let fileIndex = 0;
 
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const uploadKtp = data.uploadKtp; // frontend harus kirim flag ini per data
-      const ktpFile = uploadKtp ? ktpFiles[fileIndex++]?.filename : null;
+      const uploadKtp = data.uploadKtp;
+      const ktpFileIndex = data.ktpFileIndex;
+
+      const ktpFile =
+        uploadKtp && ktpFileIndex !== undefined && ktpFiles[ktpFileIndex]
+          ? ktpFiles[ktpFileIndex].filename
+          : null;
 
       let existingData = null;
       if (data.id) {
@@ -420,7 +424,6 @@ const updatePersonalDataBrand = async (req, res, next) => {
       }
     }
 
-    // Update file brand
     const existingBrand = await Brands.findByPk(brandId);
     if (!existingBrand) {
       return next(new ApiError("Brand tidak ditemukan", 404));
