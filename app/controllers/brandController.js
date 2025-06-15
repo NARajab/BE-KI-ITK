@@ -188,7 +188,7 @@ const updateBrand = async (req, res, next) => {
   try {
     const {
       applicationType,
-      brandType,
+      brandTypeId,
       referenceName,
       elementColor,
       translate,
@@ -255,7 +255,7 @@ const updateBrand = async (req, res, next) => {
 
     await brand.update({
       applicationType,
-      brandType,
+      brandTypeId,
       referenceName,
       elementColor,
       translate,

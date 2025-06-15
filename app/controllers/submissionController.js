@@ -284,7 +284,13 @@ const updatePersonalData = async (req, res, next) => {
 
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const ktpFile = ktpFiles[i]?.filename;
+      const uploadKtp = data.uploadKtp;
+      const ktpFileIndex = data.ktpFileIndex;
+
+      const ktpFile =
+        uploadKtp && ktpFileIndex !== undefined && ktpFiles[ktpFileIndex]
+          ? ktpFiles[ktpFileIndex].filename
+          : null;
 
       let existingData = null;
       if (data.id) {
@@ -310,15 +316,22 @@ const updatePersonalData = async (req, res, next) => {
           ...data,
           ktp: ktpFile || existingData.ktp,
         });
+        console.log(
+          `Updated KTP for ${existingData.fullname || existingData.id}: ${
+            ktpFile || existingData.ktp
+          }`
+        );
       } else {
         const newData = { ...data };
         delete newData.id;
+
         await PersonalDatas.create({
           ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
         });
+        console.log(`Created new PersonalData with KTP: ${ktpFile || null}`);
       }
     }
 
@@ -345,7 +358,6 @@ const updatePersonalDataBrand = async (req, res, next) => {
     const { personalDatas } = req.body || {};
 
     const ktpFiles = req.files?.ktpFiles || [];
-    console.log(ktpFiles);
     const labelBrand = req.files?.labelBrand ? req.files.labelBrand[0] : null;
     const fileUploade = req.files?.fileUploade
       ? req.files.fileUploade[0]
@@ -562,7 +574,13 @@ const updatePersonalDataCopyright = async (req, res, next) => {
 
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const ktpFile = ktpFiles[i]?.filename;
+      const uploadKtp = data.uploadKtp;
+      const ktpFileIndex = data.ktpFileIndex;
+
+      const ktpFile =
+        uploadKtp && ktpFileIndex !== undefined && ktpFiles[ktpFileIndex]
+          ? ktpFiles[ktpFileIndex].filename
+          : null;
 
       let existingData = null;
       if (data.id) {
@@ -588,15 +606,22 @@ const updatePersonalDataCopyright = async (req, res, next) => {
           ...data,
           ktp: ktpFile || existingData.ktp,
         });
+        console.log(
+          `Updated KTP for ${existingData.fullname || existingData.id}: ${
+            ktpFile || existingData.ktp
+          }`
+        );
       } else {
         const newData = { ...data };
         delete newData.id;
+
         await PersonalDatas.create({
           ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
         });
+        console.log(`Created new PersonalData with KTP: ${ktpFile || null}`);
       }
     }
 
@@ -606,9 +631,6 @@ const updatePersonalDataCopyright = async (req, res, next) => {
     }
 
     const documentFolderPath = path.join(__dirname, "../../uploads/documents/");
-
-    const exampleCreation =
-      exampleCreationFile?.filename || req.body.exampleCreation || null;
 
     if (statementLetterFile) {
       if (existingCopyright.statementLetter) {
@@ -657,7 +679,7 @@ const updatePersonalDataCopyright = async (req, res, next) => {
         letterTransferCopyrightFile?.filename ||
         existingCopyright.letterTransferCopyright,
       exampleCreation:
-        exampleCreationFile?.filename || req.body.exampleCreation || null,
+        exampleCreationFile?.filename || req.body.exampleCreation,
     });
 
     await logActivity({
@@ -705,7 +727,13 @@ const updatePersonalDataPaten = async (req, res, next) => {
 
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const ktpFile = ktpFiles[i]?.filename;
+      const uploadKtp = data.uploadKtp;
+      const ktpFileIndex = data.ktpFileIndex;
+
+      const ktpFile =
+        uploadKtp && ktpFileIndex !== undefined && ktpFiles[ktpFileIndex]
+          ? ktpFiles[ktpFileIndex].filename
+          : null;
 
       let existingData = null;
       if (data.id) {
@@ -731,15 +759,22 @@ const updatePersonalDataPaten = async (req, res, next) => {
           ...data,
           ktp: ktpFile || existingData.ktp,
         });
+        console.log(
+          `Updated KTP for ${existingData.fullname || existingData.id}: ${
+            ktpFile || existingData.ktp
+          }`
+        );
       } else {
         const newData = { ...data };
         delete newData.id;
+
         await PersonalDatas.create({
           ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
         });
+        console.log(`Created new PersonalData with KTP: ${ktpFile || null}`);
       }
     }
 
@@ -813,7 +848,13 @@ const updatePersonalDataDesignIndustri = async (req, res, next) => {
 
     for (let i = 0; i < parsedPersonalDatas.length; i++) {
       const data = parsedPersonalDatas[i];
-      const ktpFile = ktpFiles[i]?.filename;
+      const uploadKtp = data.uploadKtp;
+      const ktpFileIndex = data.ktpFileIndex;
+
+      const ktpFile =
+        uploadKtp && ktpFileIndex !== undefined && ktpFiles[ktpFileIndex]
+          ? ktpFiles[ktpFileIndex].filename
+          : null;
 
       let existingData = null;
       if (data.id) {
@@ -839,15 +880,22 @@ const updatePersonalDataDesignIndustri = async (req, res, next) => {
           ...data,
           ktp: ktpFile || existingData.ktp,
         });
+        console.log(
+          `Updated KTP for ${existingData.fullname || existingData.id}: ${
+            ktpFile || existingData.ktp
+          }`
+        );
       } else {
         const newData = { ...data };
         delete newData.id;
+
         await PersonalDatas.create({
           ...newData,
           submissionId,
           ktp: ktpFile || null,
           isLeader: i === 0,
         });
+        console.log(`Created new PersonalData with KTP: ${ktpFile || null}`);
       }
     }
 

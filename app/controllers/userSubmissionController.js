@@ -1159,28 +1159,41 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
       order: [["id", "DESC"]],
     });
 
-    const filteredRows = rows.filter((item) => {
-      const userFullname = item.user?.fullname || "";
-      const reviewerFullname = item.reviewer?.fullname || "";
-      const submissionScheme = item.submission?.submissionScheme || "";
-      const titleInvention = item.submission?.copyright?.titleInvention || "";
-      const inventionTitle = item.submission?.patent?.inventionTitle || "";
-      const titleDesign = item.submission?.industrialDesign?.titleDesign || "";
-      const centralStatus = item.centralStatus || "";
-      const progressStatus = item.progress?.[0]?.status || "";
+    const allowedStatuses = [
+      "Menunggu",
+      "Direview",
+      "Revisi",
+      "Lengkapi Berkas",
+    ];
 
+    const filteredByStatus = rows.filter((item) => {
+      const lastProgressStatus = item.progress?.[0]?.status || "";
+      return allowedStatuses.includes(lastProgressStatus);
+    });
+
+    const filteredRows = filteredByStatus.filter((item) => {
       if (!search) return true;
 
       const searchLower = search.toLowerCase();
       return (
-        userFullname.toLowerCase().includes(searchLower) ||
-        reviewerFullname.toLowerCase().includes(searchLower) ||
-        submissionScheme.toLowerCase().includes(searchLower) ||
-        titleInvention.toLowerCase().includes(searchLower) ||
-        inventionTitle.toLowerCase().includes(searchLower) ||
-        titleDesign.toLowerCase().includes(searchLower) ||
-        progressStatus.toLowerCase().includes(searchLower) ||
-        centralStatus.toLowerCase().includes(searchLower)
+        (item.user?.fullname || "").toLowerCase().includes(searchLower) ||
+        (item.reviewer?.fullname || "").toLowerCase().includes(searchLower) ||
+        (item.submission?.submissionScheme || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.submission?.copyright?.titleInvention || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.submission?.patent?.inventionTitle || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.submission?.industrialDesign?.titleDesign || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.progress?.[0]?.status || "")
+          .toLowerCase()
+          .includes(searchLower) ||
+        (item.centralStatus || "").toLowerCase().includes(searchLower)
       );
     });
 
