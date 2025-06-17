@@ -111,6 +111,7 @@ const createPatent = async (req, res, next) => {
 
     return res.status(201).json({
       status: "success",
+      message: "Pengajuan paten berhasil dibuat",
       userSubmission,
     });
   } catch (err) {

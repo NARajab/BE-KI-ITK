@@ -655,15 +655,16 @@ const updatePersonalDataCopyright = async (req, res, next) => {
         letterTransferCopyrightFile.filename;
     }
 
-    if (exampleCreationFile && existingCopyright.exampleCreation) {
-      const oldPath = path.join(
-        documentFolderPath,
-        existingCopyright.exampleCreation
-      );
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    if (exampleCreationFile) {
+      if (existingCopyright.exampleCreation) {
+        const oldPath = path.join(
+          documentFolderPath,
+          existingCopyright.exampleCreation
+        );
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      existingCopyright.exampleCreation = exampleCreationFile.filename;
     }
-
-    existingCopyright.exampleCreation = exampleCreation;
 
     await existingCopyright.update({
       titleInvention,

@@ -433,6 +433,51 @@ const getAllAdditionalDatas = async (req, res, next) => {
   }
 };
 
+const createAdditionalDatas = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { description } = req.body;
+    const newFile = req.files?.newFile?.[0];
+
+    let fileName = null;
+    let fileType = null;
+    let file = null;
+    let size = null;
+
+    if (newFile) {
+      fileName = newFile.originalname;
+      file = newFile.filename;
+      size = newFile.size;
+      fileType = newFile.mimetype.startsWith("image/") ? "image" : "documents";
+    }
+
+    const additionalData = await AdditionalDatas.create({
+      brandId: id,
+      description,
+      fileName,
+      file,
+      fileType,
+      size,
+    });
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menambahkan Data Tambahan",
+      description: `${req.user.fullname} berhasil menambahkan data tambahan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(201).json({
+      status: "success",
+      message: "AdditionalData berhasil dibuat",
+      additionalData,
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
 const updateAdditionalDatas = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -491,6 +536,53 @@ const updateAdditionalDatas = async (req, res, next) => {
     return res.status(200).json({
       status: "success",
       message: "AdditionalData berhasil diperbarui",
+    });
+  } catch (err) {
+    next(new ApiError(err.message, 500));
+  }
+};
+
+const deleteAdditionalData = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const additionalData = await AdditionalDatas.findByPk(id);
+    if (!additionalData) {
+      return next(new ApiError("AdditionalData tidak ditemukan", 404));
+    }
+
+    if (additionalData.file) {
+      const fileTypePath =
+        additionalData.file.endsWith(".pdf") ||
+        additionalData.file.endsWith(".docx")
+          ? "uploads/documents"
+          : "uploads/image";
+
+      const filePath = path.join(
+        __dirname,
+        "../../",
+        fileTypePath,
+        additionalData.file
+      );
+
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    await additionalData.destroy();
+
+    await logActivity({
+      userId: req.user.id,
+      action: "Menghapus Data Tambahan",
+      description: `${req.user.fullname} berhasil menghapus data tambahan.`,
+      device: req.headers["user-agent"],
+      ipAddress: req.ip,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      message: "AdditionalData berhasil dihapus",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -574,7 +666,9 @@ module.exports = {
   getAllBrandTypesWtoPagination,
   getByIdBrandType,
   getAllAdditionalDatas,
+  createAdditionalDatas,
   updateAdditionalDatas,
+  deleteAdditionalData,
   restoreBrandType,
   deleteBrandType,
 };
