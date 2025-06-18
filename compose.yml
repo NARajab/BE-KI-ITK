@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: KI_ITK
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -37,29 +35,20 @@ services:
       - EMAIL_PASS=bczysvhnbebssvea
       - MAIL_FROM_NAME=KI-ITK
       - NODE_ENV=production
-    ports:
-      - "9000:9000"
+      - VIRTUAL_HOST=api-hki.wynz.site,www.api-hki.wynz.site
+      - VIRTUAL_PORT=9000
+      - LETSENCRYPT_HOST=api-hki.wynz.site,www.api-hki.wynz.site
+      - LETSENCRYPT_EMAIL=septianushendra3@gmail.com
+
     depends_on:
       - db
     networks:
       - app-network
-
-  nginx:
-    image: nginx:1.25-alpine
-    container_name: nginx-ki
-    restart: always
-    ports:
-      - "8032:80"
-      - "8033:443"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    depends_on:
-      - backend
-    networks:
-      - app-network
-
+      - proxy-network
 volumes:
   postgres_data:
 
 networks:
   app-network:
+  proxy-network:
+    external: true
