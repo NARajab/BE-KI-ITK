@@ -440,7 +440,9 @@ const updateCopyright = async (req, res, next) => {
         letterTransferCopyrightFile?.filename ||
         copyright.letterTransferCopyright,
       exampleCreation:
-        exampleCreationFile?.filename || copyright.exampleCreation,
+        exampleCreationFile?.filename ||
+        req.body.exampleCreation ||
+        copyright.exampleCreation,
     });
 
     await Progresses.update(

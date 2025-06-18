@@ -492,7 +492,7 @@ const updatePersonalDataBrand = async (req, res, next) => {
     const brandDataUpdate = {
       ...fileFieldsToUpdate,
       applicationType: req.body.applicationType,
-      brandType: req.body.brandType,
+      brandTypeId: req.body.brandTypeId,
       referenceName: req.body.referenceName,
       elementColor: req.body.elementColor,
       translate: req.body.translate,
