@@ -29,6 +29,7 @@ router.patch(
   authenticate,
   (req, res, next) => {
     uploadFields([
+      { name: "draftPatentApplicationFile", maxCount: 1 },
       { name: "entirePatentDocument", maxCount: 1 },
       { name: "description", maxCount: 1 },
       { name: "abstract", maxCount: 1 },

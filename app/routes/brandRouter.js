@@ -58,6 +58,20 @@ router.patch(
 );
 
 router.get("/", Brand.getAllAdditionalDatas);
+router.post(
+  "/additional-data/:id",
+  authenticat,
+  (req, res, next) => {
+    uploadFields([{ name: "newFile", maxCount: 1 }])(req, res, (err) => {
+      if (err) {
+        console.error("Multer error:", err.message);
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  },
+  Brand.createAdditionalDatas
+);
 router.patch(
   "/additional-data/:id",
   authenticat,
@@ -72,5 +86,6 @@ router.patch(
   },
   Brand.updateAdditionalDatas
 );
+router.delete("/additional-data/:id", authenticat, Brand.deleteAdditionalData);
 
 module.exports = router;

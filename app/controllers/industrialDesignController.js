@@ -400,6 +400,10 @@ const updateIndustrialDesign = async (req, res, next) => {
       }
     };
 
+    const draftDesainIndustriApplicationFile = req.files
+      ?.draftDesainIndustriApplicationFile
+      ? req.files.draftDesainIndustriApplicationFile[0]
+      : null;
     const looksPerspective = req.files.looksPerspective
       ? req.files.looksPerspective[0]
       : null;
@@ -421,6 +425,8 @@ const updateIndustrialDesign = async (req, res, next) => {
       ? req.files.designOwnershipLetter[0]
       : null;
 
+    if (draftDesainIndustriApplicationFile)
+      removeOldFile(industrialDesign.draftDesainIndustriApplicationFile);
     if (looksPerspective)
       removeOldFile(industrialDesign.looksPerspective, "image");
     if (frontView) removeOldFile(industrialDesign.frontView, "image");
@@ -438,21 +444,29 @@ const updateIndustrialDesign = async (req, res, next) => {
     const claimArray = typeof claim === "string" ? JSON.parse(claim) : claim;
 
     await industrialDesign.update({
-      titleDesign: titleDesign,
-      type: type,
-      typeDesignId: typeDesignId,
-      subtypeDesignId: subtypeDesignId,
+      titleDesign,
+      type,
+      typeDesignId,
+      subtypeDesignId,
       claim: claimArray,
-      looksPerspective: looksPerspective?.filename || null,
-      frontView: frontView?.filename || null,
-      backView: backView?.filename || null,
-      rightSideView: rightSideView?.filename || null,
-      lefttSideView: lefttSideView?.filename || null,
-      topView: topView?.filename || null,
-      downView: downView?.filename || null,
-      moreImages: moreImages?.filename || null,
-      letterTransferDesignRights: letterTransferDesignRights?.filename || null,
-      designOwnershipLetter: designOwnershipLetter?.filename || null,
+      draftDesainIndustriApplicationFile: draftDesainIndustriApplicationFile
+        ? draftDesainIndustriApplicationFile.filename
+        : industrialDesign.draftDesainIndustriApplicationFile,
+      looksPerspective:
+        looksPerspective?.filename || industrialDesign.looksPerspective,
+      frontView: frontView?.filename || industrialDesign.frontView,
+      backView: backView?.filename || industrialDesign.backView,
+      rightSideView: rightSideView?.filename || industrialDesign.rightSideView,
+      lefttSideView: lefttSideView?.filename || industrialDesign.lefttSideView,
+      topView: topView?.filename || industrialDesign.topView,
+      downView: downView?.filename || industrialDesign.downView,
+      moreImages: moreImages?.filename || industrialDesign.moreImages,
+      letterTransferDesignRights:
+        letterTransferDesignRights?.filename ||
+        industrialDesign.letterTransferDesignRights,
+      designOwnershipLetter:
+        designOwnershipLetter?.filename ||
+        industrialDesign.designOwnershipLetter,
     });
 
     await Progresses.update(

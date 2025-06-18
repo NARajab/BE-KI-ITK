@@ -31,7 +31,7 @@ const createUser = async (req, res, next) => {
 
     const image = req.file || null;
 
-    const user = await Users.create({
+    await Users.create({
       fullname,
       email,
       password: hashedPassword,
@@ -54,7 +54,7 @@ const createUser = async (req, res, next) => {
 
     return res.status(201).json({
       status: "success",
-      user,
+      message: "Pengguna berhasil ditambahkan",
     });
   } catch (err) {
     next(new ApiError(err.message, 500));
@@ -169,7 +169,20 @@ const updateUser = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "Pengguna tidak ditemukan" });
     }
+    const { email } = req.body;
 
+    if (email && email !== user.email) {
+      const existingUser = await Users.findOne({
+        where: {
+          email,
+          id: { [Op.ne]: user.id },
+        },
+      });
+
+      if (existingUser) {
+        return next(new ApiError("Email sudah terdaftar", 400));
+      }
+    }
     const fieldsToCheck = [
       "fullname",
       "faculty",

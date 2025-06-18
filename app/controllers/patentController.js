@@ -111,6 +111,7 @@ const createPatent = async (req, res, next) => {
 
     return res.status(201).json({
       status: "success",
+      message: "Pengajuan paten berhasil dibuat",
       userSubmission,
     });
   } catch (err) {
@@ -183,6 +184,9 @@ const updatePatent = async (req, res, next) => {
       }
     };
 
+    const draftPatentApplicationFile = req.files?.draftPatentApplicationFile
+      ? req.files.draftPatentApplicationFile[0]
+      : null;
     const entirePatentDocument = req.files?.entirePatentDocument?.[0] || null;
     const description = req.files?.description?.[0] || null;
     const abstract = req.files?.abstract?.[0] || null;
@@ -195,6 +199,8 @@ const updatePatent = async (req, res, next) => {
     const letterPassedReviewStage =
       req.files?.letterPassedReviewStage?.[0] || null;
 
+    if (draftPatentApplicationFile)
+      removeOldFile(patent.draftPatentApplicationFile);
     if (entirePatentDocument) removeOldFile(patent.entirePatentDocument);
     if (description) removeOldFile(patent.description);
     if (abstract) removeOldFile(patent.abstract);
@@ -210,6 +216,9 @@ const updatePatent = async (req, res, next) => {
       inventionTitle,
       patentTypeId,
       numberClaims,
+      draftPatentApplicationFile: draftPatentApplicationFile
+        ? draftPatentApplicationFile.filename
+        : null,
       entirePatentDocument:
         entirePatentDocument?.filename || patent.entirePatentDocument,
       description: description?.filename || patent.description,

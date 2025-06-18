@@ -57,6 +57,7 @@ router.patch(
   authenticate,
   (req, res, next) => {
     uploadFields([
+      { name: "draftDesainIndustriApplicationFile", maxCount: 1 },
       { name: "looksPerspective", maxCount: 1 },
       { name: "frontView", maxCount: 1 },
       { name: "backView", maxCount: 1 },

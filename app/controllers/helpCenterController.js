@@ -123,7 +123,10 @@ const getHelpCenter = async (req, res, next) => {
       limit,
       offset,
       where: whereCondition,
-      order: [["id", "DESC"]],
+      order: [
+        ["status", "ASC"],
+        ["createdAt", "DESC"],
+      ],
     });
     res.status(200).json({
       status: "success",

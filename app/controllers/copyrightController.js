@@ -368,8 +368,8 @@ const updateCopyright = async (req, res, next) => {
   try {
     const {
       titleInvention,
-      typeCreation,
-      subTypeCreation,
+      typeCreationId,
+      subTypeCreationId,
       countryFirstAnnounced,
       cityFirstAnnounced,
       timeFirstAnnounced,
@@ -428,8 +428,8 @@ const updateCopyright = async (req, res, next) => {
 
     await copyright.update({
       titleInvention,
-      typeCreation,
-      subTypeCreation,
+      typeCreationId,
+      subTypeCreationId,
       countryFirstAnnounced,
       cityFirstAnnounced,
       timeFirstAnnounced,
@@ -440,7 +440,9 @@ const updateCopyright = async (req, res, next) => {
         letterTransferCopyrightFile?.filename ||
         copyright.letterTransferCopyright,
       exampleCreation:
-        exampleCreationFile?.filename || copyright.exampleCreation,
+        exampleCreationFile?.filename ||
+        req.body.exampleCreation ||
+        copyright.exampleCreation,
     });
 
     await Progresses.update(
