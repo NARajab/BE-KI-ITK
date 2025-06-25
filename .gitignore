@@ -1,8 +1,15 @@
 .env
 node_modules
 serviceAccountKey.json
-uploads/image/*
-uploads/documents/*
+/uploads/*
+!/uploads/.gitkeep
+
+/uploads/images/*
+!/uploads/images/.gitkeep
+
+/uploads/documents/*
+!/uploads/documents/.gitkeep
+
 coverage
 .dockerignore
 docker-compose.yml
