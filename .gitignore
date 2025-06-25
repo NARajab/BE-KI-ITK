@@ -4,8 +4,8 @@ serviceAccountKey.json
 /uploads/*
 !/uploads/.gitkeep
 
-/uploads/images/*
-!/uploads/images/.gitkeep
+/uploads/image/*
+!/uploads/image/.gitkeep
 
 /uploads/documents/*
 !/uploads/documents/.gitkeep
