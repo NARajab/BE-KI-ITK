@@ -1,4 +1,4 @@
 mkdir -p uploads/images uploads/documents
 touch uploads/.gitkeep
-touch uploads/images/.gitkeep
+touch uploads/image/.gitkeep
 touch uploads/documents/.gitkeep
