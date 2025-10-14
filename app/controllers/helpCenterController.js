@@ -63,13 +63,10 @@ const updateHelpCenter = async (req, res, next) => {
     if (!helpCenter) {
       return next(new ApiError("Help Center tidak ditemukan", 404));
     }
+
     await helpCenter.update({ answer, status: true });
 
     const user = await Users.findOne({ where: { email: helpCenter.email } });
-
-    if (isNaN(user.id)) {
-      return next(new ApiError("ID pengguna tidak valid", 400));
-    }
 
     await logActivity({
       userId: req.user.id,
@@ -79,22 +76,23 @@ const updateHelpCenter = async (req, res, next) => {
       ipAddress: req.ip,
     });
 
-    await SendEmail({
-      to: user.email,
-      subject: "Pertanyaan di Pusat Bantuan",
-      html: helpCenterMailAdmin({ fullname: user.fullname, message: answer }),
-    });
+    if (user && !isNaN(user.id)) {
+      await SendEmail({
+        to: user.email,
+        subject: "Pertanyaan di Pusat Bantuan",
+        html: helpCenterMailAdmin({ fullname: user.fullname, message: answer }),
+      });
 
-    await sendNotification(
-      user.id,
-      "Pertanyaan di Pusat Bantuan",
-      "Pertanyaan di Pusat Bantuan telah dijawab"
-    );
+      await sendNotification(
+        user.id,
+        "Pertanyaan di Pusat Bantuan",
+        "Pertanyaan di Pusat Bantuan telah dijawab"
+      );
+    }
 
     res.status(200).json({
       status: "success",
       message: "Help Center berhasil diperbarui",
-      helpCenter,
     });
   } catch (err) {
     next(new ApiError(err.message, 500));

@@ -25,6 +25,7 @@ const {
   SubmissionTypes,
   Payments,
   Faqs,
+  CentralStatus,
   Documents,
 } = require("../models");
 const { Op } = require("sequelize");
@@ -279,7 +280,7 @@ const updateSubmissionProgress = async (req, res, next) => {
 const updateStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { centralStatus } = req.body;
+    const { centralStatusId } = req.body;
 
     const userSubmission = await UserSubmissions.findOne({
       where: { id },
@@ -292,7 +293,16 @@ const updateStatus = async (req, res, next) => {
       });
     }
 
-    await userSubmission.update({ centralStatus });
+    await userSubmission.update({ centralStatusId });
+
+    const centralStatus = await CentralStatus.findByPk(centralStatusId);
+
+    if (!centralStatus) {
+      return res.status(404).json({
+        status: "error",
+        message: "CentralStatus tidak ditemukan",
+      });
+    }
 
     await logActivity({
       userId: req.user.id,
@@ -311,7 +321,7 @@ const updateStatus = async (req, res, next) => {
       subject: "Update Status Pengajuan",
       html: statusSubmissionMail({
         fullname: user.fullname,
-        status: centralStatus,
+        status: centralStatus.name,
         updatedAt: new Date(),
       }),
     });
@@ -319,7 +329,7 @@ const updateStatus = async (req, res, next) => {
     await sendNotification(
       user.id,
       "Status Pengajuan",
-      `Status Pengajuan anda telah berubah menjadi ${centralStatus}`
+      `Status Pengajuan anda telah berubah menjadi ${centralStatus.name}`
     );
 
     res.status(200).json({
@@ -415,6 +425,10 @@ const getAllUserSubmission = async (req, res, next) => {
           {
             model: Users,
             as: "reviewer",
+          },
+          {
+            model: CentralStatus,
+            as: "centralStatus",
           },
           {
             model: Progresses,
@@ -528,6 +542,10 @@ const getUserSubmissionById = async (req, res, next) => {
         {
           model: Users,
           as: "reviewer",
+        },
+        {
+          model: CentralStatus,
+          as: "centralStatus",
         },
         {
           model: Progresses,
@@ -671,6 +689,10 @@ const getByIdSubmissionType = async (req, res, next) => {
         {
           model: Users,
           as: "reviewer",
+        },
+        {
+          model: CentralStatus,
+          as: "centralStatus",
         },
         {
           model: Progresses,
@@ -847,6 +869,10 @@ const getByIdSubmissionTypeStatusSelesai = async (req, res, next) => {
         {
           model: Users,
           as: "reviewer",
+        },
+        {
+          model: CentralStatus,
+          as: "centralStatus",
         },
         {
           model: Progresses,
@@ -1074,6 +1100,10 @@ const getSubmissionsByReviewerId = async (req, res, next) => {
           as: "reviewer",
         },
         {
+          model: CentralStatus,
+          as: "centralStatus",
+        },
+        {
           model: Progresses,
           as: "progress",
           separate: true,
@@ -1259,6 +1289,11 @@ const getSubmissionsByUserId = async (req, res, next) => {
       include: [
         { model: Users, as: "user", required: false },
         { model: Users, as: "reviewer", required: false },
+        {
+          model: CentralStatus,
+          as: "centralStatus",
+          required: false,
+        },
         {
           model: Progresses,
           as: "progress",

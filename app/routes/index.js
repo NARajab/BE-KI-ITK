@@ -17,6 +17,7 @@ const Terms = require("./termsConditionRouter");
 const HelpCenter = require("./helpCenterRouter");
 const Notification = require("./notificationRouter");
 const ActivityLog = require("./activityLogRouter");
+const CentralStatus = require("./centralStatusRouter");
 
 router.use("/api/v1/auth", Auth);
 router.use("/api/v1/user", User);
@@ -34,5 +35,6 @@ router.use("/api/v1/terms", Terms);
 router.use("/api/v1/help-center", HelpCenter);
 router.use("/api/v1/notification", Notification);
 router.use("/api/v1/activity-log", ActivityLog);
+router.use("/api/v1/central-status", CentralStatus);
 
 module.exports = router;

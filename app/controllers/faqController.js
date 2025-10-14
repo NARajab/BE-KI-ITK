@@ -241,7 +241,6 @@ const getFaqByType = async (req, res, next) => {
         [Op.ne]: null,
         ...(search && {
           [Op.iLike]: `%${search}%`, // Untuk PostgreSQL
-          // [Op.like]: `%${search}%`, // Gunakan ini kalau pakai MySQL
         }),
       },
     };

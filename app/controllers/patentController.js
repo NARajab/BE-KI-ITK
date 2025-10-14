@@ -123,6 +123,11 @@ const updatePatentType = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    const patentType = await PatentTypes.findByPk(id);
+    if (!patentType) {
+      return next(new ApiError("Kategori paten tidak ditemukan", 404));
+    }
+
     const { title } = req.body;
 
     await PatentTypes.update({ title }, { where: { id } });

@@ -170,8 +170,12 @@ const createBrand = async (req, res, next) => {
 const updateBrandType = async (req, res, next) => {
   try {
     const { id } = req.params;
-
     const { title } = req.body;
+
+    const brandType = await BrandTypes.findByPk(id);
+    if (!brandType) {
+      return next(new ApiError("Kategori merek tidak ditemukan", 404));
+    }
 
     await BrandTypes.update({ title }, { where: { id } });
 

@@ -177,9 +177,14 @@ const getAllSubTypeCreationByTypeCreationWtoPagination = async (
 const updateTypeCreation = async (req, res, next) => {
   try {
     const { id } = req.params;
-
     const { title } = req.body;
-    await TypeCreations.update({ title: title }, { where: { id: id } });
+
+    const typeCreation = await TypeCreations.findByPk(id);
+    if (!typeCreation) {
+      return next(new ApiError("Kategori Hak Cipta tidak ditemukan", 404));
+    }
+
+    await typeCreation.update({ title });
 
     await logActivity({
       userId: req.user.id,

@@ -129,6 +129,11 @@ const getAllSubmissions = async (req, res, next) => {
                   as: "progress",
                   required: false,
                 },
+                {
+                  model: CentralStatus,
+                  as: "centralStatus",
+                  required: false,
+                },
               ],
             },
           ],

@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "userSubmissionId",
         as: "progress",
       });
+      UserSubmissions.belongsTo(models.CentralStatus, {
+        foreignKey: "centralStatusId",
+        as: "centralStatus",
+      });
     }
   }
   UserSubmissions.init(
@@ -31,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
       userId: DataTypes.INTEGER,
       reviewerId: DataTypes.INTEGER,
       submissionId: DataTypes.INTEGER,
-      centralStatus: DataTypes.STRING,
+      centralStatusId: DataTypes.STRING,
     },
     {
       sequelize,
