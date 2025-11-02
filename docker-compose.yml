@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    container_name: Backend-App-Central-KI-ITK
+    ports:
+      - "${PORT}:${PORT}"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+    command: npm run dev
+
+  db:
+    image: postgres:16
+    container_name: Database-App-Central-KI-ITK
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+
+volumes:
+  db-data:

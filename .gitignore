@@ -8,6 +8,3 @@ serviceAccountKey.json
 !/uploads/documents/
 !/uploads/documents/.gitkeep
 coverage
-.dockerignore
-docker-compose.yml
-Dockerfile
