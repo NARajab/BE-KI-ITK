@@ -10,7 +10,7 @@ services:
       - .:/app
     depends_on:
       - db
-    command: npm run dev
+    command: npm run start
 
   db:
     image: postgres:16
