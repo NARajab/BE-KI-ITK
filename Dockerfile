@@ -16,7 +16,7 @@ ENV PATH /app/node_modules/.bin:$PATH
 # Salin semua file ke dalam container (pastikan .dockerignore digunakan)
 COPY . .
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
 
 # Buka port sesuai app (kalau pakai 9000, sesuaikan juga di EXPOSE)
 EXPOSE 3000
