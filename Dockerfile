@@ -2,7 +2,7 @@
 FROM node:18
 
 # Buat direktori kerja
-WORKDIR /app
+WORKDIR /usr/src/app
 
 # Salin file package.json dan package-lock.json
 COPY package*.json ./
