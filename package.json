@@ -4,7 +4,7 @@
   "description": "Backend Web KI-ITK",
   "main": "index.js",
   "scripts": {
-    "start": "node -r dotenv/config bin/www",
+    "start": "node -r bin/www",
     "dev": "nodemon -r dotenv/config bin/www",
     "db:drop": "sequelize db:drop",
     "db:create": "sequelize db:create",
