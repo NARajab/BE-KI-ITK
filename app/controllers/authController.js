@@ -61,7 +61,7 @@ const register = async (req, res, next) => {
       role: "user",
     });
 
-    const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
+    const verificationLink = `${process.env.BASE_URL_VERIF_EMAIL}/auth/verify-email/${emailToken}`;
 
     await sendEmail({
       to: email,
@@ -92,7 +92,7 @@ const login = async (req, res, next) => {
 
     if (!user || !isPasswordValid) {
       return next(
-        new ApiError("Email dan password yang anda masukkan salah", 401)
+        new ApiError("Email dan password yang anda masukkan salah", 401),
       );
     }
 
@@ -101,7 +101,7 @@ const login = async (req, res, next) => {
         expiresIn: "1h",
       });
 
-      const verificationLink = `${process.env.BASE_URL}/auth/verify-email/${emailToken}`;
+      const verificationLink = `${process.env.BASE_URL_VERIF_EMAIL}/auth/verify-email/${emailToken}`;
 
       await sendEmail({
         to: email,
@@ -112,8 +112,8 @@ const login = async (req, res, next) => {
       return next(
         new ApiError(
           "Email belum diverifikasi. Link verifikasi telah dikirim ulang ke email Anda.",
-          401
-        )
+          401,
+        ),
       );
     }
     const payload = {
@@ -158,7 +158,7 @@ const loginGoogle = async (req, res, next) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
-      }
+      },
     );
 
     const userInfo = response.data;
@@ -186,7 +186,7 @@ const loginGoogle = async (req, res, next) => {
         role: user.role,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "1d" },
     );
 
     await logActivity({
@@ -265,7 +265,7 @@ const sendEmailResetPassword = async (req, res, next) => {
 
     await user.save();
 
-    const resetUrl = `${process.env.BASE_URL}/reset-password/${token}`;
+    const resetUrl = `${process.env.BASE_URL_RESET_PW}/reset-password/${token}`;
 
     await sendEmail({
       to: email,
